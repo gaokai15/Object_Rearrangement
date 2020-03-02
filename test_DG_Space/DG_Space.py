@@ -14,11 +14,10 @@ import cPickle as pickle
 my_path = os.path.abspath(os.path.dirname(__file__))
 
 class Experiments(object):
+    # try to create instances in different areas and object numbers.
     def density(self):
         OBJ_NUM = 5
-        # W_X = 3
-        # W_Y = 3
-        DATE = '0301'
+        # RECORD is False when I'm debugging and don't want to rewrite the data
         RECORD = True
         Iteration_time = 10
 
@@ -53,11 +52,6 @@ class Experiments(object):
         surf = ax.plot_surface(X, Y, DG_num_matrix, cmap=cm.coolwarm,
                             linewidth=0, antialiased=False)
 
-        # Customize the z axis.
-        # ax.set_zlim(-1.01, 1.01)
-        # ax.zaxis.set_major_locator(LinearLocator(10))
-        # ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-
         # Add a color bar which maps values to colors.
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
@@ -74,11 +68,10 @@ class Experiments(object):
 
         plt.savefig(my_path + "/pictures/min_feedback_n%s.png"%OBJ_NUM)
 
+    # In this experiment, I'm trying to see the relationship between the number of edges and DG quality.
     def edge_and_DG(self):
         Iteration_time = 10
         OBJ_NUM = 5
-        # Points = []
-        # edge_arcs_dict = {}
         M = np.zeros([21,21])
         for W_X in range(3,8):
             for W_Y in range(3,8):
@@ -95,29 +88,11 @@ class Experiments(object):
 
         width = 0.2
         fig, ax = plt.subplots()
-        # ax2 = ax.twinx()
 
         p0 = ax.bar([x for x in range(11)], A[0,:].T, width)
-
-        # fig = plt.figure()
-        # ax = fig.gca(projection='3d')
-
-        # X = np.arange(0,21,1)
-        # Y = np.arange(0,21,1)
-
-        # X, Y = np.meshgrid(X, Y)
-
-        # print M
-
-        # surf = ax.plot_surface(X,Y,M, cmap=cm.coolwarm, linewidth=0, antialiased=False)
-        
-        # # Add a color bar which maps values to colors.
-        # fig.colorbar(surf, shrink=0.5, aspect=5)
         plt.xlabel("Minimum Feedback Arcs")
         plt.ylabel("Num")
         plt.savefig(my_path + "/pictures/arcs_distribution_n%s.png"%OBJ_NUM)
-        # plt.scatter([Points[i][0] for i in xrange(len(Points))], [Points[i][1] for i in xrange(len(Points))])
-        # plt.savefig(my_path + "/pictures/edge_arcs_n%s.png"%OBJ_NUM)
 
 
 
