@@ -72,29 +72,72 @@ class Experiments(object):
     def edge_and_DG(self):
         Iteration_time = 10
         OBJ_NUM = 5
+        # Points = []
+        edge_arcs_dict = {}
         M = np.zeros([21,21])
+        count_DG = 0
         for W_X in range(3,8):
             for W_Y in range(3,8):
                 for iter in range(Iteration_time):
                     with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl"%(W_X, W_Y, OBJ_NUM,iter)), 'rb') as input:
                            DGs = pickle.load(input)
                     for stat in DGs.values():
+                        count_DG +=1
                         M[int(stat[1]),int(stat[2])] += 1
+                        if not edge_arcs_dict.has_key(stat[2]):
+                            edge_arcs_dict[stat[2]] = []
+                        edge_arcs_dict[stat[2]].append(stat[1])
+        print "Num DGs", count_DG
         
-        A = np.zeros([1,11])
-        for i in range(11):
-            for j in range(21):
-                A[0,i] += M[j,i]
+        edge_arcs_avg_list = []
+        for key in range(0,11):
+            if edge_arcs_dict.has_key(key):
+                edge_arcs_avg_list.append(np.average(edge_arcs_dict[key]))
+            else:
+                edge_arcs_avg_list.append(0)
+
+        edge_arcs_std_list = []
+        for key in range(0,11):
+            if edge_arcs_dict.has_key(key):
+                edge_arcs_std_list.append(np.std(edge_arcs_dict[key]))
+            else:
+                edge_arcs_std_list.append(0)
+        
+        # A = np.zeros([1,11])
+        # for i in range(11):
+        #     for j in range(21):
+        #         A[0,i] += M[j,i]
 
         width = 0.2
         fig, ax = plt.subplots()
+        # ax2 = ax.twinx()
 
-        p0 = ax.bar([x for x in range(11)], A[0,:].T, width)
+        p0 = ax.bar(range(0,11), edge_arcs_avg_list, width,label='edge_num_avg')
+        p1 = ax.bar(range(0,11), edge_arcs_std_list, width, bottom = edge_arcs_avg_list,label='edge_num_std')
+
+        # p0 = ax.bar([x for x in range(11)], A[0,:].T, width)
+
+        # fig = plt.figure()
+        # ax = fig.gca(projection='3d')
+
+        # X = np.arange(0,21,1)
+        # Y = np.arange(0,21,1)
+
+        # X, Y = np.meshgrid(X, Y)
+
+        # print M
+
+        # surf = ax.plot_surface(X,Y,M, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+        
+        # # Add a color bar which maps values to colors.
+        # fig.colorbar(surf, shrink=0.5, aspect=5)
+        plt.legend()
         plt.xlabel("Minimum Feedback Arcs")
-        plt.ylabel("Num")
-        plt.savefig(my_path + "/pictures/arcs_distribution_n%s.png"%OBJ_NUM)
-
-
+        plt.ylabel("Corresponding Edges")
+        plt.savefig(my_path + "/pictures/edge_arcs_n%s.png"%OBJ_NUM)
+        plt.show()
+        # plt.scatter([Points[i][0] for i in xrange(len(Points))], [Points[i][1] for i in xrange(len(Points))])
+        # plt.savefig(my_path + "/pictures/edge_arcs_n%s.png"%OBJ_NUM)
 
 class DG_Space(object):
     def __init__(self, path_dict):
