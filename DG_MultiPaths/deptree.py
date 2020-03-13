@@ -75,20 +75,22 @@ def basicSearch(tree, start, goal):
     Perform basic search
     '''
     path = []
-    if len(tree) > 0:
-        backtrace = {start: start}
-        explore = deque([start])
-        while goal not in backtrace:
+    backtrace = {start: start}
+    explore = deque([start])
+    while goal not in backtrace:
+        try:
             p = explore.pop()
-            for c in tree[p]:
-                if c not in backtrace:
-                    backtrace[c] = p
-                    explore.append(c)
+        except Exception:
+            return []
+        for c in tree[p]:
+            if c not in backtrace:
+                backtrace[c] = p
+                explore.append(c)
 
-        path.append(goal)
-        while backtrace[path[-1]] != path[-1]:
-            path.append(backtrace[path[-1]])
-        path.reverse()
+    path.append(goal)
+    while backtrace[path[-1]] != path[-1]:
+        path.append(backtrace[path[-1]])
+    path.reverse()
 
     return path
 
@@ -397,14 +399,16 @@ def depSearch(paths, objs, start, goal):
 
 def main(numObjs, display, displayMore, HEIGHT, WIDTH):
     # Read data and parse polygons
-    DIAG = 2
+    DIAG = 100
 
     points = []
     shapes = []
     objects = []
     staticObs = []
+    # obj_clear = []
     for i in range(numObjs):
         polygon = np.array([[0, 0], [1, -1], [2, 0], [1, 1]]) * DIAG
+        # polygon = np.array([[0, 0.1], [1, 0], [1.1, 1.1], [0.1, 1]]) * DIAG
         # for p in range(0, len(xys)):
         #     xy = xys[p].split(',')
         #     polygon.append((float(xy[0]), float(xy[1])))
@@ -419,7 +423,7 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH):
                 )
                 isfree = isCollisionFree(polygon, point, objects)  # [:len(objects) - i])
             points.append(point)
-            objects.append(polygon + point)
+            objects.append([tuple(x) for x in (polygon + point)])
 
     staticObs.append(
         [
@@ -454,27 +458,47 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH):
 
         cspace = configuration_space()
         cspace.fromParams(
-            HEIGHT, WIDTH, [
-                [tuple(2 * (p - obs[0] - [DIAG, 0]) + obs[0])
-                 for p in obs]
-                for obs in obstacles[:-2]
-            ], tuple(points[indStart] + 0 * np.array([0.5, 0.5])),
-            tuple(points[indGoal] + 0 * np.array([0.5, 0.5]))
+            # HEIGHT, WIDTH, [
+            #     [tuple(2 * (p - obs[0] - [DIAG, 0]) + obs[0])
+            #      for p in obs]
+            #     for obs in obstacles[:-2]
+            # ], tuple(points[indStart] + 0 * np.array([0.5, 0.5])),
+            # tuple(points[indGoal] + 0 * np.array([0.5, 0.5]))
+            HEIGHT,
+            WIDTH,
+            obstacles[:-2],
+            tuple(points[indStart]),
+            tuple(points[indGoal])
         )
+        # cspace.boundary = [
+        #     (0, DIAG / 2), (WIDTH - DIAG, DIAG / 2), (WIDTH - DIAG, HEIGHT - DIAG / 2),
+        #     (0, HEIGHT - DIAG / 2)
+        # ]
         planner = VerticalCellDecomposition(cspace)
+
+        planner.construct_graph(
+            lambda edge: isCollisionFree(shapes[indStart // 2], edge, obstacles[:-2])
+        )
 
         if displayMore:
             # drawProblem(HEIGHT, WIDTH, obstacles, robotStart, robotGoal)
             planner.plot_vcd()
+            plt.show()
 
-        planner.construct_graph()
         # path, path_idx = planner.search(displayMore)
+        # print(path, path_idx)
 
         # nodes, adjListMap, path = RRT(
         #     HEIGHT, WIDTH, shapes[indStart // 2], obstacles, points[indStart], points[indGoal]
         # )
         nodes = planner.roadmap.vertices_dict
         adjListMap = planner.roadmap.adjacency_dict
+
+        if displayMore:
+            displayRRTandPath(
+                HEIGHT, WIDTH, nodes, adjListMap, [], robotStart, robotGoal, obstacles
+            )
+
         path = basicSearch(adjListMap, 0, 1)
 
         paths[(indStart, indGoal)] = (nodes, adjListMap, path)

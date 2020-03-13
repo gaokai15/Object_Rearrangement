@@ -42,7 +42,7 @@ def on_polygon(x, y, polygon):
     pair_vertices = zip(polygon, polygon[1:] + polygon[:1])
     for item in pair_vertices:
         if abs(distance(item[0], item[1]) -
-               (distance(item[0], (x, y)) + distance((x, y), item[1]))) < 0.1:
+               (distance(item[0], (x, y)) + distance((x, y), item[1]))) < 0.01:
             return True
     return False
 

@@ -115,8 +115,14 @@ class VerticalCellDecomposition:
         return []
 
     def region_disection(self):
+        # LEN = 1
+        # for k in range(LEN):
         maxY = self.cspace.boundary[2][1]
         minY = self.cspace.boundary[0][1]
+
+        # diff = (maxY - minY) / LEN
+        # minY += k * diff
+        # maxY -= (LEN - 1 - k) * diff
 
         self.polygon_vertices = sorted(self.polygon_vertices, key=lambda x: x[0])
 
@@ -188,7 +194,7 @@ class VerticalCellDecomposition:
 
             self.roadmap.vertices_dict[i + 2] = [c_x, c_y]
 
-    def construct_graph(self):
+    def construct_graph(self, collides=None):
         self.vertical_lines()
         self.region_disection()
 
@@ -204,6 +210,9 @@ class VerticalCellDecomposition:
                     if (line_intersection(graph_line, line) is not None):
                         skip = True
                         break
+
+                if not skip and collides is not None:
+                    skip = not collides(point) and not collides(centroid)
 
                 if skip:
                     continue
@@ -233,6 +242,9 @@ class VerticalCellDecomposition:
                                                                    point) != 0:
                         skip = True
                         break
+
+                if not skip and collides is not None:
+                    skip = not collides(point) and not collides(centroid)
 
                 if skip:
                     continue
@@ -268,7 +280,7 @@ class VerticalCellDecomposition:
 
         if searchResult is None:
             # print("Path could not be found!")
-            return None, None
+            return None, []
 
         final_path, final_path_idx, path_cost = searchResult
 
