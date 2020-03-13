@@ -10,12 +10,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 from util import *
-from geometry import *
 from rrtree import RRTree
-# from cells import CellMap
-
-from utils.configuration_space import *
-from VCD import VerticalCellDecomposition
+from roadmap import Roadmap
 
 
 def setupPlot(HEIGHT, WIDTH):
@@ -93,8 +89,8 @@ def basicSearch(tree, start, goal):
     return path
 
 
-def displayRRTandPath(
-    HEIGHT, WIDTH, points, adjListMap, path, robotStart=None, robotGoal=None, polygons=None
+def displayPathInGraph(
+    HEIGHT, WIDTH, points, adjListMap, path=[], robotStart=None, robotGoal=None, polygons=None
 ):
     '''
     Display the RRT and Path
@@ -112,7 +108,7 @@ def displayRRTandPath(
             ax.add_patch(patch)
 
     for k, p in points.items():
-        circ = patches.Circle(p, 0.3, color="black", zorder=1)
+        circ = patches.Circle(p, 0.03, color="black", zorder=1)
         ax.add_patch(circ)
 
     for u, e in adjListMap.items():
@@ -127,65 +123,6 @@ def displayRRTandPath(
         ypts = (points[path[i - 1]][1], points[path[i]][1])
         l = Line2D(xpts, ypts, color="orange", zorder=2)
         ax.add_line(l)
-
-    plt.show()
-    return
-
-
-def displayCells(
-    HEIGHT,
-    WIDTH,
-    cells,
-    graph,
-    verts,
-    edges,
-    polygons=None,
-    robotStart=None,
-    robotGoal=None,
-    path=None
-):
-    '''
-    Display the Cells and Path
-    '''
-    _, ax = setupPlot(HEIGHT, WIDTH)
-    if robotStart is not None:
-        patch = createPolygonPatch(robotStart, 'green')
-        ax.add_patch(patch)
-    if robotGoal is not None:
-        patch = createPolygonPatch(robotGoal, 'red')
-        ax.add_patch(patch)
-    if polygons is not None:
-        for p in range(0, len(polygons)):
-            patch = createPolygonPatch(polygons[p], 'gray')
-            ax.add_patch(patch)
-
-    # for k, p in points.items():
-    #     circ = patches.Circle(p, 0.3, color="black", zorder=1)
-    #     ax.add_patch(circ)
-
-    for u, v in edges:
-        xpts = (verts[u].x, verts[v].x)
-        ypts = (verts[u].y, verts[v].y)
-        l = Line2D(xpts, ypts, color="black", zorder=1)
-        ax.add_line(l)
-
-    print(graph)
-    print([(p.x, p.y) for p in verts])
-    print(edges)
-
-    if path is not None:
-        for i in range(1, len(path)):
-            xpts = (points[path[i - 1]][0], points[path[i]][0])
-            ypts = (points[path[i - 1]][1], points[path[i]][1])
-            l = Line2D(xpts, ypts, color="orange", zorder=2)
-            ax.add_line(l)
-
-    for cell in cells:
-        for points in list(zip(cell, cell[1:] + [cell[0]])):
-            xpts = (points[0].x, points[1].x)
-            ypts = (points[0].y, points[1].y)
-            l = Line2D(xpts, ypts, color="blue", zorder=1)
-            ax.add_line(l)
 
     plt.show()
     return
@@ -208,7 +145,7 @@ def displayRoadmap(HEIGHT, WIDTH, paths, polygons=None):
             ax.add_patch(patch)
 
     # for k, p in points.items():
-    #     circ = patches.Circle(p, 0.3, color="black", zorder=1)
+    #     circ = patches.Circle(p, 0.03, color="black", zorder=1)
     #     ax.add_patch(circ)
 
     # for u, e in adjListMap.items():
@@ -225,9 +162,9 @@ def displayRoadmap(HEIGHT, WIDTH, paths, polygons=None):
             l = Line2D(xpts, ypts, color=color, zorder=2)
             ax.add_line(l)
 
-            circ = patches.Circle(points[path[i - 1]], 0.3, color=color, zorder=3)
+            circ = patches.Circle(points[path[i - 1]], 0.03, color=color, zorder=3)
             ax.add_patch(circ)
-            circ = patches.Circle(points[path[i]], 0.3, color=color, zorder=3)
+            circ = patches.Circle(points[path[i]], 0.03, color=color, zorder=3)
             ax.add_patch(circ)
 
     plt.show()
@@ -251,7 +188,7 @@ def displaySolution(HEIGHT, WIDTH, depgraph, polygons=None):
             ax.add_patch(patch)
 
     # for k, p in points.items():
-    #     circ = patches.Circle(p, 0.3, color="black", zorder=1)
+    #     circ = patches.Circle(p, 0.03, color="black", zorder=1)
     #     ax.add_patch(circ)
 
     # for u, e in adjListMap.items():
@@ -278,9 +215,9 @@ def displaySolution(HEIGHT, WIDTH, depgraph, polygons=None):
                 #     arrowprops=dict(arrowstyle="->")
                 # )
 
-                circ = patches.Circle(points[path[i - 1]], 0.3, color=color, zorder=3)
+                circ = patches.Circle(points[path[i - 1]], 0.03, color=color, zorder=3)
                 ax.add_patch(circ)
-                circ = patches.Circle(points[path[i]], 0.3, color=color, zorder=3)
+                circ = patches.Circle(points[path[i]], 0.03, color=color, zorder=3)
                 ax.add_patch(circ)
 
     plt.show()
@@ -318,6 +255,50 @@ def isCollisionFreeEdge(robot, edge, obstacles):
     return True
 
 
+def growPRMwObs(HEIGHT, WIDTH, robot, obstacles):
+    '''
+    Grow a simple PRM with collision checks
+    '''
+
+    radius = 100
+    n = 50
+    roadmap = Roadmap(HEIGHT, WIDTH, robot, obstacles, isCollisionFreeEdge, isCollisionFree)
+
+    while n > 0:
+        newPoint = roadmap.tryGrow(gamma=radius)
+        # print(n)
+        if not newPoint:
+            continue
+        n -= 1
+
+        # if iters % 10 == 0:
+        #     displayPathInGraph(
+        #         rrtree.points, rrtree.adjListMap, [], np.add(robot, newPoint),
+        #         np.add(robot, goalPoint), obstacles
+        #     )
+
+    return roadmap
+
+
+def PRM(basemap, obstacles, startPoint, goalPoint):
+    '''
+    The full PRM algorithm
+    '''
+
+    path = []
+
+    roadmap = basemap.copyBut(obstacles, isCollisionFreeEdge, None)
+    startInd = roadmap.tryGrow(tryPoint=startPoint, r=lambda y, x: x, gamma=100)
+    goalInd = roadmap.tryGrow(tryPoint=goalPoint, r=lambda y, x: x, gamma=100)
+    print(startInd, goalInd)
+
+    samples, graph = roadmap.getUndirected()
+
+    path = basicSearch(graph, startInd, goalInd)
+
+    return samples, graph, path
+
+
 def growRRTwObs(HEIGHT, WIDTH, robot, obstacles, startPoint, goalPoint):
     '''
     Grow a simple RRT with collision checks
@@ -340,7 +321,7 @@ def growRRTwObs(HEIGHT, WIDTH, robot, obstacles, startPoint, goalPoint):
         # print(newPoint)
 
         # if iters % 10 == 0:
-        #     displayRRTandPath(
+        #     displayPathInGraph(
         #         rrtree.points, rrtree.adjListMap, [], np.add(robot, newPoint),
         #         np.add(robot, goalPoint), obstacles
         #     )
@@ -362,7 +343,7 @@ def RRT(HEIGHT, WIDTH, robot, obstacles, startPoint, goalPoint):
     path = []
 
     points, tree = growRRTwObs(HEIGHT, WIDTH, robot, obstacles, startPoint, goalPoint)
-    # displayRRTandPath(points, tree, path)
+    # displayPathInGraph(points, tree, path)
     path = basicSearch(tree, 1, len(points))
 
     return points, tree, path
@@ -397,14 +378,12 @@ def depSearch(paths, objs, start, goal):
 
 def main(numObjs, display, displayMore, HEIGHT, WIDTH):
     # Read data and parse polygons
-    DIAG = 2
 
     points = []
     shapes = []
     objects = []
-    staticObs = []
     for i in range(numObjs):
-        polygon = np.array([[0, 0], [1, -1], [2, 0], [1, 1]]) * DIAG
+        polygon = np.array([[0, 0], [0.4, 0.4], [0.8, 0], [0.4, -0.4]])
         # for p in range(0, len(xys)):
         #     xy = xys[p].split(',')
         #     polygon.append((float(xy[0]), float(xy[1])))
@@ -414,21 +393,24 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH):
             isfree = False
             while not isfree:
                 point = (
-                    int(uniform(0, WIDTH - max(polygon[:, 0]))),
-                    int(uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1])))
+                    uniform(0, WIDTH - max(polygon[:, 0])),
+                    uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
                 )
                 isfree = isCollisionFree(polygon, point, objects)  # [:len(objects) - i])
             points.append(point)
             objects.append(polygon + point)
 
-    staticObs.append(
+    objects.append(
         [
-            [-1, -1], [-1, HEIGHT + 1], [WIDTH + 1, HEIGHT + 1], [WIDTH + 1, HEIGHT],
-            [0, HEIGHT], [0, -1]
+            [-0.1, -0.1], [-0.1, HEIGHT + 0.1], [WIDTH + 0.1, HEIGHT + 0.1],
+            [WIDTH + 0.1, HEIGHT], [0, HEIGHT], [0, -0.1]
         ]
     )
-    staticObs.append(
-        [[0, 0], [WIDTH, 0], [WIDTH, HEIGHT], [WIDTH + 1, HEIGHT], [WIDTH + 1, -1], [0, -1]]
+    objects.append(
+        [
+            [0, 0], [WIDTH, 0], [WIDTH, HEIGHT], [WIDTH + 0.1, HEIGHT], [WIDTH + 0.1, -0.1],
+            [0, -0.1]
+        ]
     )
 
     # print("Objects:")
@@ -437,57 +419,36 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH):
     # print()
 
     if display:
-        drawProblem(HEIGHT, WIDTH, objects + staticObs)
+        drawProblem(HEIGHT, WIDTH, objects)
 
-        # cm = CellMap(HEIGHT, WIDTH, np.array(objects).tolist())
-        # displayCells(
-        #     HEIGHT, WIDTH, cm.cells, cm.graph, cm.vertices, cm.edges, objects + staticObs
-        # )
+    basemap = growPRMwObs(HEIGHT, WIDTH, polygon, objects)
+    # print("edges: ", len(basemap.adjListMap))
+    samples, adjList = basemap.getUndirected()
+
+    displayPathInGraph(HEIGHT, WIDTH, samples, adjList, polygons=objects)
 
     paths = {}
     for indStart, indGoal in combinations(range(numObjs * 2), 2):
         obstacles = objects[:indStart] + objects[indStart + 1:indGoal] + objects[indGoal + 1:]
-        obstacles += staticObs
 
         robotStart = objects[indStart]
         robotGoal = objects[indGoal]
 
-        cspace = configuration_space()
-        cspace.fromParams(
-            HEIGHT, WIDTH, [
-                [tuple(2 * (p - obs[0] - [DIAG, 0]) + obs[0])
-                 for p in obs]
-                for obs in obstacles[:-2]
-            ], tuple(points[indStart] + 0 * np.array([0.5, 0.5])),
-            tuple(points[indGoal] + 0 * np.array([0.5, 0.5]))
-        )
-        planner = VerticalCellDecomposition(cspace)
-
         if displayMore:
-            # drawProblem(HEIGHT, WIDTH, obstacles, robotStart, robotGoal)
-            planner.plot_vcd()
+            drawProblem(HEIGHT, WIDTH, obstacles, robotStart, robotGoal)
 
-        planner.construct_graph()
-        # path, path_idx = planner.search(displayMore)
-
-        # nodes, adjListMap, path = RRT(
-        #     HEIGHT, WIDTH, shapes[indStart // 2], obstacles, points[indStart], points[indGoal]
-        # )
-        nodes = planner.roadmap.vertices_dict
-        adjListMap = planner.roadmap.adjacency_dict
-        path = basicSearch(adjListMap, 0, 1)
-
+        nodes, adjListMap, path = PRM(basemap, obstacles, points[indStart], points[indGoal])
         paths[(indStart, indGoal)] = (nodes, adjListMap, path)
         print(indStart, indGoal, path)
         # print(points[indGoal], nodes[path[-1]])
 
         if displayMore:
-            displayRRTandPath(
+            displayPathInGraph(
                 HEIGHT, WIDTH, nodes, adjListMap, path, robotStart, robotGoal, obstacles
             )
 
     if display:
-        displayRoadmap(HEIGHT, WIDTH, paths, objects + staticObs)
+        displayRoadmap(HEIGHT, WIDTH, paths, objects)
 
     # GREEDY
     depgraph = {}
@@ -505,14 +466,16 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH):
         print(indStart, deps)
 
     if display:
-        displaySolution(HEIGHT, WIDTH, depgraph, objects + staticObs)
+        displaySolution(HEIGHT, WIDTH, depgraph, objects)
 
 
 if __name__ == "__main__":
     if (len(sys.argv) < 4):
         print(
-            '''Error: deptree.py: <# objects> <height> <width>
-            [display?: (y/n)] [display more?: (y/n)]'''
+            '''
+            Error:
+            deptree.py: <# objects> <height> <width> [display?: (y/n)] [display more?: (y/n)]
+            '''
         )
         exit()
 
@@ -522,8 +485,10 @@ if __name__ == "__main__":
         WIDTH = int(sys.argv[3])
     except ValueError:
         print(
-            '''Error: deptree.py: <# objects> <height> <width>
-            [display?: (y/n)] [display more?: (y/n)]'''
+            '''
+            Error:
+            deptree.py: <# objects> <height> <width> [display?: (y/n)] [display more?: (y/n)]
+            '''
         )
         exit()
 

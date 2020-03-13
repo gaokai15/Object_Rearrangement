@@ -10,12 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 from util import *
-from geometry import *
 from rrtree import RRTree
-# from cells import CellMap
-
-from utils.configuration_space import *
-from VCD import VerticalCellDecomposition
 
 
 def setupPlot(HEIGHT, WIDTH):
@@ -112,7 +107,7 @@ def displayRRTandPath(
             ax.add_patch(patch)
 
     for k, p in points.items():
-        circ = patches.Circle(p, 0.3, color="black", zorder=1)
+        circ = patches.Circle(p, 0.03, color="black", zorder=1)
         ax.add_patch(circ)
 
     for u, e in adjListMap.items():
@@ -127,65 +122,6 @@ def displayRRTandPath(
         ypts = (points[path[i - 1]][1], points[path[i]][1])
         l = Line2D(xpts, ypts, color="orange", zorder=2)
         ax.add_line(l)
-
-    plt.show()
-    return
-
-
-def displayCells(
-    HEIGHT,
-    WIDTH,
-    cells,
-    graph,
-    verts,
-    edges,
-    polygons=None,
-    robotStart=None,
-    robotGoal=None,
-    path=None
-):
-    '''
-    Display the Cells and Path
-    '''
-    _, ax = setupPlot(HEIGHT, WIDTH)
-    if robotStart is not None:
-        patch = createPolygonPatch(robotStart, 'green')
-        ax.add_patch(patch)
-    if robotGoal is not None:
-        patch = createPolygonPatch(robotGoal, 'red')
-        ax.add_patch(patch)
-    if polygons is not None:
-        for p in range(0, len(polygons)):
-            patch = createPolygonPatch(polygons[p], 'gray')
-            ax.add_patch(patch)
-
-    # for k, p in points.items():
-    #     circ = patches.Circle(p, 0.3, color="black", zorder=1)
-    #     ax.add_patch(circ)
-
-    for u, v in edges:
-        xpts = (verts[u].x, verts[v].x)
-        ypts = (verts[u].y, verts[v].y)
-        l = Line2D(xpts, ypts, color="black", zorder=1)
-        ax.add_line(l)
-
-    print(graph)
-    print([(p.x, p.y) for p in verts])
-    print(edges)
-
-    if path is not None:
-        for i in range(1, len(path)):
-            xpts = (points[path[i - 1]][0], points[path[i]][0])
-            ypts = (points[path[i - 1]][1], points[path[i]][1])
-            l = Line2D(xpts, ypts, color="orange", zorder=2)
-            ax.add_line(l)
-
-    for cell in cells:
-        for points in list(zip(cell, cell[1:] + [cell[0]])):
-            xpts = (points[0].x, points[1].x)
-            ypts = (points[0].y, points[1].y)
-            l = Line2D(xpts, ypts, color="blue", zorder=1)
-            ax.add_line(l)
 
     plt.show()
     return
@@ -208,7 +144,7 @@ def displayRoadmap(HEIGHT, WIDTH, paths, polygons=None):
             ax.add_patch(patch)
 
     # for k, p in points.items():
-    #     circ = patches.Circle(p, 0.3, color="black", zorder=1)
+    #     circ = patches.Circle(p, 0.03, color="black", zorder=1)
     #     ax.add_patch(circ)
 
     # for u, e in adjListMap.items():
@@ -225,9 +161,9 @@ def displayRoadmap(HEIGHT, WIDTH, paths, polygons=None):
             l = Line2D(xpts, ypts, color=color, zorder=2)
             ax.add_line(l)
 
-            circ = patches.Circle(points[path[i - 1]], 0.3, color=color, zorder=3)
+            circ = patches.Circle(points[path[i - 1]], 0.03, color=color, zorder=3)
             ax.add_patch(circ)
-            circ = patches.Circle(points[path[i]], 0.3, color=color, zorder=3)
+            circ = patches.Circle(points[path[i]], 0.03, color=color, zorder=3)
             ax.add_patch(circ)
 
     plt.show()
@@ -251,7 +187,7 @@ def displaySolution(HEIGHT, WIDTH, depgraph, polygons=None):
             ax.add_patch(patch)
 
     # for k, p in points.items():
-    #     circ = patches.Circle(p, 0.3, color="black", zorder=1)
+    #     circ = patches.Circle(p, 0.03, color="black", zorder=1)
     #     ax.add_patch(circ)
 
     # for u, e in adjListMap.items():
@@ -278,9 +214,9 @@ def displaySolution(HEIGHT, WIDTH, depgraph, polygons=None):
                 #     arrowprops=dict(arrowstyle="->")
                 # )
 
-                circ = patches.Circle(points[path[i - 1]], 0.3, color=color, zorder=3)
+                circ = patches.Circle(points[path[i - 1]], 0.03, color=color, zorder=3)
                 ax.add_patch(circ)
-                circ = patches.Circle(points[path[i]], 0.3, color=color, zorder=3)
+                circ = patches.Circle(points[path[i]], 0.03, color=color, zorder=3)
                 ax.add_patch(circ)
 
     plt.show()
@@ -397,14 +333,13 @@ def depSearch(paths, objs, start, goal):
 
 def main(numObjs, display, displayMore, HEIGHT, WIDTH):
     # Read data and parse polygons
-    DIAG = 2
 
     points = []
     shapes = []
     objects = []
     staticObs = []
     for i in range(numObjs):
-        polygon = np.array([[0, 0], [1, -1], [2, 0], [1, 1]]) * DIAG
+        polygon = np.array([[0, 0], [0, 0.4], [0.4, 0.4], [0.4, 0]])
         # for p in range(0, len(xys)):
         #     xy = xys[p].split(',')
         #     polygon.append((float(xy[0]), float(xy[1])))
@@ -414,8 +349,8 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH):
             isfree = False
             while not isfree:
                 point = (
-                    int(uniform(0, WIDTH - max(polygon[:, 0]))),
-                    int(uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1])))
+                    uniform(0, WIDTH - max(polygon[:, 0])),
+                    uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
                 )
                 isfree = isCollisionFree(polygon, point, objects)  # [:len(objects) - i])
             points.append(point)
@@ -423,12 +358,15 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH):
 
     staticObs.append(
         [
-            [-1, -1], [-1, HEIGHT + 1], [WIDTH + 1, HEIGHT + 1], [WIDTH + 1, HEIGHT],
-            [0, HEIGHT], [0, -1]
+            [-0.1, -0.1], [-0.1, HEIGHT + 0.1], [WIDTH + 0.1, HEIGHT + 0.1],
+            [WIDTH + 0.1, HEIGHT], [0, HEIGHT], [0, -0.1]
         ]
     )
     staticObs.append(
-        [[0, 0], [WIDTH, 0], [WIDTH, HEIGHT], [WIDTH + 1, HEIGHT], [WIDTH + 1, -1], [0, -1]]
+        [
+            [0, 0], [WIDTH, 0], [WIDTH, HEIGHT], [WIDTH + 0.1, HEIGHT], [WIDTH + 0.1, -0.1],
+            [0, -0.1]
+        ]
     )
 
     # print("Objects:")
@@ -439,11 +377,6 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH):
     if display:
         drawProblem(HEIGHT, WIDTH, objects + staticObs)
 
-        # cm = CellMap(HEIGHT, WIDTH, np.array(objects).tolist())
-        # displayCells(
-        #     HEIGHT, WIDTH, cm.cells, cm.graph, cm.vertices, cm.edges, objects + staticObs
-        # )
-
     paths = {}
     for indStart, indGoal in combinations(range(numObjs * 2), 2):
         obstacles = objects[:indStart] + objects[indStart + 1:indGoal] + objects[indGoal + 1:]
@@ -452,31 +385,12 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH):
         robotStart = objects[indStart]
         robotGoal = objects[indGoal]
 
-        cspace = configuration_space()
-        cspace.fromParams(
-            HEIGHT, WIDTH, [
-                [tuple(2 * (p - obs[0] - [DIAG, 0]) + obs[0])
-                 for p in obs]
-                for obs in obstacles[:-2]
-            ], tuple(points[indStart] + 0 * np.array([0.5, 0.5])),
-            tuple(points[indGoal] + 0 * np.array([0.5, 0.5]))
-        )
-        planner = VerticalCellDecomposition(cspace)
-
         if displayMore:
-            # drawProblem(HEIGHT, WIDTH, obstacles, robotStart, robotGoal)
-            planner.plot_vcd()
+            drawProblem(HEIGHT, WIDTH, obstacles, robotStart, robotGoal)
 
-        planner.construct_graph()
-        # path, path_idx = planner.search(displayMore)
-
-        # nodes, adjListMap, path = RRT(
-        #     HEIGHT, WIDTH, shapes[indStart // 2], obstacles, points[indStart], points[indGoal]
-        # )
-        nodes = planner.roadmap.vertices_dict
-        adjListMap = planner.roadmap.adjacency_dict
-        path = basicSearch(adjListMap, 0, 1)
-
+        nodes, adjListMap, path = RRT(
+            HEIGHT, WIDTH, shapes[indStart // 2], obstacles, points[indStart], points[indGoal]
+        )
         paths[(indStart, indGoal)] = (nodes, adjListMap, path)
         print(indStart, indGoal, path)
         # print(points[indGoal], nodes[path[-1]])
@@ -511,8 +425,7 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH):
 if __name__ == "__main__":
     if (len(sys.argv) < 4):
         print(
-            '''Error: deptree.py: <# objects> <height> <width>
-            [display?: (y/n)] [display more?: (y/n)]'''
+            "Error: deptree.py: <# objects> <height> <width> [display?: (y/n)] [display more?: (y/n)]"
         )
         exit()
 
@@ -522,8 +435,7 @@ if __name__ == "__main__":
         WIDTH = int(sys.argv[3])
     except ValueError:
         print(
-            '''Error: deptree.py: <# objects> <height> <width>
-            [display?: (y/n)] [display more?: (y/n)]'''
+            "Error: deptree.py: <# objects> <height> <width> [display?: (y/n)] [display more?: (y/n)]"
         )
         exit()
 
