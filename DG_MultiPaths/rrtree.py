@@ -1,3 +1,4 @@
+from __future__ import print_function
 from random import uniform  # , choice
 from util import *
 
