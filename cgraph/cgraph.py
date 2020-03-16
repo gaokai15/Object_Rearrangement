@@ -1,8 +1,10 @@
 import sys
+from time import time
 import numpy as np
 from collections import deque
 from itertools import combinations
 from random import uniform  # , randint
+import cPickle as pickle
 
 from matplotlib.lines import Line2D
 from matplotlib.path import Path
@@ -11,6 +13,7 @@ import matplotlib.patches as patches
 
 from util import *
 import visilibity as vis
+from DisjointSets import DS
 
 
 def setupPlot(HEIGHT, WIDTH):
@@ -111,9 +114,10 @@ def drawConGraph(HEIGHT, WIDTH, paths, polygons=None):
         # print(path)
         c += 1 / len(paths)
         color = patches.colors.hsv_to_rgb((c, 1, 1))
-        pathx = [p.x() for p in path.path()]
-        pathy = [p.y() for p in path.path()]
-        plt.plot(pathx, pathy, color)
+        if path is not None:
+            pathx = [p.x() for p in path.path()]
+            pathy = [p.y() for p in path.path()]
+            plt.plot(pathx, pathy, color)
 
         # for i in range(1, len(path)):
         #     xpts = (points[path[i - 1]][0], points[path[i]][0])
@@ -184,8 +188,8 @@ def isCollisionFreeEdge(robot, edge, obstacles):
     return True
 
 
-def main(numObjs, display, displayMore, HEIGHT, WIDTH, RAD):
-    epsilon = 0.0000001
+def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
+    epsilon = 0.00000001
     # polygon = np.array([[0, 0], [1, 1], [2, 0], [1, -1]]) * RAD
     polygon = np.array([[0, 0], [0, 1], [1, 1], [1, 0]]) * RAD
     wall_pts = [
@@ -261,33 +265,50 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH, RAD):
         # minkowski_poly_obs = minkowski_poly[:indStart] + minkowski_poly[
         #     indStart + 1:indGoal] + minkowski_poly[indGoal + 1:]
 
-        i = 0
-        while i < len(minkowski_obs):
-            j = 0
-            while j < len(minkowski_obs):
-                if i == j:
-                    j += 1
-                    continue
-                try:
-                    pi = minkowski_obs[i]
-                    pj = minkowski_obs[j]
-                except IndexError:
-                    break
-                # print(i, j, pi, pj, polysCollide(pi, pj))
+        # i = 0
+        # while i < len(minkowski_obs):
+        #     j = 0
+        #     while j < len(minkowski_obs):
+        #         if i == j:
+        #             j += 1
+        #             continue
+        #         try:
+        #             pi = minkowski_obs[i]
+        #             pj = minkowski_obs[j]
+        #         except IndexError:
+        #             break
+        #         print(i, j, pi, pj, polysCollide(pi, pj))
+        #         if polysCollide(pi, pj):
+        #             pm = mergePolys(pi, pj)
+        #             print("merge: ", pm)
+        #             minkowski_obs[i] = np.array(pm)
+        #             minkowski_obs.pop(j)
+
+        #         else:
+        #             j += 1
+        #     i += 1
+
+        ds = DS(range(len(minkowski_obs)))
+        for i in range(len(minkowski_obs)):
+            for j in range(len(minkowski_obs)):
+                if i == j: continue
+                pi = minkowski_obs[i]
+                pj = minkowski_obs[j]
                 if polysCollide(pi, pj):
-                    pm = mergePolys(pi, pj)
-                    # print("merge: ", pm)
-                    minkowski_obs[i] = np.array(pm)
-                    minkowski_obs.pop(j)
-                else:
-                    j += 1
-            i += 1
+                    ds.union(i, j)
+
+        # print(ds.getSets())
+        mergemink_obs = []
+        for dset in ds.getSets():
+            pm = mergePolys([minkowski_obs[i] for i in dset], True)
+            # print(pm)
+            mergemink_obs.append(pm)
 
         minkowski_poly_obs = []
-        for pn in minkowski_obs:
-            po = vis.Polygon([vis.Point(*p) for p in pn.astype(float)])
-            print(po.is_in_standard_form())
-            print(po.is_simple())
+        for pn in mergemink_obs:
+            po = vis.Polygon([vis.Point(*p) for p in pn])  # .astype(float)])
+            # print(po.is_in_standard_form())
+            # print(po.is_simple())
             minkowski_poly_obs.append(po)
 
         robotStart = objects[indStart]
@@ -298,6 +319,12 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH, RAD):
         # print(minkowski_objs)
         env = vis.Environment([walls] + minkowski_poly_obs)
         print('Environment is valid : ', env.is_valid(epsilon))
+        if not env.is_valid(epsilon):
+            displayMore = True
+            if savefile:
+                savefile += ".env_error"
+            else:
+                savefile = "polys.pkl" + str(time) + ".env_error"
 
         start = vis.Point(*points[indStart])
         goal = vis.Point(*points[indGoal])
@@ -313,20 +340,19 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH, RAD):
                 HEIGHT,
                 WIDTH,
                 wall_mink_pts,
-                minkowski_obs,
+                mergemink_obs,
                 robotStart=pointStart,
                 robotGoal=pointGoal
             )
 
         path = env.shortest_path(start, goal, epsilon)
-
-        paths[(indStart, indGoal)] = path
         # print(indStart, indGoal, [(p.x(), p.y()) for p in path.path()])
         for p1, p2 in zip(path.path()[:-1], path.path()[1:]):
             if not isCollisionFreeEdge(polygon,
                                        ((p1.x(), p1.y()), (p2.x(), p2.y())), obstacles):
                 path = None
                 break
+        paths[(indStart, indGoal)] = path
 
         if displayMore:
             drawProblem(HEIGHT, WIDTH, wall_pts, obstacles, None, path, robotStart, robotGoal)
@@ -334,7 +360,32 @@ def main(numObjs, display, displayMore, HEIGHT, WIDTH, RAD):
     if display:
         drawConGraph(HEIGHT, WIDTH, paths, objects)
 
-    return paths
+    graph = {}
+    for uv, p in paths.items():
+        u, v = uv
+        if p is not None:
+            graph[u] = sorted(graph.get(u, []) + [v])
+            graph[v] = sorted(graph.get(v, []) + [u])
+
+    if savefile:
+        with open(savefile, 'w') as output:
+            pickle.dump(
+                (
+                    numObjs,
+                    RAD,
+                    HEIGHT,
+                    WIDTH,
+                    points,
+                    objects,
+                    # staticObs = []
+                    graph,
+                    paths,
+                ),
+                output,
+                pickle.HIGHEST_PROTOCOL
+            )
+
+    return graph, paths
     #     # GREEDY
     # depgraph = {}
     # for obj in range(numObjs):
@@ -358,7 +409,7 @@ if __name__ == "__main__":
     if (len(sys.argv) < 5):
         print(
             '''Error: deptree.py: <# objects> <height> <width> <radius>
-            [display?: (y/n)] [display more?: (y/n)]'''
+            [display?: (y/n)] [display more?: (y/n)] [save file]'''
         )
         exit()
 
@@ -370,7 +421,7 @@ if __name__ == "__main__":
     except ValueError:
         print(
             '''Error: deptree.py: <# objects> <height> <width> <radius>
-            [display?: (y/n)] [display more?: (y/n)]'''
+            [display?: (y/n)] [display more?: (y/n)] [save file]'''
         )
         exit()
 
@@ -382,4 +433,8 @@ if __name__ == "__main__":
     if (len(sys.argv) > 6):
         displayMore = sys.argv[6] not in ('n', 'N')
 
-    main(numObjs, display, displayMore, HEIGHT, WIDTH, RAD)
+    savefile = False
+    if (len(sys.argv) > 7):
+        savefile = sys.argv[7]
+
+    genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)

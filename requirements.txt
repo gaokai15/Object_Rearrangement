@@ -1,0 +1,5 @@
+gurobipy
+numpy
+Polygon2
+visilibity
+matplotlib

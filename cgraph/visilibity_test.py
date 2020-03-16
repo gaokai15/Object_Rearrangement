@@ -93,6 +93,18 @@ def testVisilibity():
     # Create the hole polygon
     hole1 = vis.Polygon([p1, p2, p3, p4])
 
+    p1 = vis.Point(310, 310)
+    p2 = vis.Point(310, 490)
+    p3 = vis.Point(390, 490)
+    p4 = vis.Point(390, 310)
+
+    # Load the values of the hole polygon in order to draw it later
+    hole0_x = [p1.x(), p2.x(), p3.x(), p4.x(), p1.x()]
+    hole0_y = [p1.y(), p2.y(), p3.y(), p4.y(), p1.y()]
+
+    # Create the hole polygon
+    hole0 = vis.Polygon([p4, p3, p2, p1])
+
     # Check if the hole is in standard form
     print('Hole in standard form: ', hole1.is_in_standard_form())
 
@@ -149,7 +161,7 @@ def testVisilibity():
 
     # Create environment, wall will be the outer boundary because
     # is the first polygon in the list. The other polygons will be holes
-    env = vis.Environment([walls, hole, hole2, hole1, hole3, hole4])
+    env = vis.Environment([walls, hole, hole2, hole1, hole3, hole4, hole0])
 
     # Check if the environment is valid
     print('Environment is valid : ', env.is_valid(epsilon))
@@ -239,6 +251,8 @@ def testVisilibity():
     # Plot the hole polygon with red color
     p.plot(hole4_x, hole4_y, 'r')
 
+    p.plot(hole0_x, hole0_y, 'r')
+
     # Example of a cone-shape polygon
     cone_point = vis.Point(440, 420)
     cone = create_cone([cone_point.x(), cone_point.y()], 150, 0, 45, 3)
@@ -251,7 +265,7 @@ def testVisilibity():
     # Show the plot
     p.show()
 
-    return shortest_path, hole
+    return shortest_path, hole0
 
 
 def save_print(polygon):
