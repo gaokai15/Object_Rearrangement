@@ -1,14 +1,14 @@
 import sys
+import json
 from time import time
-import numpy as np
+from random import uniform  # , randint
 from collections import deque
 from itertools import combinations
-from random import uniform  # , randint
-import cPickle as pickle
 
-from matplotlib.lines import Line2D
-from matplotlib.path import Path
+import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.path import Path
+from matplotlib.lines import Line2D
 import matplotlib.patches as patches
 
 from util import *
@@ -73,8 +73,8 @@ def drawProblem(
                 ax.add_line(l)
 
     if path is not None:
-        pathx = [p.x() for p in path.path()]
-        pathy = [p.y() for p in path.path()]
+        pathx = [p[0] for p in path]
+        pathy = [p[1] for p in path]
         plt.plot(pathx, pathy, 'blue')
 
     plt.show()
@@ -115,8 +115,8 @@ def drawConGraph(HEIGHT, WIDTH, paths, polygons=None):
         c += 1 / len(paths)
         color = patches.colors.hsv_to_rgb((c, 1, 1))
         if path is not None:
-            pathx = [p.x() for p in path.path()]
-            pathy = [p.y() for p in path.path()]
+            pathx = [p[0] for p in path]
+            pathy = [p[1] for p in path]
             plt.plot(pathx, pathy, color)
 
         # for i in range(1, len(path)):
@@ -223,8 +223,8 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
             isfree = False
             while not isfree:
                 point = (
-                    int(uniform(0, WIDTH - max(polygon[:, 0]))),
-                    int(uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1])))
+                    uniform(0, WIDTH - max(polygon[:, 0])),
+                    uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
                 )
                 isfree = isCollisionFree(polygon, point, objects)  # [:len(objects) - i])
             points.append(point)
@@ -324,7 +324,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
             if savefile:
                 savefile += ".env_error"
             else:
-                savefile = "polys.pkl" + str(time) + ".env_error"
+                savefile = "polys.json" + str(time) + ".env_error"
 
         start = vis.Point(*points[indStart])
         goal = vis.Point(*points[indGoal])
@@ -352,7 +352,10 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
                                        ((p1.x(), p1.y()), (p2.x(), p2.y())), obstacles):
                 path = None
                 break
-        paths[(indStart, indGoal)] = path
+
+        if path is not None:
+            path = [(p.x(), p.y()) for p in path.path()]
+            paths[(indStart, indGoal)] = path
 
         if displayMore:
             drawProblem(HEIGHT, WIDTH, wall_pts, obstacles, None, path, robotStart, robotGoal)
@@ -369,23 +372,23 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
 
     if savefile:
         with open(savefile, 'w') as output:
-            pickle.dump(
-                (
-                    numObjs,
-                    RAD,
-                    HEIGHT,
-                    WIDTH,
-                    points,
-                    objects,
+            json.dump(
+                {
+                    'numObjs': numObjs,
+                    'RAD': RAD,
+                    'HEIGHT': HEIGHT,
+                    'WIDTH': WIDTH,
+                    'points': points,
+                    'objects': np.array(objects).tolist(),
                     # staticObs = []
-                    graph,
-                    paths,
-                ),
+                    'graph': graph,
+                    'path': {str(k): v
+                             for k, v in paths.items()},
+                },
                 output,
-                pickle.HIGHEST_PROTOCOL
             )
 
-    return graph, paths
+            return graph, paths
     #     # GREEDY
     # depgraph = {}
     # for obj in range(numObjs):
