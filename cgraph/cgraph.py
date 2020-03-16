@@ -388,7 +388,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
                 output,
             )
 
-            return graph, paths
+    return graph, paths
     #     # GREEDY
     # depgraph = {}
     # for obj in range(numObjs):
