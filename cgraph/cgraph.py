@@ -318,7 +318,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
 
         # print(minkowski_objs)
         env = vis.Environment([walls] + minkowski_poly_obs)
-        print('Environment is valid : ', env.is_valid(epsilon))
+        # print('Environment is valid : ', env.is_valid(epsilon))
         if not env.is_valid(epsilon):
             displayMore = True
             if savefile:

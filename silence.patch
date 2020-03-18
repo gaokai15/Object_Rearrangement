@@ -1,0 +1,12 @@
+diff -ruN a/visilibity.cpp b/visilibity.cpp
+--- a/visilibity.cpp	2020-03-18 00:14:44.198239672 -0400
++++ b/visilibity.cpp	2020-03-18 00:17:16.174726215 -0400
+@@ -2133,7 +2133,7 @@
+   {
+     //true  => data printed to terminal
+     //false => silent
+-    const bool PRINTING_DEBUG_DATA = true;
++    const bool PRINTING_DEBUG_DATA = false;
+ 
+     //For now, just find one shortest path, later change this to a
+     //vector to find all shortest paths (w/in epsilon).
