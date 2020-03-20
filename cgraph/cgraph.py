@@ -2,7 +2,6 @@ import sys
 import json
 from time import time
 from random import uniform
-from collections import deque
 from itertools import combinations
 
 import numpy as np
@@ -99,6 +98,15 @@ def drawConGraph(HEIGHT, WIDTH, paths, polygons=None):
 
     plt.show()
     return
+
+
+def isCollisionFree(robot, point, obstacles):
+    robotAt = np.add(point, robot)
+    for poly in obstacles:
+        if polysCollide(poly, robotAt):
+            return False
+
+    return True
 
 
 def isEdgeCollisionFree(robot, edge, obstacles):
