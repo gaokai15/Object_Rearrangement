@@ -236,9 +236,9 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
         start.snap_to_boundary_of(env, epsilon)
         start.snap_to_vertices_of(env, epsilon)
 
-        t0 = time()
+        # t0 = time()
         path = env.shortest_path(start, goal, epsilon)
-        print(time() - t0)
+        # print(time() - t0)
 
         collides = False
         # for p1, p2 in zip(path.path()[:-1], path.path()[1:]):
