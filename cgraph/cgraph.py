@@ -1,19 +1,19 @@
 import sys
 import json
 from time import time
-from random import uniform  # , randint
+from random import uniform
 from collections import deque
 from itertools import combinations
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
-from matplotlib.lines import Line2D
 import matplotlib.patches as patches
 
 from util import *
 import visilibity as vis
-from DisjointSets import DS
+import Polygon as pn
+import Polygon.Utils as pu
 
 
 def setupPlot(HEIGHT, WIDTH):
@@ -27,12 +27,11 @@ def setupPlot(HEIGHT, WIDTH):
     return fig, ax
 
 
-def createPolygonPatch(polygon, color):
+def createPolygonPatch(polygon, color, zorder=1):
     verts = []
     codes = []
     for v in range(0, len(polygon)):
-        xy = polygon[v]
-        verts.append((xy[0], xy[1]))
+        verts.append(polygon[v])
         if v == 0:
             codes.append(Path.MOVETO)
         else:
@@ -40,177 +39,86 @@ def createPolygonPatch(polygon, color):
     verts.append(verts[0])
     codes.append(Path.CLOSEPOLY)
     path = Path(verts, codes)
-    patch = patches.PathPatch(path, facecolor=color, lw=1)
-
+    patch = patches.PathPatch(path, facecolor=color, lw=1, zorder=zorder)
     return patch
 
 
-def drawProblem(
-    HEIGHT, WIDTH, wall, polygons, graph=None, path=None, robotStart=None, robotGoal=None
-):
+def drawProblem(HEIGHT, WIDTH, wall, polygons, path=None, robotStart=None, robotGoal=None):
     _, ax = setupPlot(HEIGHT, WIDTH)
     if robotStart is not None:
-        patch = createPolygonPatch(robotStart, 'green')
+        patch = createPolygonPatch(robotStart, 'green', zorder=3)
         ax.add_patch(patch)
     if robotGoal is not None:
-        patch = createPolygonPatch(robotGoal, 'red')
+        patch = createPolygonPatch(robotGoal, 'red', zorder=3)
         ax.add_patch(patch)
 
-    wallx = [p.x() for p in wall + [wall[0]]]
-    wally = [p.y() for p in wall + [wall[0]]]
+    walls = pu.pointList(wall)
+    wallx = [p[0] for p in walls + [walls[0]]]
+    wally = [p[1] for p in walls + [walls[0]]]
     plt.plot(wallx, wally, 'blue')
 
-    for p in range(0, len(polygons)):
-        patch = createPolygonPatch(polygons[p], 'gray')
+    for poly in polygons:
+        patch = createPolygonPatch(pu.pointList(poly), 'gray')
         ax.add_patch(patch)
 
-    if graph is not None:
-        for u, e in graph:
-            for v in e:
-                xpts = (u.x, v.x)
-                ypts = (u.y, v.y)
-                l = Line2D(xpts, ypts, color="black", zorder=1)
-                ax.add_line(l)
-
     if path is not None:
-        pathx = [p[0] for p in path]
-        pathy = [p[1] for p in path]
-        plt.plot(pathx, pathy, 'blue')
+        pts, color = path
+        pathx = [p[0] for p in pts]
+        pathy = [p[1] for p in pts]
+        plt.plot(pathx, pathy, color)
 
     plt.show()
 
 
-def basicSearch(tree, start, goal):
-    path = []
-    backtrace = {start: start}
-    explore = deque([start])
-    while goal not in backtrace:
-        try:
-            p = explore.pop()
-        except Exception:
-            return []
-        for c in tree[p]:
-            if c not in backtrace:
-                backtrace[c] = p
-                explore.append(c)
-
-    path.append(goal)
-    while backtrace[path[-1]] != path[-1]:
-        path.append(backtrace[path[-1]])
-    path.reverse()
-
-    return path
-
-
 def drawConGraph(HEIGHT, WIDTH, paths, polygons=None):
     _, ax = setupPlot(HEIGHT, WIDTH)
+    scale = max(HEIGHT, WIDTH)
     if polygons is not None:
+        c = 0
         for p in range(0, len(polygons)):
-            patch = createPolygonPatch(polygons[p], 'gray')
+            if p % 2 == 0:
+                c += 2.0 / len(polygons)
+            color = patches.colors.hsv_to_rgb((c, 1, 1))
+            patch = createPolygonPatch(pu.pointList(polygons[p]), color)
             ax.add_patch(patch)
 
-    c = 0
     for path in paths.values():
-        # print(path)
-        c += 1 / len(paths)
-        color = patches.colors.hsv_to_rgb((c, 1, 1))
-        if path is not None:
-            pathx = [p[0] for p in path]
-            pathy = [p[1] for p in path]
-            plt.plot(pathx, pathy, color)
+        color = 'black'
+        for i in range(1, len(path)):
+            ax.annotate(
+                "",
+                xy=path[i],
+                xytext=path[i - 1],
+                arrowprops=dict(arrowstyle="-", color=color)
+            )
 
-        # for i in range(1, len(path)):
-        #     xpts = (points[path[i - 1]][0], points[path[i]][0])
-        #     ypts = (points[path[i - 1]][1], points[path[i]][1])
-        #     l = Line2D(xpts, ypts, color=color, zorder=2)
-        #     ax.add_line(l)
-        #     # ax.annotate(
-        #     #     "",
-        #     #     xy=points[path[i]],
-        #     #     xytext=points[path[i - 1]],
-        #     #     arrowprops=dict(arrowstyle="->")
-        #     # )
-
-        #     circ = patches.Circle(points[path[i - 1]], 0.3, color=color, zorder=3)
-        #     ax.add_patch(circ)
-        #     circ = patches.Circle(points[path[i]], 0.3, color=color, zorder=3)
-        #     ax.add_patch(circ)
+            circ = patches.Circle(path[i - 1], scale / 200.0, color=color, zorder=3)
+            ax.add_patch(circ)
+            circ = patches.Circle(path[i], scale / 200.0, color=color, zorder=3)
+            ax.add_patch(circ)
 
     plt.show()
     return
 
 
-def depSearch(paths, objs, start, goal):
-    deps = []
-    if len(paths) > 0:
-        backtrace = {start: start}
-        explore = deque([start])
-        while goal not in backtrace:
-            try:
-                p = explore.pop()
-            except Exception:
-                return []
-            for c in range(objs):
-                if p != c:
-                    if len(paths[tuple(sorted((p, c)))][2]) > 0:
-                        # print("isedge", sorted((p, c)), len(paths[tuple(sorted((p, c)))]))
-                        if c not in backtrace:
-                            backtrace[c] = p
-                            explore.append(c)
-                            # print("added", explore, backtrace)
-
-        deps.append(goal)
-        while backtrace[deps[-1]] != deps[-1]:
-            deps.append(backtrace[deps[-1]])
-        deps.reverse()
-
-    return deps
-
-
-def isCollisionFree(robot, point, obstacles):
-    robotAt = np.add(point, robot)
+def isEdgeCollisionFree(robot, edge, obstacles):
+    cpoly1 = pn.Polygon(np.add(robot, edge[0]))
+    cpoly2 = pn.Polygon(np.add(robot, edge[1]))
+    rpoly = pu.pointList(pu.convexHull(cpoly1 + cpoly2))
     for poly in obstacles:
-        if polysCollide(poly, robotAt):
+        if polysCollide(poly, rpoly):
             return False
 
     return True
 
 
-def isCollisionFreeEdge(robot, edge, obstacles):
-    for poly in obstacles:
-        for i in range(len(robot) - 1):
-            roboPart = [robot[i], robot[i], robot[i + 1], robot[i + 1]]
-            roboMask = [edge[0], edge[1], edge[1], edge[0]]
-            robotEdge = np.add(roboPart, roboMask)
-            if polysCollide(poly, robotEdge):
-                return False
-
-    return True
-
-
 def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
-    epsilon = 0.00000001
-    # polygon = np.array([[0, 0], [1, 1], [2, 0], [1, -1]]) * RAD
-    polygon = np.array([[0, 0], [0, 1], [1, 1], [1, 0]]) * RAD
-    wall_pts = [
-        vis.Point(0, 0),
-        vis.Point(WIDTH, 0),
-        vis.Point(WIDTH, HEIGHT),
-        vis.Point(0, HEIGHT)
-    ]
-    wall_mink_pts = [
-        vis.Point(0, 0),
-        vis.Point(WIDTH - RAD, 0),
-        vis.Point(WIDTH - RAD, HEIGHT - RAD),
-        vis.Point(0, HEIGHT - RAD),
-    ]
-    # wall_mink_pts = [
-    #     vis.Point(0, RAD / 2),
-    #     vis.Point(WIDTH - RAD, RAD / 2),
-    #     vis.Point(WIDTH - RAD, HEIGHT - RAD / 2),
-    #     vis.Point(0, HEIGHT - RAD / 2),
-    # ]
-    walls = vis.Polygon(wall_pts)
+    epsilon = 2**-8
+    polygon = np.array(poly_disk([0, 0], RAD, 30))
+    wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
+    wall_mink = pn.Polygon(
+        [(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)]
+    )
 
     points = []
     objects = []
@@ -223,108 +131,96 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
             isfree = False
             while not isfree:
                 point = (
-                    uniform(0, WIDTH - max(polygon[:, 0])),
+                    uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
                     uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
                 )
-                isfree = isCollisionFree(polygon, point, objects)  # [:len(objects) - i])
+                isfree = isCollisionFree(
+                    polygon * (1 + np.sqrt(0.502)),
+                    point,
+                    objects  # [:len(objects) - i]
+                )
             points.append(point)
-            objects.append(polygon + point)
-            # mink_obj = 2 * (polygon - [RAD, 0]) + point
-            mink_obj = 2 * (polygon - [RAD / 2, RAD / 2]) + point
+            objects.append(pn.Polygon(polygon + point))
+            mink_obj = 2 * polygon + point
 
-            delta = epsilon * 0 + 2
-            for i in range(len(mink_obj)):
-                if mink_obj[i][0] < 0:
-                    mink_obj[i][0] = delta
-                elif mink_obj[i][0] > WIDTH - RAD:
-                    mink_obj[i][0] = WIDTH - RAD - delta
+            # delta = epsilon * 0
+            # for i in range(len(mink_obj)):
+            #     # if mink_obj[i][0] < 0:
+            #     #     mink_obj[i][0] = delta
+            #     # elif mink_obj[i][0] > WIDTH - RAD:
+            #     #     mink_obj[i][0] = WIDTH - RAD - delta
 
-                if mink_obj[i][1] < 0:
-                    mink_obj[i][1] = delta
-                elif mink_obj[i][1] > HEIGHT - RAD:
-                    mink_obj[i][1] = HEIGHT - RAD - delta
+            #     if mink_obj[i][0] < RAD:
+            #         mink_obj[i][0] = RAD + delta
+            #     elif mink_obj[i][0] > WIDTH - RAD:
+            #         mink_obj[i][0] = WIDTH - RAD - delta
 
-                # if mink_obj[i][1] < RAD / 2:
-                #     mink_obj[i][1] = RAD / 2 + delta
-                # elif mink_obj[i][1] > HEIGHT - RAD / 2:
-                #     mink_obj[i][1] = HEIGHT - RAD / 2 - delta
+            #     # if mink_obj[i][1] < 0:
+            #     #     mink_obj[i][1] = delta
+            #     # elif mink_obj[i][1] > HEIGHT - RAD:
+            #     #     mink_obj[i][1] = HEIGHT - RAD - delta
 
-            minkowski_objs.append(mink_obj)
-            # minkowski_poly.append(vis.Polygon([vis.Point(*p) for p in mink_obj.astype(float)])) # noqa
-            # print(minkowski_poly[-1].is_in_standard_form())
-            # print(minkowski_poly[-1].is_simple())
+            #     if mink_obj[i][1] < RAD:
+            #         mink_obj[i][1] = RAD + delta
+            #     elif mink_obj[i][1] > HEIGHT - RAD:
+            #         mink_obj[i][1] = HEIGHT - RAD - delta
+
+            minkowski_objs.append(pn.Polygon(mink_obj))
 
     if display:
         drawProblem(HEIGHT, WIDTH, wall_pts, objects)
 
     paths = {}
     for indStart, indGoal in combinations(range(numObjs * 2), 2):
-        obstacles = objects[:indStart] + objects[indStart + 1:indGoal] + objects[indGoal + 1:]
-        minkowski_obs = minkowski_objs[:indStart] + minkowski_objs[
-            indStart + 1:indGoal] + minkowski_objs[indGoal + 1:]
-        # minkowski_poly_obs = minkowski_poly[:indStart] + minkowski_poly[
-        #     indStart + 1:indGoal] + minkowski_poly[indGoal + 1:]
 
-        # i = 0
-        # while i < len(minkowski_obs):
-        #     j = 0
-        #     while j < len(minkowski_obs):
-        #         if i == j:
-        #             j += 1
-        #             continue
-        #         try:
-        #             pi = minkowski_obs[i]
-        #             pj = minkowski_obs[j]
-        #         except IndexError:
-        #             break
-        #         print(i, j, pi, pj, polysCollide(pi, pj))
-        #         if polysCollide(pi, pj):
-        #             pm = mergePolys(pi, pj)
-        #             print("merge: ", pm)
-        #             minkowski_obs[i] = np.array(pm)
-        #             minkowski_obs.pop(j)
-
-        #         else:
-        #             j += 1
-        #     i += 1
-
-        ds = DS(range(len(minkowski_obs)))
-        for i in range(len(minkowski_obs)):
-            for j in range(len(minkowski_obs)):
-                if i == j: continue
-                pi = minkowski_obs[i]
-                pj = minkowski_obs[j]
-                if polysCollide(pi, pj):
-                    ds.union(i, j)
-
-        # print(ds.getSets())
-        mergemink_obs = []
-        for dset in ds.getSets():
-            pm = mergePolys([minkowski_obs[i] for i in dset], True)
-            # print(pm)
-            mergemink_obs.append(pm)
-
-        minkowski_poly_obs = []
-        for pn in mergemink_obs:
-            po = vis.Polygon([vis.Point(*p) for p in pn])  # .astype(float)])
-            # print(po.is_in_standard_form())
-            # print(po.is_simple())
-            minkowski_poly_obs.append(po)
-
-        robotStart = objects[indStart]
-        robotGoal = objects[indGoal]
+        robotStart = pu.pointList(objects[indStart])
+        robotGoal = pu.pointList(objects[indGoal])
         pointStart = points[indStart] + polygon * 0.1
         pointGoal = points[indGoal] + polygon * 0.1
+        obstacles = objects[:indStart] + objects[indStart + 1:indGoal] + objects[indGoal + 1:]
+        minkowski_obs = minkowski_objs[:indStart]
+        minkowski_obs += minkowski_objs[indStart + 1:indGoal]
+        minkowski_obs += minkowski_objs[indGoal + 1:]
 
-        # print(minkowski_objs)
-        env = vis.Environment([walls] + minkowski_poly_obs)
-        # print('Environment is valid : ', env.is_valid(epsilon))
+        if displayMore:
+            drawProblem(HEIGHT, WIDTH, wall_pts, obstacles, None, robotStart, robotGoal)
+
+        pm = pn.Polygon(wall_mink)
+        pm -= sum([pn.Polygon(obj) for obj in minkowski_obs], pn.Polygon())
+        pm.simplify()
+
+        wall_mink_poly = None
+        env_polys = []
+        for poly in sorted([pn.Polygon(p) for p in pm], key=lambda p: p.area()):
+            if wall_mink_poly is None:
+                if poly.isInside(*points[indStart]) and poly.isInside(*points[indGoal]):
+                    wall_mink_poly = poly
+                    continue
+            env_polys.append(poly)
+
+        if wall_mink_poly is None:
+            if displayMore:
+                drawProblem(HEIGHT, WIDTH, wall_mink, env_polys, None, pointStart, pointGoal)
+            continue
+
+        if displayMore:
+            drawProblem(HEIGHT, WIDTH, wall_mink_poly, env_polys, None, pointStart, pointGoal)
+
+        env_polys.insert(0, wall_mink_poly)
+
+        env_polys_vis = []
+        for poly in filter(lambda p: wall_mink_poly.covers(p), env_polys):
+            po = vis.Polygon([vis.Point(*p) for p in reversed(pu.pointList(poly))])
+            env_polys_vis.append(po)
+
+        env = vis.Environment(env_polys_vis)
         if not env.is_valid(epsilon):
             displayMore = True
+            drawProblem(HEIGHT, WIDTH, wall_mink_poly, env_polys, None, pointStart, pointGoal)
             if savefile:
                 savefile += ".env_error"
             else:
-                savefile = "polys.json" + str(time) + ".env_error"
+                savefile = "polys.json" + str(time()) + ".env_error"
 
         start = vis.Point(*points[indStart])
         goal = vis.Point(*points[indGoal])
@@ -332,33 +228,36 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
         start.snap_to_boundary_of(env, epsilon)
         start.snap_to_vertices_of(env, epsilon)
 
-        if displayMore:
-            drawProblem(
-                HEIGHT, WIDTH, wall_pts, obstacles, robotStart=robotStart, robotGoal=robotGoal
-            )
-            drawProblem(
-                HEIGHT,
-                WIDTH,
-                wall_mink_pts,
-                mergemink_obs,
-                robotStart=pointStart,
-                robotGoal=pointGoal
-            )
-
+        t0 = time()
         path = env.shortest_path(start, goal, epsilon)
-        # print(indStart, indGoal, [(p.x(), p.y()) for p in path.path()])
-        for p1, p2 in zip(path.path()[:-1], path.path()[1:]):
-            if not isCollisionFreeEdge(polygon,
-                                       ((p1.x(), p1.y()), (p2.x(), p2.y())), obstacles):
-                path = None
-                break
+        print(time() - t0)
 
-        if path is not None:
-            path = [(p.x(), p.y()) for p in path.path()]
+        collides = False
+        # for p1, p2 in zip(path.path()[:-1], path.path()[1:]):
+        #     collides |= not isEdgeCollisionFree(
+        #         polygon, [[p1.x(), p1.y()], [p2.x(), p2.y()]], obstacles
+        #     )
+        #     if collides:
+        #         break
+        # for p in list(path.path()):
+        #     collides |= not isCollisionFree(polygon, [[p.x(), p.y()]], obstacles)
+        #     if collides:
+        #         break
+
+        path = [(p.x(), p.y()) for p in path.path()]
+        if not collides:
             paths[(indStart, indGoal)] = path
+            color = 'blue'
+        else:
+            color = 'red'
 
         if displayMore:
-            drawProblem(HEIGHT, WIDTH, wall_pts, obstacles, None, path, robotStart, robotGoal)
+            drawProblem(
+                HEIGHT, WIDTH, wall_mink_poly, env_polys, (path, color), pointStart, pointGoal
+            )
+            drawProblem(
+                HEIGHT, WIDTH, wall_pts, obstacles, (path, color), robotStart, robotGoal
+            )
 
     if display:
         drawConGraph(HEIGHT, WIDTH, paths, objects)
@@ -389,23 +288,6 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
             )
 
     return graph, paths
-    #     # GREEDY
-    # depgraph = {}
-    # for obj in range(numObjs):
-    #     indStart = obj * 2  # * randint(0, numObjs - 1)
-    #     indGoal = indStart + 1
-    #     deps = depSearch(paths, 2 * numObjs, indStart, indGoal)
-    #     depsPath = []
-    #     for i in range(1, len(deps)):
-    #         # nodes, adjListMap, path = paths[tuple(sorted([deps[i - 1], deps[i]]))]
-    #         # depsPath += [nodes[x] for x in path]
-    #         depsPath += [paths[tuple(sorted([deps[i - 1], deps[i]]))]]
-
-    #     depgraph[indStart] = (deps, depsPath)
-    #     print(indStart, deps)
-
-    # if display:
-    # drawSolution(HEIGHT, WIDTH, depgraph, objects + staticObs)
 
 
 if __name__ == "__main__":
@@ -418,7 +300,7 @@ if __name__ == "__main__":
 
     try:
         numObjs = int(sys.argv[1])
-        RAD = int(sys.argv[2])
+        RAD = float(sys.argv[2])
         HEIGHT = int(sys.argv[3])
         WIDTH = int(sys.argv[4])
     except ValueError:

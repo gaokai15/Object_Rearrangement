@@ -255,7 +255,7 @@ def testVisilibity():
 
     # Example of a cone-shape polygon
     cone_point = vis.Point(440, 420)
-    cone = create_cone([cone_point.x(), cone_point.y()], 150, 0, 45, 3)
+    cone = create_cone([cone_point.x(), cone_point.y()], 150, 0, 360, 3)
     cone_x, cone_y = save_print(cone)
     cone_x.append(cone_x[0])
     cone_y.append(cone_y[0])
