@@ -396,10 +396,6 @@ def loadCGraph(savefile, repath, display, displayMore):
                     drawProblem(
                         HEIGHT, WIDTH, wall_mink_poly, env_polys, None, pointStart, pointGoal
                     )
-                    if savefile:
-                        savefile += ".env_error"
-                    else:
-                        savefile = "polys.json" + str(time()) + ".env_error"
 
                 start = vis.Point(*points[indStart])
                 goal = vis.Point(*points[indGoal])
