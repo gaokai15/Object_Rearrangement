@@ -260,7 +260,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
 
             path = [(p.x(), p.y()) for p in path.path()]
         else:
-            path = [points[indStart], 'exists', points[indGoal]]
+            path = []
 
         if not collides:
             paths[(indStart, indGoal)] = path
@@ -295,7 +295,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
                     'HEIGHT': HEIGHT,
                     'WIDTH': WIDTH,
                     'points': points,
-                    'objects': np.array(objects).tolist(),
+                    'objects': np.array([pu.pointList(p) for p in objects]).tolist(),
                     # staticObs = []
                     'graph': graph,
                     'path': {str(k): v
@@ -511,7 +511,6 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
 #             )
 
 #     return graph, paths
-
 
 if __name__ == "__main__":
     if (len(sys.argv) < 5):
