@@ -1,3 +1,8 @@
+import os
+if __name__ == '__main__' and __package__ is None:
+    from os import sys, path
+    sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+from cgraph.cgraph import genCGraph
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import gurobipy as gp
@@ -8,37 +13,61 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
-import os
 import cPickle as pickle
 
 my_path = os.path.abspath(os.path.dirname(__file__))
 
 class Experiments(object):
-    # try to create instances in different areas and object numbers.
+    def single_instance(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
+        OBJ_NUM = numObjs
+        # RECORD is False when I'm debugging and don't want to rewrite the data
+        RECORD = False
+
+        scaler = 1000.0
+        graph, _ = genCGraph( numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
+        print "linked list", graph
+        gpd = Generate_Path_Dictionary(graph)
+        # if RECORD:
+        #     with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler),int(W_Y/scaler),OBJ_NUM,iter)), 'wb') as output:
+        #         pickle.dump((OR.start_pose, OR.goal_pose), output, pickle.HIGHEST_PROTOCOL)
+        print "Dependency dictionary(key: obj index; value: a list of paths represented with dependencies)"
+        print gpd.dependency_dict
+        DGs = DG_Space(gpd.dependency_dict)
+        if RECORD:
+            with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler), int(W_Y/scaler), OBJ_NUM,iter)), 'wb') as output:
+                pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
+        IP = feekback_arc_ILP(gpd.dependency_dict)
+        print "ILP result(the smallest size of FAS):", IP.optimum
+        print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
+        print DGs.DGs
+    
+    # try to create instances in different densities and object numbers.
     def density(self):
         OBJ_NUM = 5
         # RECORD is False when I'm debugging and don't want to rewrite the data
-        RECORD = True
+        RECORD = False
         Iteration_time = 10
 
         DG_num_matrix = np.zeros([5,5])
         min_feedback_matrix = np.zeros([5,5])
-        for W_X in range(3,8):
-            for W_Y in range(3,8):
+        scaler = 1000.0
+        for W_X in range(3 * scaler,8 * scaler, scaler):
+            for W_Y in range(3 * scaler,8 * scaler, scaler):
                 for iter in range(Iteration_time):
-                    OR = Object_Rearrangement(W_X, W_Y, OBJ_NUM)
+                    graph, _ = genCGraph( OBJ_NUM, 0.3 * scaler, W_X, W_Y, False, False, False)
+                    gpd = Generate_Path_Dictionary(graph)
+                    # if RECORD:
+                    #     with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler),int(W_Y/scaler),OBJ_NUM,iter)), 'wb') as output:
+                    #         pickle.dump((OR.start_pose, OR.goal_pose), output, pickle.HIGHEST_PROTOCOL)
+                    DGs = DG_Space(gpd.dependency_dict)
+                    DG_num_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] += len(DGs.DGs.keys())
                     if RECORD:
-                        with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl"%(W_X,W_Y,OBJ_NUM,iter)), 'wb') as output:
-                            pickle.dump((OR.start_pose, OR.goal_pose), output, pickle.HIGHEST_PROTOCOL)
-                    DGs = DG_Space(OR.dependency_dict)
-                    DG_num_matrix[W_X-3, W_Y-3] += len(DGs.DGs.keys())
-                    if RECORD:
-                        with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl"%(W_X, W_Y, OBJ_NUM,iter)), 'wb') as output:
+                        with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler), int(W_Y/scaler), OBJ_NUM,iter)), 'wb') as output:
                             pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
-                    IP = feekback_arc_ILP(OR.dependency_dict)
-                    min_feedback_matrix[W_X-3, W_Y-3] += IP.optimum
-                DG_num_matrix[W_X-3, W_Y-3] /= Iteration_time
-                min_feedback_matrix[W_X-3, W_Y-3] /= Iteration_time
+                    IP = feekback_arc_ILP(gpd.dependency_dict)
+                    min_feedback_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] += IP.optimum
+                DG_num_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] /= Iteration_time
+                min_feedback_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] /= Iteration_time
         
         fig = plt.figure()
         ax = fig.gca(projection='3d')
@@ -138,6 +167,8 @@ class Experiments(object):
         plt.show()
         # plt.scatter([Points[i][0] for i in xrange(len(Points))], [Points[i][1] for i in xrange(len(Points))])
         # plt.savefig(my_path + "/pictures/edge_arcs_n%s.png"%OBJ_NUM)
+
+
 
 class DG_Space(object):
     def __init__(self, path_dict):
@@ -277,6 +308,7 @@ class Object_Rearrangement(object):
         self.plot_instance()
         self.check_overlap()
         self.construct_roadmap()
+        # I have LL now
         self.plot_roadmap()
         self.construct_path_dict()
 
@@ -485,6 +517,74 @@ class Object_Rearrangement(object):
                     break
         return obj_location
 
+class Generate_Path_Dictionary(object):
+    #Input: the linked list of the Connectivity Graph.
+    #Output: the dependency dictionary
+    def __init__(self, graph):
+        self.path_dict = {}
+        self.dependency_dict = {}
+        self.n = len(graph)/2
+        print "the number of objects:", self.n
+        self.start_pose = range(1, self.n+1)
+        self.linked_list_conversion( graph)
+        self.construct_path_dict()
+
+    def linked_list_conversion(self, graph):
+        self.LL = {}
+        for key in graph:
+            self.LL[(key//2+1, key%2)] = []
+            for pose in graph[key]:
+                self.LL[(key//2+1, key%2)].append((pose//2+1, pose%2))
+
+    def construct_path_dict(self):
+        for key in self.start_pose:
+            self.pruning_search(key)
+            # if len(self.dependency_dict[key])==0:
+            #     print "isolation occurs, key = ", key
+            #     self.add_trivial_path(key)
+    
+    def pruning_search(self, key):
+        self.path_dict[key] = []
+        self.dependency_dict[key] = []
+        nodes = {}
+        parents = {}
+        pruning = {}
+        goal_nodes = []
+        nodes[1] = (key,0)
+        queue = [1]
+        while len(queue) >0:
+            node = queue.pop()
+            if nodes[node] == (key,1):
+                goal_nodes.append(node)
+                continue
+            if parents.has_key(node):
+                pruning_set = pruning[parents[node]]
+            else:
+                pruning_set = {nodes[node]}
+            if self.LL.has_key(nodes[node]):
+                for pose in self.LL[nodes[node]]:
+                    if pose not in pruning_set:
+                        index = len(nodes) + 1
+                        nodes[index] = pose
+                        queue.append(index)
+                        parents[index] = node
+                pruning[node] = pruning_set.union(self.LL[nodes[node]])
+        # print "parents", parents
+        # print "goal", goal_nodes
+        # print "nodes", nodes
+        for node in goal_nodes:
+            current_node = node
+            path = []
+            dependency_set = set()
+            while parents.has_key(current_node):
+                path.append(nodes[current_node])
+                dependency_set = dependency_set.union({nodes[current_node]})
+                current_node = parents[current_node]
+            path.append(current_node)
+            dependency_set = dependency_set.union({nodes[current_node]})
+            dependency_set = dependency_set.difference({(key,0),(key,1)})
+            self.path_dict[key].append(path.reverse())
+            self.dependency_dict[key].append(dependency_set)
 
 ###########################################################################################################
 
@@ -511,9 +611,45 @@ class Object_Rearrangement(object):
 #     []
 # ]
 
-# DGs = DG_Space(path_dict)
-# print DGs.DGs
-# IP = feekback_arc_ILP(path_dict)
-EXP = Experiments()
-EXP.edge_and_DG()
+
+
+if __name__ == "__main__":
+    if (len(sys.argv) < 5):
+        print(
+            '''Error: deptree.py: <# objects> <height> <width> <radius>
+            [display?: (y/n)] [display more?: (y/n)] [save file]'''
+        )
+        exit()
+
+    try:
+        numObjs = int(sys.argv[1])
+        RAD = float(sys.argv[2])
+        HEIGHT = int(sys.argv[3])
+        WIDTH = int(sys.argv[4])
+    except ValueError:
+        print(
+            '''Error: deptree.py: <# objects> <height> <width> <radius>
+            [display?: (y/n)] [display more?: (y/n)] [save file]'''
+        )
+        exit()
+
+    display = False
+    if (len(sys.argv) > 5):
+        display = sys.argv[5] not in ('n', 'N')
+
+    displayMore = False
+    if (len(sys.argv) > 6):
+        displayMore = sys.argv[6] not in ('n', 'N')
+
+    savefile = False
+    if (len(sys.argv) > 7):
+        savefile = sys.argv[7]
+
+    # DGs = DG_Space(path_dict)
+    # print DGs.DGs
+    # IP = feekback_arc_ILP(path_dict)
+    EXP = Experiments()
+    print numObjs
+    print RAD
+    EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
 
