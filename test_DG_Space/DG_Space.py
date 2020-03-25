@@ -15,6 +15,8 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import cPickle as pickle
 
+import IPython
+
 my_path = os.path.abspath(os.path.dirname(__file__))
 
 class Experiments(object):
@@ -36,10 +38,10 @@ class Experiments(object):
         if RECORD:
             with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler), int(W_Y/scaler), OBJ_NUM,iter)), 'wb') as output:
                 pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
-        IP = feekback_arc_ILP(gpd.dependency_dict)
-        print "ILP result(the smallest size of FAS):", IP.optimum
-        print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
-        print DGs.DGs
+        IP = feekback_vertex_ILP(gpd.dependency_dict)
+        # print "ILP result(the smallest size of FAS):", IP.optimum
+        # print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
+        # print DGs.DGs
     
     # try to create instances in different densities and object numbers.
     def density(self):
@@ -64,7 +66,8 @@ class Experiments(object):
                     if RECORD:
                         with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler), int(W_Y/scaler), OBJ_NUM,iter)), 'wb') as output:
                             pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
-                    IP = feekback_arc_ILP(gpd.dependency_dict)
+                    IP = feekback_vertex_ILP(gpd.dependency_dict)
+                    # IP = feekback_arc_ILP(gpd.dependency_dict)
                     min_feedback_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] += IP.optimum
                 DG_num_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] /= Iteration_time
                 min_feedback_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] /= Iteration_time
@@ -174,6 +177,7 @@ class DG_Space(object):
     def __init__(self, path_dict):
         self.path_dict = path_dict
         self.DG_space_construction()
+        print("Finish DG space construction.\n")
 
     def DG_space_construction(self):
         self.DGs = {}
@@ -181,6 +185,14 @@ class DG_Space(object):
         path_choices = [len(self.path_dict[obj])-1 for obj in objs]
         for path_set in self.choice_generator(path_choices):
             self.DGs[tuple(path_set)] = self.DG_construction( path_set)
+        print("objs: ", objs)
+        print("path choices: ", path_choices)
+        print("All dependency graphs: ")
+        self.printDGs()
+
+    def printDGs(self):
+        for path_comb in self.DGs:
+            print(str(path_comb) + ": " + str(self.DGs[path_comb]))
 
     def choice_generator(self, path_choices):
         n = len(path_choices)
@@ -212,8 +224,54 @@ class DG_Space(object):
                 else:
                     M[ objs.index(constr[0]), i] = 1
         num_constr = np.count_nonzero(M)
-        num_feedback = self.count_feedback_arc(M)
-        return [total_num_constr, num_constr, num_feedback]
+        # num_feedback = self.count_feedback_arc(M)
+        num_feedback, vertices_to_be_removed, final_order = self.count_feedback_vertex(M)
+        # return [total_num_constr, num_constr, num_feedback]
+        return [total_num_constr, num_constr, num_feedback, vertices_to_be_removed, final_order]
+
+    def count_feedback_vertex(self,M):
+        n = M.shape[0]
+        m = gp.Model()
+        ### The first step is to add the inner edges
+        for i in range(n):
+            M[i,i] = 1
+
+        m.setParam('OutputFlag', 0)
+        m.modelSense=GRB.MINIMIZE
+
+        y = m.addVars(2*n,2*n, vtype=GRB.BINARY)
+        m.setObjective(sum(sum(M[k,i]*y[k,i+n] for k in range(i)) + M[i,i]*(1-y[i,i+n]) + sum(M[l,i]*y[l,i+n] for l in range(i+1,n)) for i in range(n)))
+        for i in range(2*n):
+            for j in range(i+1, 2*n):
+                for k in range(j+1, 2*n):
+                    m.addConstr(y[i,j]+y[j,k]+y[k,i]>=1)
+                    m.addConstr(y[i,j]+y[j,k]+y[k,i]<=2)
+        for i in range(2*n):
+            for j in range(i+1, 2*n):
+                m.addConstr(y[i,j]+y[j,i]==1) 
+
+        m.optimize()
+        obj = m.getObjective()
+
+        vertices_to_be_removed = []
+        for i in range(n):
+            for j in range(n):
+                if (M[i,j]==1.0):
+                    if (i!=j) and (y[i,j+n].x==1.0):
+                        vertices_to_be_removed.append((i,j))
+                    if (i==j) and (y[i,j+n].x==0.0):
+                        vertices_to_be_removed.append((i,j))
+
+        Y = np.zeros([n,2*n])
+        for i in range(n):
+            for j in range(2*n):
+                Y[i,j] = y[i,j].x
+        obj_indexes = [i for i in range(n)]
+        order_count = np.sum(Y, axis=1)
+        final_order = [obj_index for _,obj_index in sorted(zip(order_count,obj_indexes), reverse=True)]
+
+        return obj.getValue(), vertices_to_be_removed, final_order
+
 
     def count_feedback_arc(self,M):
         n = M.shape[0]
@@ -234,12 +292,121 @@ class DG_Space(object):
         obj = m.getObjective()
         return obj.getValue()
 
-class feekback_arc_ILP(object):
+class feekback_vertex_ILP(object):
     def __init__(self, path_dict):
         self.path_dict = path_dict
-        self.optimum = self.run_ILP()
+        self.optimum = self.run_vertex_ILP()
+        # self.optimum = self.run_arc_ILP()
 
-    def run_ILP(self):
+    def run_vertex_ILP(self):
+        MOST_PATH = 0
+        for paths in self.path_dict.values():
+            MOST_PATH = max(MOST_PATH, len(paths))
+        # print "most paths", MOST_PATH
+        n = len(self.path_dict)
+        objs = self.path_dict.keys()
+        dependency_dict = {}
+        for i in range(n):
+            key = objs[i]
+            for path_index in range(len(self.path_dict[key])):
+                for constr in self.path_dict[key][path_index]:
+                    if constr[1] == 0:
+                        if (i,objs.index(constr[0])) not in dependency_dict:
+                            dependency_dict[(i,objs.index(constr[0]))] = []
+                        dependency_dict[(i,objs.index(constr[0]))].append([key, path_index])
+                    else:
+                        if not dependency_dict.has_key((objs.index(constr[0]), i)):
+                            dependency_dict[( objs.index(constr[0]), i)] = []
+                        dependency_dict[(objs.index(constr[0]), i)].append([key, path_index])
+
+        m = gp.Model()
+        
+        m.setParam('OutputFlag', 0)
+        m.modelSense=GRB.MINIMIZE
+
+        ###### Minimum feedback vertex ILP formulation ######      
+        ### variables
+        y = m.addVars(2*n,2*n, vtype=GRB.BINARY)
+        M = m.addVars(n,n, vtype=GRB.BINARY)
+        x = m.addVars(n,MOST_PATH, vtype=GRB.BINARY)
+        ### Objective function ###
+        m.setObjective(sum(sum(M[k,i]*y[k,i+n] for k in range(i)) + M[i,i]*(1-y[i,i+n]) + sum(M[l,i]*y[l,i+n] for l in range(i+1,n)) for i in range(n)))
+        ### constraints ###
+        for i in range(n):
+            m.addConstr(M[i,i]==1)
+
+        for i in range(2*n):
+            for j in range(i+1, 2*n):
+                for k in range(j+1, 2*n):
+                    m.addConstr(y[i,j]+y[j,k]+y[k,i]>=1)
+                    m.addConstr(y[i,j]+y[j,k]+y[k,i]<=2)
+        for i in range(2*n):
+            for j in range(i+1, 2*n):
+                m.addConstr(y[i,j]+y[j,i]==1)
+
+        for i in range(n):
+            for j in range(len(self.path_dict[objs[i]]), MOST_PATH):
+                m.addConstr(x[i,j]==0)
+        for i in range(n):
+            m.addConstr(sum(x[i,u] for u in range(MOST_PATH))==1)
+        m.addConstrs(M[j,k] <= sum(x[objs.index(i),u] for (i,u) in dependency_dict[(j,k)]) for (j,k) in dependency_dict.keys())
+        for (j,k) in dependency_dict.keys():
+            for (i,u) in dependency_dict[(j,k)]:
+                m.addConstr(M[j,k] >= x[objs.index(i),u]) 
+
+        m.optimize()
+        obj = m.getObjective()
+
+        print("The useful information below: ")
+
+        ### figure out what path options are chosen for each object
+        path_selection = []
+        for i in range(n):
+            for j in range(MOST_PATH):
+                if x[i,j].x >0.5:
+                    path_selection.append(j)
+        print("path_selection: ", path_selection)
+
+        ### figure out the vertices and constraints to be removed
+        vertices_to_be_removed = []
+        for i in range(n):
+            for j in range(n):
+                if (M[i,j].x==1.0):
+                    if (i!=j) and (y[i,j+n].x==1.0):
+                        vertices_to_be_removed.append((i,j))
+                    if (i==j) and (y[i,j+n].x==0.0):
+                        vertices_to_be_removed.append((i,j))
+
+        ### display the dependency graph as a matrix C
+        C = np.zeros([n,n])
+        for i in range(n):
+            for j in range(n):
+                if M[i,j].x == 1.0:
+                    if i != j:
+                        C[i,j] = 1
+        print("The dependecy graph is: ")
+        print(C)
+
+        Y = np.zeros([n,2*n])
+        for i in range(n):
+            for j in range(2*n):
+                Y[i,j] = y[i,j].x
+        obj_indexes = [i for i in range(n)]
+        order_count = np.sum(Y, axis=1)
+        final_order = [obj_index for _,obj_index in sorted(zip(order_count,obj_indexes), reverse=True)]
+        print("Final objects order: ")
+        print(final_order)
+
+        # print("order: ", y)
+        # print("\n")
+        # print("DG: " , M)
+        # print("\n")
+        print("Number of vertex to be removed: ", obj.getValue())
+        print("Vertices to be removed: ", vertices_to_be_removed)
+
+        return obj.getValue()        
+
+    def run_arc_ILP(self):
         MOST_PATH = 0
         for paths in self.path_dict.values():
             MOST_PATH = max(MOST_PATH, len(paths))
