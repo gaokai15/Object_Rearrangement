@@ -122,7 +122,7 @@ def drawMotions(HEIGHT, WIDTH, paths, polygons=None):
         color = patches.colors.hsv_to_rgb((cc, 1, 1))
         # path = paths[(2 * j, 2 * j + 1)]
         for i in range(1, len(path)):
-            rad = rads.get((path[i - 1], path[i]), -0.1) + 0.1
+            rad = rads.get((path[i - 1], path[i]), -0.2) + 0.2
             rads[(path[i - 1], path[i])] = rad
             ax.annotate(
                 "",
@@ -132,10 +132,19 @@ def drawMotions(HEIGHT, WIDTH, paths, polygons=None):
                     arrowstyle="simple", connectionstyle="arc3,rad=" + str(rad), color=color
                 )
             )
+            ax.annotate(
+                "",
+                xy=path[i],
+                xytext=path[i - 1],
+                arrowprops=dict(
+                    arrowstyle="->", connectionstyle="arc3,rad=" + str(rad), color="black"
+                )
+            )
 
-            circ = patches.Circle(path[i - 1], scale / 200.0, color=color, zorder=3)
+            pcolor = "black"
+            circ = patches.Circle(path[i - 1], scale / 200.0, color=pcolor, zorder=3)
             ax.add_patch(circ)
-            circ = patches.Circle(path[i], scale / 200.0, color=color, zorder=3)
+            circ = patches.Circle(path[i], scale / 200.0, color=pcolor, zorder=3)
             ax.add_patch(circ)
 
     plt.show()
@@ -491,7 +500,7 @@ def loadCGraph(savefile, repath, display, displayMore):
         assert (new_graph == graph)
         # graph = new_graph
 
-    return graph, paths, objects
+    return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths
 
 
 if __name__ == "__main__":

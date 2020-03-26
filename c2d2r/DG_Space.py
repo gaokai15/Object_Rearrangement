@@ -1,7 +1,7 @@
 import os
 import sys
 from collections import OrderedDict
-from cgraph import genCGraph, drawMotions
+from cgraph import genCGraph, loadCGraph, drawMotions
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import gurobipy as gp
@@ -29,6 +29,38 @@ class Experiments(object):
         graph, paths, objects = genCGraph(
             numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile
         )
+        print "linked list", graph
+        gpd = Generate_Path_Dictionary(graph)
+        # if RECORD:
+        #     with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl" %
+        #                            (int(W_X / scaler), int(W_Y / scaler), OBJ_NUM, iter)),
+        #               'wb') as output:
+        #         pickle.dump((OR.start_pose, OR.goal_pose), output, pickle.HIGHEST_PROTOCOL)
+        print "Dependency dict(key: obj index; value: list of paths as dependencies)"
+        print gpd.dependency_dict
+        DGs = DG_Space(gpd.dependency_dict)
+        if RECORD:
+            with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl" %
+                                   (int(WIDTH), int(HEIGHT), OBJ_NUM, iter)), 'wb') as output:
+                pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
+        IP = feekback_vertex_ILP(gpd.dependency_dict)
+        # print "ILP result(the smallest size of FAS):", IP.optimum
+        # print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
+        # print DGs.DGs
+        opt, ind_opt = IP.optimum
+        # print ind_opt, DGs.DGs[ind_opt]
+        path_opts = gpd.dependency_dict
+        self.drawSolution(HEIGHT, WIDTH, paths, path_opts, ind_opt, objects)
+
+    def load_instance(self, savefile, repath, display, displayMore):
+        # RECORD is False when I'm debugging and don't want to rewrite the data
+        RECORD = False
+
+        # scaler = 1000.0
+        numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths = loadCGraph(
+            savefile, repath, display, displayMore
+        )
+        OBJ_NUM = numObjs
         print "linked list", graph
         gpd = Generate_Path_Dictionary(graph)
         # if RECORD:
@@ -892,7 +924,7 @@ if __name__ == "__main__":
     if (len(sys.argv) < 5):
         print(
             '''Error: deptree.py: <# objects> <height> <width> <radius>
-            [display?: (y/n)] [display more?: (y/n)] [save file]'''
+            [display?: (y/n)] [display more?: (y/n)] [save file] [load file?:(y/n)]'''
         )
         exit()
 
@@ -904,7 +936,7 @@ if __name__ == "__main__":
     except ValueError:
         print(
             '''Error: deptree.py: <# objects> <height> <width> <radius>
-            [display?: (y/n)] [display more?: (y/n)] [save file]'''
+            [display?: (y/n)] [display more?: (y/n)] [save file] [load file?:(y/n)]'''
         )
         exit()
 
@@ -920,10 +952,17 @@ if __name__ == "__main__":
     if (len(sys.argv) > 7):
         savefile = sys.argv[7]
 
+    loadfile = False
+    if (len(sys.argv) > 8):
+        loadfile = sys.argv[8] not in ('n', 'N')
+
     # DGs = DG_Space(path_dict)
     # print DGs.DGs
     # IP = feekback_arc_ILP(path_dict)
     EXP = Experiments()
     print numObjs
     print RAD
-    EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
+    if loadfile:
+        EXP.load_instance(savefile, True, display, displayMore)
+    else:
+        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
