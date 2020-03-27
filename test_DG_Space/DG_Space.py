@@ -1,4 +1,11 @@
+import time
+import eventlet
+eventlet.monkey_patch()
+import timeout_decorator
+import instance_timeout
+
 import os
+from os import sys, path
 if __name__ == '__main__' and __package__ is None:
     from os import sys, path
     sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
@@ -20,13 +27,24 @@ import IPython
 my_path = os.path.abspath(os.path.dirname(__file__))
 
 class Experiments(object):
+    # generate a instance and analyze it.
     def single_instance(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
         OBJ_NUM = numObjs
         # RECORD is False when I'm debugging and don't want to rewrite the data
         RECORD = False
 
         scaler = 1000.0
+        # success = False
+        # while not success:
+        #     try:
+        #         graph, _ = instance_timeout.timeout_genCGraph( numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
+        #         print "instance generated!"
+        #         success = True
+        #     except:
+        #         success = False
+        #         print "Generation failed, will try again."
         graph, _ = genCGraph( numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
+            
         print "linked list", graph
         gpd = Generate_Path_Dictionary(graph)
         # if RECORD:
@@ -43,6 +61,69 @@ class Experiments(object):
         # print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
         # print DGs.DGs
     
+    # generate multiple instances and analyze it.
+    def multi_instances(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
+        OBJ_NUM = numObjs
+        # RECORD is False when I'm debugging and don't want to rewrite the data
+        RECORD = False
+        Iteration_time = 20
+        optimum_distribution = {}
+        DG_distribution = {}
+        num_DG = []
+
+        scaler = 1000.0
+        for iter in range(Iteration_time):
+            success = False
+            while not success:
+                try:
+                    graph, _ = instance_timeout.timeout_genCGraph( numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
+                    print "instance generated!"
+                    success = True
+                except:
+                    success = False
+                    print "generation failed, will try again!"
+                
+            # print "linked list", graph
+            gpd = Generate_Path_Dictionary(graph)
+            # if RECORD:
+            #     with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler),int(W_Y/scaler),OBJ_NUM,iter)), 'wb') as output:
+            #         pickle.dump((OR.start_pose, OR.goal_pose), output, pickle.HIGHEST_PROTOCOL)
+            # print "Dependency dictionary(key: obj index; value: a list of paths represented with dependencies)"
+            # print gpd.dependency_dict
+            DGs = DG_Space(gpd.dependency_dict)
+            num_DG.append(len(DGs.DGs.values()))
+            for DG in DGs.DGs.values():
+                edge = DG[1]
+                FVS = int(DG[2])
+                if DG_distribution.has_key(FVS):
+                    DG_distribution[FVS] += 1
+                else:
+                    DG_distribution[FVS] = 1
+            if RECORD:
+                with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler), int(W_Y/scaler), OBJ_NUM,iter)), 'wb') as output:
+                    pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
+            IP = feekback_vertex_ILP(gpd.dependency_dict)
+            opt = int(IP.optimum)
+            if optimum_distribution.has_key(opt):
+                optimum_distribution[opt] += 1
+            else:
+                optimum_distribution[opt] = 1
+            # print "ILP result(the smallest size of FAS):", IP.optimum
+            # print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
+            # print DGs.DGs
+        print "distr", optimum_distribution
+        print "DG_distr", DG_distribution
+        print "num_DG", num_DG
+
+    def instance_generation_difficulty(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
+        for iter in range(10):
+            try:
+                graph, _ = instance_timeout.timeout_genCGraph( numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
+                print "instance generated!"
+                success = True
+            except:
+                print "generation failed"
+
     # try to create instances in different densities and object numbers.
     def density(self):
         OBJ_NUM = 5
@@ -778,8 +859,6 @@ class Generate_Path_Dictionary(object):
 #     []
 # ]
 
-
-
 if __name__ == "__main__":
     if (len(sys.argv) < 5):
         print(
@@ -818,5 +897,5 @@ if __name__ == "__main__":
     EXP = Experiments()
     print numObjs
     print RAD
-    EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
+    EXP.instance_generation_difficulty(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
 
