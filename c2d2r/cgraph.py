@@ -22,8 +22,9 @@ def setupPlot(HEIGHT, WIDTH):
     fig = plt.figure(num=None, figsize=(5, 5), dpi=120, facecolor='w', edgecolor='k')
     ax = fig.subplots()
     ax.set_axisbelow(True)
-    ax.set_ylim(-1, max(HEIGHT, WIDTH) + 1)
-    ax.set_xlim(-1, max(HEIGHT, WIDTH) + 1)
+    scale = max(HEIGHT, WIDTH)
+    ax.set_ylim(-0.1 * scale, scale * 1.1)
+    ax.set_xlim(-0.1 * scale, scale * 1.1)
     ax.grid(which='minor', linestyle=':', alpha=0.2)
     ax.grid(which='major', linestyle=':', alpha=0.5)
     return fig, ax
@@ -75,6 +76,11 @@ def drawProblem(HEIGHT, WIDTH, wall, polygons, path=None, robotStart=None, robot
 def drawConGraph(HEIGHT, WIDTH, paths, polygons=None):
     _, ax = setupPlot(HEIGHT, WIDTH)
     scale = max(HEIGHT, WIDTH)
+
+    wallx = [0, WIDTH, WIDTH, 0, 0]
+    wally = [0, 0, HEIGHT, HEIGHT, 0]
+    plt.plot(wallx, wally, 'blue')
+
     if polygons is not None:
         c = 0
         for p in range(0, len(polygons)):
@@ -106,6 +112,11 @@ def drawConGraph(HEIGHT, WIDTH, paths, polygons=None):
 def drawMotions(HEIGHT, WIDTH, paths, polygons=None):
     _, ax = setupPlot(HEIGHT, WIDTH)
     scale = max(HEIGHT, WIDTH)
+
+    wallx = [0, WIDTH, WIDTH, 0, 0]
+    wally = [0, 0, HEIGHT, HEIGHT, 0]
+    plt.plot(wallx, wally, 'blue')
+
     if polygons is not None:
         c = 0
         for p in range(0, len(polygons)):
@@ -122,20 +133,23 @@ def drawMotions(HEIGHT, WIDTH, paths, polygons=None):
         color = patches.colors.hsv_to_rgb((cc, 1, 1))
         # path = paths[(2 * j, 2 * j + 1)]
         for i in range(1, len(path)):
-            rad = rads.get((path[i - 1], path[i]), -0.2) + 0.2
-            rads[(path[i - 1], path[i])] = rad
+            vfrom = path[i - 1]
+            vto = path[i]
+            rad = rads.get((vfrom, vto), -0.2) + 0.2
+            rads[(vfrom, vto)] = rad
+            rads[(vto, vfrom)] = rad
             ax.annotate(
                 "",
-                xy=path[i],
-                xytext=path[i - 1],
+                xy=vto,
+                xytext=vfrom,
                 arrowprops=dict(
                     arrowstyle="simple", connectionstyle="arc3,rad=" + str(rad), color=color
                 )
             )
             ax.annotate(
                 "",
-                xy=path[i],
-                xytext=path[i - 1],
+                xy=vto,
+                xytext=vfrom,
                 arrowprops=dict(
                     arrowstyle="->", connectionstyle="arc3,rad=" + str(rad), color="black"
                 )
@@ -188,7 +202,9 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
 
         for i in range(2):
             isfree = False
-            while not isfree:
+            timeout = 1000
+            while not isfree and timeout > 0:
+                timeout -= 1
                 point = (
                     uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
                     uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
@@ -198,6 +214,11 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
                     point,
                     objects  # [:len(objects) - i]
                 )
+
+            if timeout <= 0:
+                # print("Failed to generate!")
+                return False, False, False
+
             points.append(point)
             objects.append(pn.Polygon(polygon + point))
             mink_obj = 2 * polygon + point

@@ -21,60 +21,51 @@ my_path = os.path.abspath(os.path.dirname(__file__))
 
 class Experiments(object):
     def single_instance(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
-        OBJ_NUM = numObjs
+        # OBJ_NUM = numObjs
         # RECORD is False when I'm debugging and don't want to rewrite the data
-        RECORD = False
+        # RECORD = False
 
         # scaler = 1000.0
         graph, paths, objects = genCGraph(
             numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile
         )
-        print "linked list", graph
+        if graph is paths is objects is False:
+            return -1
+        # print "linked list", graph
         gpd = Generate_Path_Dictionary(graph)
         # if RECORD:
         #     with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl" %
         #                            (int(W_X / scaler), int(W_Y / scaler), OBJ_NUM, iter)),
         #               'wb') as output:
         #         pickle.dump((OR.start_pose, OR.goal_pose), output, pickle.HIGHEST_PROTOCOL)
-        print "Dependency dict(key: obj index; value: list of paths as dependencies)"
-        print gpd.dependency_dict
-        DGs = DG_Space(gpd.dependency_dict)
-        if RECORD:
-            with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl" %
-                                   (int(WIDTH), int(HEIGHT), OBJ_NUM, iter)), 'wb') as output:
-                pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
+        # print "Dependency dict(key: obj index; value: list of paths as dependencies)"
+        # print gpd.dependency_dict
+        # DGs = DG_Space(gpd.dependency_dict)
+        # if RECORD:
+        #     with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl" %
+        #                            (int(WIDTH), int(HEIGHT), OBJ_NUM, iter)), 'wb') as output:
+        #         pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
         IP = feekback_vertex_ILP(gpd.dependency_dict)
         # print "ILP result(the smallest size of FAS):", IP.optimum
         # print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
-        # print DGs.DGs
         opt, ind_opt = IP.optimum
         # print ind_opt, DGs.DGs[ind_opt]
         path_opts = gpd.dependency_dict
-        self.drawSolution(HEIGHT, WIDTH, paths, path_opts, ind_opt, objects)
+        if display:
+            self.drawSolution(HEIGHT, WIDTH, paths, path_opts, ind_opt, objects)
+        return opt
 
     def load_instance(self, savefile, repath, display, displayMore):
-        # RECORD is False when I'm debugging and don't want to rewrite the data
-        RECORD = False
 
         # scaler = 1000.0
         numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths = loadCGraph(
             savefile, repath, display, displayMore
         )
-        OBJ_NUM = numObjs
         print "linked list", graph
         gpd = Generate_Path_Dictionary(graph)
-        # if RECORD:
-        #     with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl" %
-        #                            (int(W_X / scaler), int(W_Y / scaler), OBJ_NUM, iter)),
-        #               'wb') as output:
-        #         pickle.dump((OR.start_pose, OR.goal_pose), output, pickle.HIGHEST_PROTOCOL)
         print "Dependency dict(key: obj index; value: list of paths as dependencies)"
         print gpd.dependency_dict
-        DGs = DG_Space(gpd.dependency_dict)
-        if RECORD:
-            with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl" %
-                                   (int(WIDTH), int(HEIGHT), OBJ_NUM, iter)), 'wb') as output:
-                pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
+        # DGs = DG_Space(gpd.dependency_dict)
         IP = feekback_vertex_ILP(gpd.dependency_dict)
         # print "ILP result(the smallest size of FAS):", IP.optimum
         # print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
@@ -82,7 +73,8 @@ class Experiments(object):
         opt, ind_opt = IP.optimum
         # print ind_opt, DGs.DGs[ind_opt]
         path_opts = gpd.dependency_dict
-        self.drawSolution(HEIGHT, WIDTH, paths, path_opts, ind_opt, objects)
+        if display:
+            self.drawSolution(HEIGHT, WIDTH, paths, path_opts, ind_opt, objects)
 
     def drawSolution(self, HEIGHT, WIDTH, paths, path_opts, ind_opt, objects):
         rpaths = OrderedDict()
@@ -273,7 +265,7 @@ class DG_Space(object):
     def __init__(self, path_dict):
         self.path_dict = path_dict
         self.DG_space_construction()
-        print("Finish DG space construction.\n")
+        # print("Finish DG space construction.\n")
 
     def DG_space_construction(self):
         self.DGs = {}
@@ -281,10 +273,10 @@ class DG_Space(object):
         path_choices = [len(self.path_dict[obj]) - 1 for obj in objs]
         for path_set in self.choice_generator(path_choices):
             self.DGs[tuple(path_set)] = self.DG_construction(path_set)
-        print("objs: ", objs)
-        print("path choices: ", path_choices)
-        print("All dependency graphs: ")
-        self.printDGs()
+        # print("objs: ", objs)
+        # print("path choices: ", path_choices)
+        # print("All dependency graphs: ")
+        # self.printDGs()
 
     def printDGs(self):
         for path_comb in self.DGs:
@@ -476,7 +468,7 @@ class feekback_vertex_ILP(object):
         m.optimize()
         obj = m.getObjective()
 
-        print("The useful information below: ")
+        # print("The useful information below: ")
 
         ### figure out what path options are chosen for each object
         path_selection = []
@@ -484,7 +476,7 @@ class feekback_vertex_ILP(object):
             for j in range(MOST_PATH):
                 if x[i, j].x > 0.5:
                     path_selection.append(j)
-        print("path_selection: ", path_selection)
+        # print("path_selection: ", path_selection)
 
         ### figure out the vertices and constraints to be removed
         vertices_to_be_removed = []
@@ -503,27 +495,27 @@ class feekback_vertex_ILP(object):
                 if M[i, j].x == 1.0:
                     if i != j:
                         C[i, j] = 1
-        print("The dependecy graph is: ")
-        print(C)
+        # print("The dependecy graph is: ")
+        # print(C)
 
-        Y = np.zeros([n, 2 * n])
-        for i in range(n):
-            for j in range(2 * n):
-                Y[i, j] = y[i, j].x
-        obj_indexes = [i for i in range(n)]
-        order_count = np.sum(Y, axis=1)
-        final_order = [
-            obj_index for _, obj_index in sorted(zip(order_count, obj_indexes), reverse=True)
-        ]
-        print("Final objects order: ")
-        print(final_order)
+        # Y = np.zeros([n, 2 * n])
+        # for i in range(n):
+        #     for j in range(2 * n):
+        #         Y[i, j] = y[i, j].x
+        # obj_indexes = [i for i in range(n)]
+        # order_count = np.sum(Y, axis=1)
+        # final_order = [
+        #     obj_index for _, obj_index in sorted(zip(order_count, obj_indexes), reverse=True)
+        # ]
+        # print("Final objects order: ")
+        # print(final_order)
 
         # print("order: ", y)
         # print("\n")
         # print("DG: " , M)
         # print("\n")
-        print("Number of vertex to be removed: ", obj.getValue())
-        print("Vertices to be removed: ", vertices_to_be_removed)
+        # print("Number of vertex to be removed: ", obj.getValue())
+        # print("Vertices to be removed: ", vertices_to_be_removed)
 
         return obj.getValue(), tuple(path_selection)
 
@@ -833,7 +825,7 @@ class Generate_Path_Dictionary(object):
         self.path_dict = {}
         self.dependency_dict = {}
         self.n = len(graph) / 2
-        print "the number of objects:", self.n
+        # print "the number of objects:", self.n
         self.start_pose = range(1, self.n + 1)
         self.linked_list_conversion(graph)
         self.construct_path_dict()
