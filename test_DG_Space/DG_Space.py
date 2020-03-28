@@ -125,132 +125,132 @@ class Experiments(object):
                 print "generation failed"
 
     # try to create instances in different densities and object numbers.
-    def density(self):
-        OBJ_NUM = 5
-        # RECORD is False when I'm debugging and don't want to rewrite the data
-        RECORD = False
-        Iteration_time = 10
+    # def density(self):
+    #     OBJ_NUM = 5
+    #     # RECORD is False when I'm debugging and don't want to rewrite the data
+    #     RECORD = False
+    #     Iteration_time = 10
 
-        DG_num_matrix = np.zeros([5,5])
-        min_feedback_matrix = np.zeros([5,5])
-        scaler = 1000.0
-        for W_X in range(3 * scaler,8 * scaler, scaler):
-            for W_Y in range(3 * scaler,8 * scaler, scaler):
-                for iter in range(Iteration_time):
-                    graph, _ = genCGraph( OBJ_NUM, 0.3 * scaler, W_X, W_Y, False, False, False)
-                    gpd = Generate_Path_Dictionary(graph)
-                    # if RECORD:
-                    #     with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler),int(W_Y/scaler),OBJ_NUM,iter)), 'wb') as output:
-                    #         pickle.dump((OR.start_pose, OR.goal_pose), output, pickle.HIGHEST_PROTOCOL)
-                    DGs = DG_Space(gpd.dependency_dict)
-                    DG_num_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] += len(DGs.DGs.keys())
-                    if RECORD:
-                        with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler), int(W_Y/scaler), OBJ_NUM,iter)), 'wb') as output:
-                            pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
-                    IP = feekback_vertex_ILP(gpd.dependency_dict)
-                    # IP = feekback_arc_ILP(gpd.dependency_dict)
-                    min_feedback_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] += IP.optimum
-                DG_num_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] /= Iteration_time
-                min_feedback_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] /= Iteration_time
+    #     DG_num_matrix = np.zeros([5,5])
+    #     min_feedback_matrix = np.zeros([5,5])
+    #     scaler = 1000.0
+    #     for W_X in range(3 * scaler,8 * scaler, scaler):
+    #         for W_Y in range(3 * scaler,8 * scaler, scaler):
+    #             for iter in range(Iteration_time):
+    #                 graph, _ = genCGraph( OBJ_NUM, 0.3 * scaler, W_X, W_Y, False, False, False)
+    #                 gpd = Generate_Path_Dictionary(graph)
+    #                 # if RECORD:
+    #                 #     with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler),int(W_Y/scaler),OBJ_NUM,iter)), 'wb') as output:
+    #                 #         pickle.dump((OR.start_pose, OR.goal_pose), output, pickle.HIGHEST_PROTOCOL)
+    #                 DGs = DG_Space(gpd.dependency_dict)
+    #                 DG_num_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] += len(DGs.DGs.keys())
+    #                 if RECORD:
+    #                     with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl"%(int(W_X/scaler), int(W_Y/scaler), OBJ_NUM,iter)), 'wb') as output:
+    #                         pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
+    #                 IP = feekback_vertex_ILP(gpd.dependency_dict)
+    #                 # IP = feekback_arc_ILP(gpd.dependency_dict)
+    #                 min_feedback_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] += IP.optimum
+    #             DG_num_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] /= Iteration_time
+    #             min_feedback_matrix[int(W_X/scaler)-3, int(W_Y/scaler)-3] /= Iteration_time
         
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
+    #     fig = plt.figure()
+    #     ax = fig.gca(projection='3d')
 
-        # Make data.
-        X = np.arange(3, 8, 1)
-        Y = np.arange(3, 8, 1)
-        X, Y = np.meshgrid(X, Y)
+    #     # Make data.
+    #     X = np.arange(3, 8, 1)
+    #     Y = np.arange(3, 8, 1)
+    #     X, Y = np.meshgrid(X, Y)
 
-        # Plot the surface.
-        surf = ax.plot_surface(X, Y, DG_num_matrix, cmap=cm.coolwarm,
-                            linewidth=0, antialiased=False)
+    #     # Plot the surface.
+    #     surf = ax.plot_surface(X, Y, DG_num_matrix, cmap=cm.coolwarm,
+    #                         linewidth=0, antialiased=False)
 
-        # Add a color bar which maps values to colors.
-        fig.colorbar(surf, shrink=0.5, aspect=5)
+    #     # Add a color bar which maps values to colors.
+    #     fig.colorbar(surf, shrink=0.5, aspect=5)
 
-        plt.savefig(my_path + "/pictures/DG_num_n%s.png"%OBJ_NUM)
+    #     plt.savefig(my_path + "/pictures/DG_num_n%s.png"%OBJ_NUM)
 
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
+    #     fig = plt.figure()
+    #     ax = fig.gca(projection='3d')
 
-        surf = ax.plot_surface(X, Y, min_feedback_matrix, cmap=cm.coolwarm,
-                    linewidth=0, antialiased=False)
+    #     surf = ax.plot_surface(X, Y, min_feedback_matrix, cmap=cm.coolwarm,
+    #                 linewidth=0, antialiased=False)
         
-        # Add a color bar which maps values to colors.
-        fig.colorbar(surf, shrink=0.5, aspect=5)
+    #     # Add a color bar which maps values to colors.
+    #     fig.colorbar(surf, shrink=0.5, aspect=5)
 
-        plt.savefig(my_path + "/pictures/min_feedback_n%s.png"%OBJ_NUM)
+    #     plt.savefig(my_path + "/pictures/min_feedback_n%s.png"%OBJ_NUM)
 
-    # In this experiment, I'm trying to see the relationship between the number of edges and DG quality.
-    def edge_and_DG(self):
-        Iteration_time = 10
-        OBJ_NUM = 5
-        # Points = []
-        edge_arcs_dict = {}
-        M = np.zeros([21,21])
-        count_DG = 0
-        for W_X in range(3,8):
-            for W_Y in range(3,8):
-                for iter in range(Iteration_time):
-                    with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl"%(W_X, W_Y, OBJ_NUM,iter)), 'rb') as input:
-                           DGs = pickle.load(input)
-                    for stat in DGs.values():
-                        count_DG +=1
-                        M[int(stat[1]),int(stat[2])] += 1
-                        if not edge_arcs_dict.has_key(stat[2]):
-                            edge_arcs_dict[stat[2]] = []
-                        edge_arcs_dict[stat[2]].append(stat[1])
-        print "Num DGs", count_DG
+    # # In this experiment, I'm trying to see the relationship between the number of edges and DG quality.
+    # def edge_and_DG(self):
+        # Iteration_time = 10
+        # OBJ_NUM = 5
+        # # Points = []
+        # edge_arcs_dict = {}
+        # M = np.zeros([21,21])
+        # count_DG = 0
+        # for W_X in range(3,8):
+        #     for W_Y in range(3,8):
+        #         for iter in range(Iteration_time):
+        #             with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl"%(W_X, W_Y, OBJ_NUM,iter)), 'rb') as input:
+        #                    DGs = pickle.load(input)
+        #             for stat in DGs.values():
+        #                 count_DG +=1
+        #                 M[int(stat[1]),int(stat[2])] += 1
+        #                 if not edge_arcs_dict.has_key(stat[2]):
+        #                     edge_arcs_dict[stat[2]] = []
+        #                 edge_arcs_dict[stat[2]].append(stat[1])
+        # print "Num DGs", count_DG
         
-        edge_arcs_avg_list = []
-        for key in range(0,11):
-            if edge_arcs_dict.has_key(key):
-                edge_arcs_avg_list.append(np.average(edge_arcs_dict[key]))
-            else:
-                edge_arcs_avg_list.append(0)
+        # edge_arcs_avg_list = []
+        # for key in range(0,11):
+        #     if edge_arcs_dict.has_key(key):
+        #         edge_arcs_avg_list.append(np.average(edge_arcs_dict[key]))
+        #     else:
+        #         edge_arcs_avg_list.append(0)
 
-        edge_arcs_std_list = []
-        for key in range(0,11):
-            if edge_arcs_dict.has_key(key):
-                edge_arcs_std_list.append(np.std(edge_arcs_dict[key]))
-            else:
-                edge_arcs_std_list.append(0)
+        # edge_arcs_std_list = []
+        # for key in range(0,11):
+        #     if edge_arcs_dict.has_key(key):
+        #         edge_arcs_std_list.append(np.std(edge_arcs_dict[key]))
+        #     else:
+        #         edge_arcs_std_list.append(0)
         
-        # A = np.zeros([1,11])
-        # for i in range(11):
-        #     for j in range(21):
-        #         A[0,i] += M[j,i]
+        # # A = np.zeros([1,11])
+        # # for i in range(11):
+        # #     for j in range(21):
+        # #         A[0,i] += M[j,i]
 
-        width = 0.2
-        fig, ax = plt.subplots()
-        # ax2 = ax.twinx()
+        # width = 0.2
+        # fig, ax = plt.subplots()
+        # # ax2 = ax.twinx()
 
-        p0 = ax.bar(range(0,11), edge_arcs_avg_list, width,label='edge_num_avg')
-        p1 = ax.bar(range(0,11), edge_arcs_std_list, width, bottom = edge_arcs_avg_list,label='edge_num_std')
+        # p0 = ax.bar(range(0,11), edge_arcs_avg_list, width,label='edge_num_avg')
+        # p1 = ax.bar(range(0,11), edge_arcs_std_list, width, bottom = edge_arcs_avg_list,label='edge_num_std')
 
-        # p0 = ax.bar([x for x in range(11)], A[0,:].T, width)
+        # # p0 = ax.bar([x for x in range(11)], A[0,:].T, width)
 
-        # fig = plt.figure()
-        # ax = fig.gca(projection='3d')
+        # # fig = plt.figure()
+        # # ax = fig.gca(projection='3d')
 
-        # X = np.arange(0,21,1)
-        # Y = np.arange(0,21,1)
+        # # X = np.arange(0,21,1)
+        # # Y = np.arange(0,21,1)
 
-        # X, Y = np.meshgrid(X, Y)
+        # # X, Y = np.meshgrid(X, Y)
 
-        # print M
+        # # print M
 
-        # surf = ax.plot_surface(X,Y,M, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+        # # surf = ax.plot_surface(X,Y,M, cmap=cm.coolwarm, linewidth=0, antialiased=False)
         
-        # # Add a color bar which maps values to colors.
-        # fig.colorbar(surf, shrink=0.5, aspect=5)
-        plt.legend()
-        plt.xlabel("Minimum Feedback Arcs")
-        plt.ylabel("Corresponding Edges")
-        plt.savefig(my_path + "/pictures/edge_arcs_n%s.png"%OBJ_NUM)
-        plt.show()
-        # plt.scatter([Points[i][0] for i in xrange(len(Points))], [Points[i][1] for i in xrange(len(Points))])
+        # # # Add a color bar which maps values to colors.
+        # # fig.colorbar(surf, shrink=0.5, aspect=5)
+        # plt.legend()
+        # plt.xlabel("Minimum Feedback Arcs")
+        # plt.ylabel("Corresponding Edges")
         # plt.savefig(my_path + "/pictures/edge_arcs_n%s.png"%OBJ_NUM)
+        # plt.show()
+        # # plt.scatter([Points[i][0] for i in xrange(len(Points))], [Points[i][1] for i in xrange(len(Points))])
+        # # plt.savefig(my_path + "/pictures/edge_arcs_n%s.png"%OBJ_NUM)
 
 
 
@@ -891,11 +891,8 @@ if __name__ == "__main__":
     if (len(sys.argv) > 7):
         savefile = sys.argv[7]
 
-    # DGs = DG_Space(path_dict)
-    # print DGs.DGs
-    # IP = feekback_arc_ILP(path_dict)
+    ################### Experiments ###################
     EXP = Experiments()
-    print numObjs
-    print RAD
+    # Switch among experiments by modifying the function name below
     EXP.instance_generation_difficulty(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
 
