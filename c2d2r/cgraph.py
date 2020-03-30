@@ -86,7 +86,14 @@ def drawConGraph(HEIGHT, WIDTH, paths, polygons=None):
         for p in range(0, len(polygons)):
             if p % 2 == 0:
                 c += 2.0 / len(polygons)
-            color = patches.colors.hsv_to_rgb((c, 1, 1))
+            # else:
+            #     pox = [pp[0] for pp in pu.pointList(polygons[p])]
+            #     poy = [pp[1] for pp in pu.pointList(polygons[p])]
+            #     pox.append(pox[0])
+            #     poy.append(poy[1])
+            #     color = patches.colors.hsv_to_rgb((c, 1, 1))
+            #     plt.plot(pox, poy, color)
+            color = patches.colors.hsv_to_rgb((c, 1, 1 - 0.5 * (p % 2)))
             patch = createPolygonPatch(pu.pointList(polygons[p]), color)
             ax.add_patch(patch)
 
@@ -122,7 +129,14 @@ def drawMotions(HEIGHT, WIDTH, paths, polygons=None):
         for p in range(0, len(polygons)):
             if p % 2 == 0:
                 c += 2.0 / len(polygons)
-            color = patches.colors.hsv_to_rgb((c, 1, 1))
+            # else:
+            #     pox = [pp[0] for pp in pu.pointList(polygons[p])]
+            #     poy = [pp[1] for pp in pu.pointList(polygons[p])]
+            #     pox.append(pox[0])
+            #     poy.append(poy[1])
+            #     color = patches.colors.hsv_to_rgb((c, 1, 1))
+            #     plt.plot(pox, poy, color)
+            color = patches.colors.hsv_to_rgb((c, 1, 1 - 0.5 * (p % 2)))
             patch = createPolygonPatch(pu.pointList(polygons[p]), color, zorder=1)
             ax.add_patch(patch)
 
