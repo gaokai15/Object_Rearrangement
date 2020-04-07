@@ -55,14 +55,16 @@ def drawProblem(HEIGHT, WIDTH, wall, polygons, path=None, robotStart=None, robot
         patch = createPolygonPatch(robotGoal, 'red', zorder=3)
         ax.add_patch(patch)
 
-    walls = pu.pointList(wall)
-    wallx = [p[0] for p in walls + [walls[0]]]
-    wally = [p[1] for p in walls + [walls[0]]]
-    plt.plot(wallx, wally, 'blue')
+    for walls in wall:
+        # walls = pu.pointList(cont)
+        wallx = [p[0] for p in walls + [walls[0]]]
+        wally = [p[1] for p in walls + [walls[0]]]
+        plt.plot(wallx, wally, 'blue')
 
     for poly in polygons:
-        patch = createPolygonPatch(pu.pointList(poly), 'gray')
-        ax.add_patch(patch)
+        for cont in poly:
+            patch = createPolygonPatch(cont, 'gray')
+            ax.add_patch(patch)
 
     if path is not None:
         pts, color = path
@@ -94,18 +96,14 @@ def drawConGraph(HEIGHT, WIDTH, paths, polygons=None):
             #     color = patches.colors.hsv_to_rgb((c, 1, 1))
             #     plt.plot(pox, poy, color)
             color = patches.colors.hsv_to_rgb((c, 1, 1 - 0.5 * (p % 2)))
-            patch = createPolygonPatch(pu.pointList(polygons[p]), color)
-            ax.add_patch(patch)
+            for cont in polygons[p]:
+                patch = createPolygonPatch(cont, color)
+                ax.add_patch(patch)
 
     for path in paths.values():
         color = 'black'
         for i in range(1, len(path)):
-            ax.annotate(
-                "",
-                xy=path[i],
-                xytext=path[i - 1],
-                arrowprops=dict(arrowstyle="-", color=color)
-            )
+            ax.annotate("", xy=path[i], xytext=path[i - 1], arrowprops=dict(arrowstyle="-", color=color))
 
             circ = patches.Circle(path[i - 1], scale / 200.0, color=color, zorder=3)
             ax.add_patch(circ)
@@ -137,8 +135,9 @@ def drawMotions(HEIGHT, WIDTH, paths, polygons=None):
             #     color = patches.colors.hsv_to_rgb((c, 1, 1))
             #     plt.plot(pox, poy, color)
             color = patches.colors.hsv_to_rgb((c, 1, 1 - 0.5 * (p % 2)))
-            patch = createPolygonPatch(pu.pointList(polygons[p]), color, zorder=1)
-            ax.add_patch(patch)
+            for cont in polygons[p]:
+                patch = createPolygonPatch(cont, color)
+                ax.add_patch(patch)
 
     rads = {}
     cc = 0.0
@@ -156,17 +155,13 @@ def drawMotions(HEIGHT, WIDTH, paths, polygons=None):
                 "",
                 xy=vto,
                 xytext=vfrom,
-                arrowprops=dict(
-                    arrowstyle="simple", connectionstyle="arc3,rad=" + str(rad), color=color
-                )
+                arrowprops=dict(arrowstyle="simple", connectionstyle="arc3,rad=" + str(rad), color=color)
             )
             ax.annotate(
                 "",
                 xy=vto,
                 xytext=vfrom,
-                arrowprops=dict(
-                    arrowstyle="->", connectionstyle="arc3,rad=" + str(rad), color="black"
-                )
+                arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=" + str(rad), color="black")
             )
 
             pcolor = "black"
@@ -203,9 +198,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
     epsilon = EPSILON
     polygon = np.array(poly_disk([0, 0], RAD, 30))
     wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
-    wall_mink = pn.Polygon(
-        [(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)]
-    )
+    wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
 
     points = []
     objects = []
@@ -220,8 +213,8 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
             while not isfree and timeout > 0:
                 timeout -= 1
                 point = (
-                    uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
-                    uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
+                    uniform(0 - min(polygon[:, 0]),
+                            WIDTH - max(polygon[:, 0])), uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
                 )
                 isfree = isCollisionFree(
                     polygon * (1 + np.sqrt(0.502)),
@@ -301,9 +294,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
         if display:
 
             if displayMore:
-                drawProblem(
-                    HEIGHT, WIDTH, wall_mink_poly, env_polys, None, pointStart, pointGoal
-                )
+                drawProblem(HEIGHT, WIDTH, wall_mink_poly, env_polys, None, pointStart, pointGoal)
 
             env_polys.insert(0, wall_mink_poly)
 
@@ -315,9 +306,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
             env = vis.Environment(env_polys_vis)
             if not env.is_valid(epsilon):
                 displayMore = True
-                drawProblem(
-                    HEIGHT, WIDTH, wall_mink_poly, env_polys, None, pointStart, pointGoal
-                )
+                drawProblem(HEIGHT, WIDTH, wall_mink_poly, env_polys, None, pointStart, pointGoal)
                 if savefile:
                     savefile += ".env_error"
                 else:
@@ -355,12 +344,8 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
             color = 'red'
 
         if display and displayMore:
-            drawProblem(
-                HEIGHT, WIDTH, wall_mink_poly, env_polys, (path, color), pointStart, pointGoal
-            )
-            drawProblem(
-                HEIGHT, WIDTH, wall_pts, obstacles, (path, color), robotStart, robotGoal
-            )
+            drawProblem(HEIGHT, WIDTH, wall_mink_poly, env_polys, (path, color), pointStart, pointGoal)
+            drawProblem(HEIGHT, WIDTH, wall_pts, obstacles, (path, color), robotStart, robotGoal)
 
     if display:
         drawConGraph(HEIGHT, WIDTH, paths, objects)
@@ -393,6 +378,230 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
     return graph, paths, objects
 
 
+def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
+    epsilon = EPSILON
+    polygon = np.array(poly_disk([0, 0], RAD, 30))
+    wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
+    wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
+
+    points = []
+    objects = []
+    # staticObs = []
+    minkowski_objs = []
+    # minkowski_poly = []
+    for i in range(numObjs):
+
+        for i in range(2):
+            isfree = False
+            timeout = 1000
+            while not isfree and timeout > 0:
+                timeout -= 1
+                point = (
+                    uniform(0 - min(polygon[:, 0]),
+                            WIDTH - max(polygon[:, 0])), uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
+                )
+                isfree = isCollisionFree(
+                    polygon * (1 + np.sqrt(0.502)),
+                    point,
+                    objects  # [:len(objects) - i]
+                )
+
+            if timeout <= 0:
+                # print("Failed to generate!")
+                return False, False, False
+
+            points.append(point)
+            objects.append(pn.Polygon(polygon + point))
+            mink_obj = 2 * polygon + point
+
+            # delta = epsilon * 0
+            # for i in range(len(mink_obj)):
+            #     # if mink_obj[i][0] < 0:
+            #     #     mink_obj[i][0] = delta
+            #     # elif mink_obj[i][0] > WIDTH - RAD:
+            #     #     mink_obj[i][0] = WIDTH - RAD - delta
+
+            #     if mink_obj[i][0] < RAD:
+            #         mink_obj[i][0] = RAD + delta
+            #     elif mink_obj[i][0] > WIDTH - RAD:
+            #         mink_obj[i][0] = WIDTH - RAD - delta
+
+            #     # if mink_obj[i][1] < 0:
+            #     #     mink_obj[i][1] = delta
+            #     # elif mink_obj[i][1] > HEIGHT - RAD:
+            #     #     mink_obj[i][1] = HEIGHT - RAD - delta
+
+            #     if mink_obj[i][1] < RAD:
+            #         mink_obj[i][1] = RAD + delta
+            #     elif mink_obj[i][1] > HEIGHT - RAD:
+            #         mink_obj[i][1] = HEIGHT - RAD - delta
+
+            minkowski_objs.append(pn.Polygon(mink_obj))
+
+    if display:
+        drawProblem(HEIGHT, WIDTH, wall_pts, objects)
+
+    paths = {}
+
+    regions = {}
+    for comb in sorted(range(2**len(minkowski_objs)), key=lambda x: -numBits(x)):  # sort by number of objects
+        v = comb
+        polyInd = []
+        poly = pn.Polygon(wall_mink)
+        while v:  # loop through objects in bitmask
+            x = v - 1
+            v &= x
+            x = (x ^ v) + 1
+
+            pInd = pow2log2(x)
+            poly &= minkowski_objs[pInd]
+            if poly:
+                polyInd.append(pInd)
+            else:
+                break
+        if poly:
+            poly_mo = poly - sum(
+                [minkowski_objs[i] for i in set(range(len(minkowski_objs))) - set(polyInd)], pn.Polygon()
+            )
+            # poly_pm.simplify()
+            # print(poly_pm)
+            if polyInd:
+                regions[tuple(polyInd)] = poly_mo
+            else:
+                freeInd = 0
+                # for strip in poly_mo.triStrip():
+                #     for i in range(len(strip) - 2):
+                #         ptri = pn.Polygon(list(reversed(strip[i:i + 3])))
+                #         freeInd -= 1
+                #         regions[tuple([freeInd])] = ptri
+                for cont in poly_mo:
+                    freeInd -= 1
+                    regions[tuple([freeInd])] = pn.Polygon(cont)
+
+    if display:
+        drawProblem(HEIGHT, WIDTH, wall_mink, regions.values())
+
+    # for r, p in regions.items():
+    #     paths[r] = [p.center()] * 2
+
+    # if display:
+    #     drawConGraph(HEIGHT, WIDTH, paths, regions.values())
+
+    for rkv1, rkv2 in combinations(regions.items(), 2):
+        rind1, r1 = rkv1
+        rind2, r2 = rkv2
+
+        pstart = r1.center()
+        pgoal = r2.center()
+        pointStart = pstart + polygon * 0.1
+        pointGoal = pgoal + polygon * 0.1
+
+        interR = set(pu.pointList(r1)) & set(pu.pointList(r2))
+        if len(interR) > 0:
+            if displayMore:
+                drawProblem(HEIGHT, WIDTH, wall_mink, regions.values(), None, pu.pointList(r1), pu.pointList(r2))
+
+            collides = False
+            if display:
+                interR = min(interR, key=lambda x: dist(pstart, x) + dist(x, pgoal))
+                wall_mink_poly = r1
+                if displayMore:
+                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                env_polys_vis = [vis.Polygon([vis.Point(*p) for p in reversed(pu.pointList(wall_mink_poly))])]
+                env = vis.Environment(env_polys_vis)
+                if not env.is_valid(epsilon):
+                    displayMore = True
+                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                    if savefile:
+                        savefile += ".env_error"
+                    else:
+                        savefile = "polys.json" + str(time()) + ".env_error"
+
+                start = vis.Point(*pstart)
+                goal = vis.Point(*interR)
+
+                start.snap_to_boundary_of(env, epsilon)
+                start.snap_to_vertices_of(env, epsilon)
+
+                t0 = time()
+                ppath = env.shortest_path(start, goal, epsilon)
+                print(time() - t0)
+
+                path = [(p.x(), p.y()) for p in ppath.path()]
+
+                wall_mink_poly = r2
+                if displayMore:
+                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                env_polys_vis = [vis.Polygon([vis.Point(*p) for p in reversed(pu.pointList(wall_mink_poly))])]
+                env = vis.Environment(env_polys_vis)
+                if not env.is_valid(epsilon):
+                    displayMore = True
+                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                    if savefile:
+                        savefile += ".env_error"
+                    else:
+                        savefile = "polys.json" + str(time()) + ".env_error"
+
+                start = vis.Point(*interR)
+                goal = vis.Point(*pgoal)
+
+                start.snap_to_boundary_of(env, epsilon)
+                start.snap_to_vertices_of(env, epsilon)
+
+                t0 = time()
+                ppath = env.shortest_path(start, goal, epsilon)
+                print(time() - t0)
+
+                path += [(p.x(), p.y()) for p in ppath.path()][1:]
+            else:
+                path = []
+
+            # if len(interR) == 1:
+            #     path = [pstart, interR.pop(), pgoal]
+            # else:
+            #     path = [pstart, pgoal]
+
+            if not collides:
+                paths[(rind1, rind2)] = path
+                color = 'blue'
+            else:
+                color = 'red'
+
+            if display and displayMore:
+                drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), (path, color), pointStart, pointGoal)
+
+    if display:
+        drawConGraph(HEIGHT, WIDTH, paths, objects)
+
+    graph = {}
+    for uv, p in paths.items():
+        u, v = uv
+        if p is not None:
+            graph[u] = sorted(graph.get(u, []) + [v])
+            graph[v] = sorted(graph.get(v, []) + [u])
+
+    if savefile:
+        with open(savefile, 'w') as output:
+            json.dump(
+                {
+                    'numObjs': numObjs,
+                    'RAD': RAD,
+                    'HEIGHT': HEIGHT,
+                    'WIDTH': WIDTH,
+                    'points': points,
+                    'objects': np.array([pu.pointList(p) for p in objects]).tolist(),
+                    # staticObs = []
+                    'graph': graph,
+                    'path': {str(k): v
+                             for k, v in paths.items()},
+                },
+                output,
+            )
+    
+    print(graph)
+    return graph, paths, objects
+
+
 def loadCGraph(savefile, repath, display, displayMore):
     with open(savefile, 'r') as finput:
         data = json.load(finput)
@@ -409,9 +618,7 @@ def loadCGraph(savefile, repath, display, displayMore):
     epsilon = EPSILON
     polygon = np.array(poly_disk([0, 0], RAD, 30))
     wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
-    wall_mink = pn.Polygon(
-        [(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)]
-    )
+    wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
 
     # staticObs = []
     minkowski_objs = []
@@ -430,8 +637,7 @@ def loadCGraph(savefile, repath, display, displayMore):
             robotGoal = pu.pointList(objects[indGoal])
             pointStart = points[indStart] + polygon * 0.1
             pointGoal = points[indGoal] + polygon * 0.1
-            obstacles = objects[:indStart] + objects[indStart + 1:indGoal] + objects[indGoal +
-                                                                                     1:]
+            obstacles = objects[:indStart] + objects[indStart + 1:indGoal] + objects[indGoal + 1:]
             minkowski_obs = minkowski_objs[:indStart]
             minkowski_obs += minkowski_objs[indStart + 1:indGoal]
             minkowski_obs += minkowski_objs[indGoal + 1:]
@@ -454,18 +660,14 @@ def loadCGraph(savefile, repath, display, displayMore):
 
             if wall_mink_poly is None:
                 if displayMore:
-                    drawProblem(
-                        HEIGHT, WIDTH, wall_mink, env_polys, None, pointStart, pointGoal
-                    )
+                    drawProblem(HEIGHT, WIDTH, wall_mink, env_polys, None, pointStart, pointGoal)
                 continue
 
             collides = False
             if display or repath:
 
                 if displayMore:
-                    drawProblem(
-                        HEIGHT, WIDTH, wall_mink_poly, env_polys, None, pointStart, pointGoal
-                    )
+                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, env_polys, None, pointStart, pointGoal)
 
                 env_polys.insert(0, wall_mink_poly)
 
@@ -477,9 +679,7 @@ def loadCGraph(savefile, repath, display, displayMore):
                 env = vis.Environment(env_polys_vis)
                 if not env.is_valid(epsilon):
                     displayMore = True
-                    drawProblem(
-                        HEIGHT, WIDTH, wall_mink_poly, env_polys, None, pointStart, pointGoal
-                    )
+                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, env_polys, None, pointStart, pointGoal)
 
                 start = vis.Point(*points[indStart])
                 goal = vis.Point(*points[indGoal])
@@ -513,13 +713,8 @@ def loadCGraph(savefile, repath, display, displayMore):
                 color = 'red'
 
             if display and displayMore:
-                drawProblem(
-                    HEIGHT, WIDTH, wall_mink_poly, env_polys, (path, color), pointStart,
-                    pointGoal
-                )
-                drawProblem(
-                    HEIGHT, WIDTH, wall_pts, obstacles, (path, color), robotStart, robotGoal
-                )
+                drawProblem(HEIGHT, WIDTH, wall_mink_poly, env_polys, (path, color), pointStart, pointGoal)
+                drawProblem(HEIGHT, WIDTH, wall_pts, obstacles, (path, color), robotStart, robotGoal)
 
     if display:
         drawConGraph(HEIGHT, WIDTH, paths, objects)
@@ -570,4 +765,4 @@ if __name__ == "__main__":
     if (len(sys.argv) > 7):
         savefile = sys.argv[7]
 
-    genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
+    genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
