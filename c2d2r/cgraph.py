@@ -444,48 +444,79 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
     paths = {}
 
     regions = {}
-    for comb in sorted(range(2**len(minkowski_objs)), key=lambda x: -numBits(x)):  # sort by number of objects
-        v = comb
-        polyInd = []
-        poly = pn.Polygon(wall_mink)
-        while v:  # loop through objects in bitmask
-            x = v - 1
-            v &= x
-            x = (x ^ v) + 1
+    # for comb in sorted(range(2**len(minkowski_objs)), key=lambda x: -numBits(x)):  # sort by number of objects
+    # for comb in sorted(range(2**len(minkowski_objs)), key=lambda x: -bin(x).count('1')):  # sort by number of objects
+    #     v = comb
+    #     polyInd = []
+    #     poly = pn.Polygon(wall_mink)
+    #     while v:  # loop through objects in bitmask
+    #         x = v - 1
+    #         v &= x
+    #         x = (x ^ v) + 1
 
-            pInd = pow2log2(x)
-            poly &= minkowski_objs[pInd]
-            if poly:
-                polyInd.append(pInd)
-            else:
-                break
-        if poly:
-            poly_mo = poly - sum(
-                [minkowski_objs[i] for i in set(range(len(minkowski_objs))) - set(polyInd)], pn.Polygon()
-            )
-            # poly_pm.simplify()
-            # print(poly_pm)
-            if polyInd:
-                regions[tuple(polyInd)] = poly_mo
-            else:
-                freeInd = 0
-                # for strip in poly_mo.triStrip():
-                #     for i in range(len(strip) - 2):
-                #         ptri = pn.Polygon(list(reversed(strip[i:i + 3])))
-                #         freeInd -= 1
-                #         regions[tuple([freeInd])] = ptri
-                for cont in poly_mo:
-                    freeInd -= 1
-                    regions[tuple([freeInd])] = pn.Polygon(cont)
+    #         pInd = int(np.log2(x))
+    #         poly &= minkowski_objs[pInd]
+    #         # print(x, pInd, len(poly))
+    #         if poly:
+    #             polyInd.append(pInd)
+    #         else:
+    #             break
+    #     if poly:
+    #         # drawProblem(HEIGHT, WIDTH, poly, minkowski_objs)
+    #         poly_mo = poly - sum(
+    #             [minkowski_objs[i] for i in set(range(len(minkowski_objs))) - set(polyInd)], pn.Polygon()
+    #         )
+    #         # drawProblem(HEIGHT, WIDTH, poly_mo, minkowski_objs)
+    #         # print(comb)
+    #         # print(polyInd)
+    #         poly_mo.simplify()
+    #         # print(poly_mo)
+    #         if polyInd:
+    #             regions[tuple(polyInd)] = poly_mo
+    #         else:
+    #             freeInd = 0
+    #             # for strip in poly_mo.triStrip():
+    #             #     for i in range(len(strip) - 2):
+    #             #         ptri = pn.Polygon(list(reversed(strip[i:i + 3])))
+    #             #         freeInd -= 1
+    #             #         regions[tuple([freeInd])] = ptri
+    #             for cont in poly_mo:
+    #                 freeInd -= 1
+    #                 regions[tuple([freeInd])] = pn.Polygon(cont)
+    # regions[-1] = wall_mink
+    polysum = pn.Polygon()
+    for i, obj in enumerate(minkowski_objs):
+        for rind, r in regions.items():
+            rANDobj = r & obj
+            if rANDobj:
+                regions[rind] = r - obj
+                regions[rind + (i, )] = rANDobj
 
-    if display:
-        drawProblem(HEIGHT, WIDTH, wall_mink, regions.values())
+        objDIFFpolysum = wall_mink & obj - polysum
+        # print(objDIFFpolysum, bool(objDIFFpolysum))
+        if objDIFFpolysum:
+            regions[(i, )] = objDIFFpolysum
+        polysum += obj
+
+        if displayMore:
+            drawProblem(HEIGHT, WIDTH, wall_mink, regions.values())
+
+    # for i, pfree in enumerate(wall_mink - polysum, 1):
+    #     regions[(-i, )] = pn.Polygon(pfree)
+    freeInd = 0
+    for strip in (wall_mink - polysum).triStrip():
+        for i in range(len(strip) - 2):
+            ptri = pn.Polygon(strip[i:i + 3])
+            freeInd -= 1
+            regions[(freeInd, )] = ptri
+
+    print(sorted(regions))
 
     # for r, p in regions.items():
     #     paths[r] = [p.center()] * 2
 
-    # if display:
-    #     drawConGraph(HEIGHT, WIDTH, paths, regions.values())
+    if display:
+        drawConGraph(HEIGHT, WIDTH, {}, regions.values())
 
     for rkv1, rkv2 in combinations(regions.items(), 2):
         rind1, r1 = rkv1
@@ -504,55 +535,56 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
             collides = False
             if display:
                 interR = min(interR, key=lambda x: dist(pstart, x) + dist(x, pgoal))
-                wall_mink_poly = r1
-                if displayMore:
-                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
-                env_polys_vis = [vis.Polygon([vis.Point(*p) for p in reversed(pu.pointList(wall_mink_poly))])]
-                env = vis.Environment(env_polys_vis)
-                if not env.is_valid(epsilon):
-                    displayMore = True
-                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
-                    if savefile:
-                        savefile += ".env_error"
-                    else:
-                        savefile = "polys.json" + str(time()) + ".env_error"
+                # wall_mink_poly = r1
+                # if displayMore:
+                #     drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                # env_polys_vis = [vis.Polygon([vis.Point(*p) for p in reversed(pu.pointList(wall_mink_poly))])]
+                # env = vis.Environment(env_polys_vis)
+                # if not env.is_valid(epsilon):
+                #     displayMore = True
+                #     drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                #     if savefile:
+                #         savefile += ".env_error"
+                #     else:
+                #         savefile = "polys.json" + str(time()) + ".env_error"
 
-                start = vis.Point(*pstart)
-                goal = vis.Point(*interR)
+                # start = vis.Point(*pstart)
+                # goal = vis.Point(*interR)
 
-                start.snap_to_boundary_of(env, epsilon)
-                start.snap_to_vertices_of(env, epsilon)
+                # start.snap_to_boundary_of(env, epsilon)
+                # start.snap_to_vertices_of(env, epsilon)
 
-                t0 = time()
-                ppath = env.shortest_path(start, goal, epsilon)
-                print(time() - t0)
+                # t0 = time()
+                # ppath = env.shortest_path(start, goal, epsilon)
+                # print(time() - t0)
 
-                path = [(p.x(), p.y()) for p in ppath.path()]
+                # path = [(p.x(), p.y()) for p in ppath.path()]
 
-                wall_mink_poly = r2
-                if displayMore:
-                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
-                env_polys_vis = [vis.Polygon([vis.Point(*p) for p in reversed(pu.pointList(wall_mink_poly))])]
-                env = vis.Environment(env_polys_vis)
-                if not env.is_valid(epsilon):
-                    displayMore = True
-                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
-                    if savefile:
-                        savefile += ".env_error"
-                    else:
-                        savefile = "polys.json" + str(time()) + ".env_error"
+                # wall_mink_poly = r2
+                # if displayMore:
+                #     drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                # env_polys_vis = [vis.Polygon([vis.Point(*p) for p in reversed(pu.pointList(wall_mink_poly))])]
+                # env = vis.Environment(env_polys_vis)
+                # if not env.is_valid(epsilon):
+                #     displayMore = True
+                #     drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                #     if savefile:
+                #         savefile += ".env_error"
+                #     else:
+                #         savefile = "polys.json" + str(time()) + ".env_error"
 
-                start = vis.Point(*interR)
-                goal = vis.Point(*pgoal)
+                # start = vis.Point(*interR)
+                # goal = vis.Point(*pgoal)
 
-                start.snap_to_boundary_of(env, epsilon)
-                start.snap_to_vertices_of(env, epsilon)
+                # start.snap_to_boundary_of(env, epsilon)
+                # start.snap_to_vertices_of(env, epsilon)
 
-                t0 = time()
-                ppath = env.shortest_path(start, goal, epsilon)
-                print(time() - t0)
+                # t0 = time()
+                # ppath = env.shortest_path(start, goal, epsilon)
+                # print(time() - t0)
 
-                path += [(p.x(), p.y()) for p in ppath.path()][1:]
+                # path += [(p.x(), p.y()) for p in ppath.path()][1:]
+                path = [pstart, pgoal]
             else:
                 path = []
 
@@ -568,7 +600,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
                 color = 'red'
 
             if display and displayMore:
-                drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), (path, color), pointStart, pointGoal)
+                drawProblem(HEIGHT, WIDTH, r1 + r2, regions.values(), (path, color), pointStart, pointGoal)
 
     if display:
         drawConGraph(HEIGHT, WIDTH, paths, objects)
@@ -597,7 +629,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
                 },
                 output,
             )
-    
+
     print(graph)
     return graph, paths, objects
 
