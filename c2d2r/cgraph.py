@@ -46,6 +46,27 @@ def createPolygonPatch(polygon, color, zorder=1):
     return patch
 
 
+def createPolygonPatch_distinct(polygon, color, isGoal, zorder=1):
+    verts = []
+    codes = []
+    for v in range(0, len(polygon)):
+        verts.append(polygon[v])
+        if v == 0:
+            codes.append(Path.MOVETO)
+        else:
+            codes.append(Path.LINETO)
+
+    verts.append(verts[0])
+    codes.append(Path.CLOSEPOLY)
+    path = Path(verts, codes)
+    if isGoal:
+        patch = patches.PathPatch(path, linestyle='--', edgecolor=color, facecolor="white", lw=1, zorder=zorder)
+    else:
+        patch = patches.PathPatch(path, facecolor=color, lw=1, zorder=zorder)
+
+    return patch
+
+
 def drawProblem(HEIGHT, WIDTH, wall, polygons, path=None, robotStart=None, robotGoal=None):
     _, ax = setupPlot(HEIGHT, WIDTH)
     if robotStart is not None:
@@ -65,19 +86,12 @@ def drawProblem(HEIGHT, WIDTH, wall, polygons, path=None, robotStart=None, robot
     for p in range(0, len(polygons)):
         if p % 2 == 0:
             c += 2.0 / len(polygons)
-        # else:
-        #     pox = [pp[0] for pp in pu.pointList(polygons[p])]
-        #     poy = [pp[1] for pp in pu.pointList(polygons[p])]
-        #     pox.append(pox[0])
-        #     poy.append(poy[1])
-        #     color = patches.colors.hsv_to_rgb((c, 1, 1))
-        #     plt.plot(pox, poy, color)
-        color = patches.colors.hsv_to_rgb((c, 1 - 0.5 * (p % 2), 1))
+        color = patches.colors.hsv_to_rgb((c, 1, 1))
         poly = polygons[p]
         if type(poly) == tuple:
             poly, _ = poly
         for cont in poly:
-            patch = createPolygonPatch(cont, color)
+            patch = createPolygonPatch_distinct(cont, color, p % 2)
             ax.add_patch(patch)
             ax.annotate(str(p), xy=(0, 0), xytext=pn.Polygon(cont).center())
 
@@ -106,19 +120,12 @@ def drawConGraph(HEIGHT, WIDTH, paths, polygons=None, label=True):
                     c += 2.0 / len(polygons)
             else:
                 c += 1.0 / len(polygons)
-            # else:
-            #     pox = [pp[0] for pp in pu.pointList(polygons[p])]
-            #     poy = [pp[1] for pp in pu.pointList(polygons[p])]
-            #     pox.append(pox[0])
-            #     poy.append(poy[1])
-            #     color = patches.colors.hsv_to_rgb((c, 1, 1))
-            #     plt.plot(pox, poy, color)
-            color = patches.colors.hsv_to_rgb((c, 1 - 0.5 * (p % 2), 1))
+            color = patches.colors.hsv_to_rgb((c, 1, 1))
             poly = polygons[p]
             if type(poly) == tuple:
                 poly, _ = poly
             for cont in poly:
-                patch = createPolygonPatch(cont, color)
+                patch = createPolygonPatch_distinct(cont, color, label and p % 2)
                 ax.add_patch(patch)
                 if label:
                     ax.annotate(str(p), xy=(0, 0), xytext=pn.Polygon(cont).center())
