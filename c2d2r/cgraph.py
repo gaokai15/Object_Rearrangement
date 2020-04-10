@@ -61,12 +61,25 @@ def drawProblem(HEIGHT, WIDTH, wall, polygons, path=None, robotStart=None, robot
         wally = [p[1] for p in walls + [walls[0]]]
         plt.plot(wallx, wally, 'blue')
 
-    for poly in polygons:
+    c = 0
+    for p in range(0, len(polygons)):
+        if p % 2 == 0:
+            c += 2.0 / len(polygons)
+        # else:
+        #     pox = [pp[0] for pp in pu.pointList(polygons[p])]
+        #     poy = [pp[1] for pp in pu.pointList(polygons[p])]
+        #     pox.append(pox[0])
+        #     poy.append(poy[1])
+        #     color = patches.colors.hsv_to_rgb((c, 1, 1))
+        #     plt.plot(pox, poy, color)
+        color = patches.colors.hsv_to_rgb((c, 1 - 0.5 * (p % 2), 1))
+        poly = polygons[p]
         if type(poly) == tuple:
             poly, _ = poly
         for cont in poly:
-            patch = createPolygonPatch(cont, 'gray')
+            patch = createPolygonPatch(cont, color)
             ax.add_patch(patch)
+            ax.annotate(str(p), xy=(0, 0), xytext=pn.Polygon(cont).center())
 
     if path is not None:
         pts, color = path
@@ -77,7 +90,7 @@ def drawProblem(HEIGHT, WIDTH, wall, polygons, path=None, robotStart=None, robot
     plt.show()
 
 
-def drawConGraph(HEIGHT, WIDTH, paths, polygons=None):
+def drawConGraph(HEIGHT, WIDTH, paths, polygons=None, label=True):
     _, ax = setupPlot(HEIGHT, WIDTH)
     scale = max(HEIGHT, WIDTH)
 
@@ -88,8 +101,11 @@ def drawConGraph(HEIGHT, WIDTH, paths, polygons=None):
     if polygons is not None:
         c = 0
         for p in range(0, len(polygons)):
-            if p % 2 == 0:
-                c += 2.0 / len(polygons)
+            if label:
+                if p % 2 == 0:
+                    c += 2.0 / len(polygons)
+            else:
+                c += 1.0 / len(polygons)
             # else:
             #     pox = [pp[0] for pp in pu.pointList(polygons[p])]
             #     poy = [pp[1] for pp in pu.pointList(polygons[p])]
@@ -97,13 +113,15 @@ def drawConGraph(HEIGHT, WIDTH, paths, polygons=None):
             #     poy.append(poy[1])
             #     color = patches.colors.hsv_to_rgb((c, 1, 1))
             #     plt.plot(pox, poy, color)
-            color = patches.colors.hsv_to_rgb((c, 1, 1 - 0.5 * (p % 2)))
+            color = patches.colors.hsv_to_rgb((c, 1 - 0.5 * (p % 2), 1))
             poly = polygons[p]
             if type(poly) == tuple:
                 poly, _ = poly
             for cont in poly:
                 patch = createPolygonPatch(cont, color)
                 ax.add_patch(patch)
+                if label:
+                    ax.annotate(str(p), xy=(0, 0), xytext=pn.Polygon(cont).center())
 
     for path in paths.values():
         color = 'black'
@@ -478,7 +496,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
     #     paths[r] = [p.center()] * 2
 
     if display:
-        drawConGraph(HEIGHT, WIDTH, {}, regions.values())
+        drawConGraph(HEIGHT, WIDTH, {}, regions.values(), False)
 
     for rkv1, rkv2 in combinations(regions.items(), 2):
         rind1, r1 = rkv1
@@ -821,7 +839,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
         #     paths[r] = [p.center()] * 2
 
         if display:
-            drawConGraph(HEIGHT, WIDTH, {}, regions.values())
+            drawConGraph(HEIGHT, WIDTH, {}, regions.values(), False)
 
         for rkv1, rkv2 in combinations(regions.items(), 2):
             rind1, r1 = rkv1
