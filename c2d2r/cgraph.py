@@ -635,7 +635,8 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
                     'points': points,
                     'objects': np.array([pu.pointList(p) for p in objects]).tolist(),
                     # staticObs = []
-                    'graph': graph,
+                    'graph': {str(k): v
+                              for k, v in graph.items()},
                     'path': {str(k): v
                              for k, v in paths.items()},
                 },
@@ -786,7 +787,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
     WIDTH = data['WIDTH']
     points = data['points']
     objects = [pn.Polygon(o) for o in data['objects']]
-    graph = {int(k): v for k, v in data['graph'].items()}
+    graph = {eval(k): v for k, v in data['graph'].items()}
     paths = {eval(k): v for k, v in data['path'].items()}
 
     epsilon = EPSILON
