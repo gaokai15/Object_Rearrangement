@@ -429,11 +429,8 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
                     uniform(0 - min(polygon[:, 0]),
                             WIDTH - max(polygon[:, 0])), uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
                 )
-                isfree = isCollisionFree(
-                    polygon,
-                    point,
-                    objects  # [:len(objects) - i]
-                )
+                isfree = isCollisionFree(polygon, point, objects[i % 2::2])
+                # isfree = isCollisionFree(polygon, point, objects)
 
             if timeout <= 0:
                 # print("Failed to generate!")
