@@ -6,8 +6,8 @@ from random import random as rng
 from c2d2r.cgraph import *
 from c2d2r.util import *
 
-numObjs = 100
-RAD = 40
+numObjs = 50
+RAD = 50
 HEIGHT = 1000
 WIDTH = 1000
 display = False

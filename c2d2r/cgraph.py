@@ -541,7 +541,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
             rect = ps.Rectangle(dist(pstart, pgoal), 1)
             vsg = np.subtract(pgoal, pstart)
             rect.rotate(np.angle(vsg[0] + 1j * vsg[1]))
-            rect.warpToBox(*pn.Polygon([pstart, pgoal]).boundingBox())
+            rect.warpToBox(*bbox([pstart, pgoal]))
             hasDirectPath = (r1Ar2).covers(rect) if len(r1Ar2) == 1 else False
 
             if displayMore:
