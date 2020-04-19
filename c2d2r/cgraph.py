@@ -414,7 +414,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
     return graph, paths, objects
 
 
-def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
+def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, debug=False):
     epsilon = EPSILON
     polygon = np.array(poly_disk([0, 0], RAD, 30))
     wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
@@ -440,7 +440,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
 
             if timeout <= 0:
                 # print("Failed to generate!")
-                return False, False, False
+                return False
 
             points.append(point)
             objects.append(pn.Polygon(polygon + point))
@@ -660,6 +660,8 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
                 output,
             )
 
+    if debug:
+        return graph, paths, objects, obj2reg, regions, polygon
     return graph, paths, objects, obj2reg
 
 
@@ -1013,9 +1015,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
                 new_graph[v] = sorted(new_graph.get(v, []) + [u])
 
         # assert (new_graph == graph)
-        # graph = new_graph
-        print(new_graph)
-        print(obj2reg)
+        graph = new_graph
 
     return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths, obj2reg
 
@@ -1057,8 +1057,6 @@ if __name__ == "__main__":
         loadSave = sys.argv[8] not in ('n', 'N')
 
     if loadSave:
-        loadDenseCGraph(savefile, True, display, displayMore)
+        print(loadDenseCGraph(savefile, True, display, displayMore))
     else:
-        graph, paths, objects, obj2reg = genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
-        print(graph)
-        print(obj2reg)
+        print(genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile))
