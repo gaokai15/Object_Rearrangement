@@ -14,6 +14,19 @@ def dist(a, b):
     return norm(np.subtract(a, b))
 
 
+def bbox(poly):
+    xmin = np.Inf
+    xmax = -np.Inf
+    ymin = np.Inf
+    ymax = -np.Inf
+    for p in poly:
+        xmin = min(xmin, p[0])
+        xmax = max(xmax, p[0])
+        ymin = min(ymin, p[1])
+        ymax = max(ymax, p[1])
+    return xmin, xmax, ymin, ymax
+
+
 def polysCollide(poly1, poly2):
     cpoly1 = pn.Polygon(poly1)
     cpoly2 = pn.Polygon(poly2)

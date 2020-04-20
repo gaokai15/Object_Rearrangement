@@ -14,6 +14,7 @@ from util import *
 import visilibity as vis
 import Polygon as pn
 import Polygon.Utils as pu
+import Polygon.Shapes as ps
 
 EPSILON = 2**-8
 
@@ -42,7 +43,7 @@ def createPolygonPatch(polygon, color, zorder=1):
     verts.append(verts[0])
     codes.append(Path.CLOSEPOLY)
     path = Path(verts, codes)
-    patch = patches.PathPatch(path, facecolor=color, lw=1, zorder=zorder)
+    patch = patches.PathPatch(path, facecolor=color, lw=0.5, zorder=zorder)
     return patch
 
 
@@ -62,7 +63,7 @@ def createPolygonPatch_distinct(polygon, color, isGoal, zorder=1):
     if isGoal:
         patch = patches.PathPatch(path, linestyle='--', edgecolor=color, facecolor="white", lw=1, zorder=zorder)
     else:
-        patch = patches.PathPatch(path, facecolor=color, lw=1, zorder=zorder)
+        patch = patches.PathPatch(path, facecolor=color, lw=0.5, zorder=zorder)
 
     return patch
 
@@ -135,10 +136,15 @@ def drawConGraph(HEIGHT, WIDTH, paths, polygons=None, label=True):
         for i in range(1, len(path)):
             ax.annotate("", xy=path[i], xytext=path[i - 1], arrowprops=dict(arrowstyle="-", color=color))
 
-            circ = patches.Circle(path[i - 1], scale / 200.0, color=color, zorder=3)
+            circ = patches.Circle(path[i], scale / 400.0, color=color, zorder=3)
             ax.add_patch(circ)
-            circ = patches.Circle(path[i], scale / 200.0, color=color, zorder=3)
+            circ = patches.Circle(path[i - 1], scale / 400.0, color=color, zorder=3)
             ax.add_patch(circ)
+
+        circ = patches.Circle(path[0], scale / 200.0, color=color, zorder=3)
+        ax.add_patch(circ)
+        circ = patches.Circle(path[-1], scale / 200.0, color=color, zorder=3)
+        ax.add_patch(circ)
 
     plt.show()
     return
@@ -408,7 +414,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
     return graph, paths, objects
 
 
-def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
+def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, debug=False):
     epsilon = EPSILON
     polygon = np.array(poly_disk([0, 0], RAD, 30))
     wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
@@ -434,7 +440,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
 
             if timeout <= 0:
                 # print("Failed to generate!")
-                return False, False, False
+                return False
 
             points.append(point)
             objects.append(pn.Polygon(polygon + point))
@@ -518,28 +524,42 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
         rind1, r1 = rkv1
         rind2, r2 = rkv2
         # print(rind1, r1, rind2, r2)
+        if rind1[0] > 0 and rind2[0] > 0:
+            s1 = set(rind1[:-1])
+            s2 = set(rind2[:-1])
+            if len(s1 - s2) + len(s2 - s1) > 1:
+                continue
 
         r1, pstart = r1
         r2, pgoal = r2
+        r1Ar2 = r1 + r2
         pointStart = pstart + polygon * 0.1
         pointGoal = pgoal + polygon * 0.1
 
         interR = set(pu.pointList(r1)) & set(pu.pointList(r2))
         if len(interR) > 0:
+            rect = ps.Rectangle(dist(pstart, pgoal), 1)
+            vsg = np.subtract(pgoal, pstart)
+            rect.rotate(np.angle(vsg[0] + 1j * vsg[1]))
+            rect.warpToBox(*bbox([pstart, pgoal]))
+            hasDirectPath = (r1Ar2).covers(rect) if len(r1Ar2) == 1 else False
+
             if displayMore:
                 drawConGraph(
                     HEIGHT, WIDTH, {
                         0: pu.pointList(pu.fillHoles(r1)),
-                        1: pu.pointList(pu.fillHoles(r2))
+                        1: pu.pointList(pu.fillHoles(r2)),
+                        2: pu.pointList(rect)
                     }, regions.values(), False
                 )
+                print('Direct?: ', hasDirectPath)
                 # drawProblem(
                 #     HEIGHT, WIDTH, wall_mink, regions.values(), None, pu.pointList(pu.fillHoles(r1)),
                 #     pu.pointList(pu.fillHoles(r2))
                 # )
 
             # collides = False
-            if display:
+            if display and not hasDirectPath:
                 interR = min(interR, key=lambda x: dist(pstart, x) + dist(x, pgoal))
                 wall_mink_poly = pu.fillHoles(r1)
                 # if displayMore:
@@ -597,8 +617,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
 
                 path += [(p.x(), p.y()) for p in ppath.path()][1:]
             else:
-                path = []
-
+                path = [pstart, pgoal]
             # if not collides:
             paths[(rind1, rind2)] = path
             #     # paths[(rind2, rind1)] = list(reversed(path))
@@ -611,6 +630,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
                 drawConGraph(HEIGHT, WIDTH, {0: path}, regions.values(), False)
 
     if display:
+        drawConGraph(HEIGHT, WIDTH, paths, regions.values(), False)
         drawConGraph(HEIGHT, WIDTH, paths, objects)
 
     graph = {}
@@ -640,6 +660,8 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
                 output,
             )
 
+    if debug:
+        return graph, paths, objects, obj2reg, regions, polygon
     return graph, paths, objects, obj2reg
 
 
@@ -875,28 +897,42 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
             rind1, r1 = rkv1
             rind2, r2 = rkv2
             # print(rind1, r1, rind2, r2)
+            if rind1[0] > 0 and rind2[0] > 0:
+                s1 = set(rind1[:-1])
+                s2 = set(rind2[:-1])
+                if len(s1 - s2) + len(s2 - s1) > 1:
+                    continue
 
             r1, pstart = r1
             r2, pgoal = r2
+            r1Ar2 = r1 + r2
             pointStart = pstart + polygon * 0.1
             pointGoal = pgoal + polygon * 0.1
 
             interR = set(pu.pointList(r1)) & set(pu.pointList(r2))
             if len(interR) > 0:
+                rect = ps.Rectangle(dist(pstart, pgoal), 1)
+                vsg = np.subtract(pgoal, pstart)
+                rect.rotate(np.angle(vsg[0] + 1j * vsg[1]))
+                rect.warpToBox(*pn.Polygon([pstart, pgoal]).boundingBox())
+                hasDirectPath = (r1Ar2).covers(rect) if len(r1Ar2) == 1 else False
+
                 if displayMore:
                     drawConGraph(
                         HEIGHT, WIDTH, {
                             0: pu.pointList(pu.fillHoles(r1)),
-                            1: pu.pointList(pu.fillHoles(r2))
+                            1: pu.pointList(pu.fillHoles(r2)),
+                            2: pu.pointList(rect)
                         }, regions.values(), False
                     )
+                    print('Direct?: ', hasDirectPath)
                     # drawProblem(
                     #     HEIGHT, WIDTH, wall_mink, regions.values(), None, pu.pointList(pu.fillHoles(r1)),
                     #     pu.pointList(pu.fillHoles(r2))
                     # )
 
                 # collides = False
-                if display:
+                if display and not hasDirectPath:
                     interR = min(interR, key=lambda x: dist(pstart, x) + dist(x, pgoal))
                     wall_mink_poly = pu.fillHoles(r1)
                     # if displayMore:
@@ -954,8 +990,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
 
                     path += [(p.x(), p.y()) for p in ppath.path()][1:]
                 else:
-                    path = []
-
+                    path = [pstart, pgoal]
                 # if not collides:
                 paths[(rind1, rind2)] = path
                 #     # paths[(rind2, rind1)] = list(reversed(path))
@@ -968,6 +1003,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
                     drawConGraph(HEIGHT, WIDTH, {0: path}, regions.values(), False)
 
     if display:
+        drawConGraph(HEIGHT, WIDTH, paths, regions.values(), False)
         drawConGraph(HEIGHT, WIDTH, paths, objects)
 
     if repath:
@@ -979,9 +1015,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
                 new_graph[v] = sorted(new_graph.get(v, []) + [u])
 
         # assert (new_graph == graph)
-        # graph = new_graph
-        print(new_graph)
-        print(obj2reg)
+        graph = new_graph
 
     return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths, obj2reg
 
@@ -1023,8 +1057,6 @@ if __name__ == "__main__":
         loadSave = sys.argv[8] not in ('n', 'N')
 
     if loadSave:
-        loadDenseCGraph(savefile, True, display, displayMore)
+        print(loadDenseCGraph(savefile, True, display, displayMore))
     else:
-        graph, paths, objects, obj2reg = genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
-        print(graph)
-        print(obj2reg)
+        print(genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile))
