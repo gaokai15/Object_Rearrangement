@@ -17,6 +17,7 @@ from util import *
 import visilibity as vis
 import Polygon as pn
 import Polygon.Utils as pu
+import Polygon.Shapes as ps
 
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
@@ -26,17 +27,16 @@ import os
 
 EPSILON = 2**-8
 
-
-def setupPlot(HEIGHT, WIDTH):
-    fig = plt.figure(num=None, figsize=(5, 5), dpi=120, facecolor='w', edgecolor='k')
-    ax = fig.subplots()
-    ax.set_axisbelow(True)
-    scale = max(HEIGHT, WIDTH)
-    ax.set_ylim(-0.1 * scale, scale * 1.1)
-    ax.set_xlim(-0.1 * scale, scale * 1.1)
-    ax.grid(which='minor', linestyle=':', alpha=0.2)
-    ax.grid(which='major', linestyle=':', alpha=0.5)
-    return fig, ax
+# def setupPlot(HEIGHT, WIDTH):
+#     fig = plt.figure(num=None, figsize=(5, 5), dpi=120, facecolor='w', edgecolor='k')
+#     ax = fig.subplots()
+#     ax.set_axisbelow(True)
+#     scale = max(HEIGHT, WIDTH)
+#     ax.set_ylim(-0.1 * scale, scale * 1.1)
+#     ax.set_xlim(-0.1 * scale, scale * 1.1)
+#     ax.grid(which='minor', linestyle=':', alpha=0.2)
+#     ax.grid(which='major', linestyle=':', alpha=0.5)
+#     return fig, ax
 
 
 def createPolygonPatch(polygon, color, zorder=1):
@@ -51,7 +51,7 @@ def createPolygonPatch(polygon, color, zorder=1):
     verts.append(verts[0])
     codes.append(Path.CLOSEPOLY)
     path = Path(verts, codes)
-    patch = patches.PathPatch(path, facecolor=color, lw=1, zorder=zorder)
+    patch = patches.PathPatch(path, facecolor=color, lw=0.5, zorder=zorder)
     return patch
 
 
@@ -71,12 +71,26 @@ def createPolygonPatch_distinct(polygon, color, isGoal, zorder=1):
     if isGoal:
         patch = patches.PathPatch(path, linestyle='--', edgecolor=color, facecolor="white", lw=1, zorder=zorder)
     else:
-        patch = patches.PathPatch(path, facecolor=color, lw=1, zorder=zorder)
+        patch = patches.PathPatch(path, facecolor=color, lw=0.5, zorder=zorder)
 
     return patch
 
 
-def drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall, polygons, color_pool, points, example_index, saveimage, path=None, robotStart=None, robotGoal=None):
+def drawProblem(
+    HEIGHT,
+    WIDTH,
+    numObjs,
+    RAD,
+    wall,
+    polygons,
+    color_pool,
+    points,
+    example_index,
+    saveimage,
+    path=None,
+    robotStart=None,
+    robotGoal=None
+):
     _, ax = setupPlot(HEIGHT, WIDTH)
     if robotStart is not None:
         patch = createPolygonPatch(robotStart, 'green', zorder=3)
@@ -85,16 +99,22 @@ def drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall, polygons, color_pool, points,
         patch = createPolygonPatch(robotGoal, 'red', zorder=3)
         ax.add_patch(patch)
 
-    walls = pu.pointList(wall)
-    wallx = [p[0] for p in walls + [walls[0]]]
-    wally = [p[1] for p in walls + [walls[0]]]
-    plt.plot(wallx, wally, 'blue')
+    for walls in wall:
+        # walls = pu.pointList(cont)
+        wallx = [p[0] for p in walls + [walls[0]]]
+        wally = [p[1] for p in walls + [walls[0]]]
+        plt.plot(wallx, wally, 'blue')
 
     for i in range(len(polygons)):
         obj_idx = i // 2
         isGoal = i % 2
-        patch = createPolygonPatch_distinct(pu.pointList(polygons[i]), color_pool[obj_idx], isGoal)
-        ax.add_patch(patch)
+        poly = polygons[i]
+        if type(poly) == tuple:
+            poly, _ = poly
+        for cont in poly:
+            # patch = createPolygonPatch_distinct(cont, color, p % 2)
+            patch = createPolygonPatch_distinct(cont, color_pool[obj_idx], isGoal)
+            ax.add_patch(patch)
 
     ### label these polygon
     for i in range(len(points)):
@@ -112,8 +132,12 @@ def drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall, polygons, color_pool, points,
         plt.plot(pathx, pathy, color)
     if saveimage:
         path = os.getcwd() + "/figures/"
-        plt.savefig(path + str(numObjs) + "_" + str(int(RAD)) + "_" + str(HEIGHT) + "_" + str(WIDTH) + "_" + str(example_index) + "_object_deployment.png")
+        plt.savefig(
+            path + str(numObjs) + "_" + str(int(RAD)) + "_" + str(HEIGHT) + "_" + str(WIDTH) + "_" +
+            str(example_index) + "_object_deployment.png"
+        )
     plt.show()
+
 
 def drawConGraph(HEIGHT, WIDTH, paths, color_pool, polygons=None, label=True):
     _, ax = setupPlot(HEIGHT, WIDTH)
@@ -146,42 +170,38 @@ def drawConGraph(HEIGHT, WIDTH, paths, color_pool, polygons=None, label=True):
         for i in range(1, len(path)):
             ax.annotate("", xy=path[i], xytext=path[i - 1], arrowprops=dict(arrowstyle="-", color=color))
 
-            circ = patches.Circle(path[i - 1], scale / 200.0, color=color, zorder=3)
+            circ = patches.Circle(path[i - 1], scale / 400.0, color=color, zorder=3)
             ax.add_patch(circ)
-            circ = patches.Circle(path[i], scale / 200.0, color=color, zorder=3)
+            circ = patches.Circle(path[i], scale / 400.0, color=color, zorder=3)
             ax.add_patch(circ)
+
+        circ = patches.Circle(path[0], scale / 200.0, color=color, zorder=3)
+        ax.add_patch(circ)
+        circ = patches.Circle(path[-1], scale / 200.0, color=color, zorder=3)
+        ax.add_patch(circ)
 
     plt.show()
     return
 
-
-    for path in paths.values():
-        color = 'black'
-        for i in range(1, len(path)):
-            ax.annotate(
-                "",
-                xy=path[i],
-                xytext=path[i - 1],
-                arrowprops=dict(arrowstyle="-", color=color)
-            )
-
-            circ = patches.Circle(path[i - 1], scale / 200.0, color=color, zorder=3)
-            ax.add_patch(circ)
-            circ = patches.Circle(path[i], scale / 200.0, color=color, zorder=3)
-            ax.add_patch(circ)
-    if saveimage:    
+    if saveimage:
         path = os.getcwd() + "/figures/"
-        plt.savefig(path + str(numObjs) + "_" + str(int(RAD)) + "_" + str(HEIGHT) + "_" + str(WIDTH) + "_" + str(example_index) + "_cgraph.png")
+        plt.savefig(
+            path + str(numObjs) + "_" + str(int(RAD)) + "_" + str(HEIGHT) + "_" + str(WIDTH) + "_" +
+            str(example_index) + "_cgraph.png"
+        )
     plt.show()
     return
 
 
 def setupPlot(HEIGHT, WIDTH):
-    fig = plt.figure(num=None, figsize=(int(5*WIDTH/HEIGHT), 5), dpi=120, facecolor='w', edgecolor='k')
+    fig = plt.figure(num=None, figsize=(int(5 * WIDTH / HEIGHT), 5), dpi=120, facecolor='w', edgecolor='k')
     ax = fig.subplots()
     return fig, ax
 
-def animatedMotions(HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, object_ordering, example_index, objectShape=None):
+
+def animatedMotions(
+    HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, object_ordering, example_index, objectShape=None
+):
 
     # n_steps = 5
 
@@ -197,7 +217,7 @@ def animatedMotions(HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, obj
     plt.show(block=False)
 
     ### give a prompt to start animation
-    raw_input("Press <ENTER> to start animation")   
+    raw_input("Press <ENTER> to start animation")
 
     ### separate the points (center of the objects) into (1) current points and (2) goal points
     current_pts = points[0::2]
@@ -205,22 +225,24 @@ def animatedMotions(HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, obj
     isGoalReached = [False for i in range(numObjs)]
 
     for obj in object_ordering:
-        for wpt_idx in range(len(rpaths[(obj*2, obj*2+1)])-1):
-            pt1 = rpaths[(obj*2, obj*2+1)][wpt_idx]
-            pt2 = rpaths[(obj*2, obj*2+1)][wpt_idx+1]
-            step1 = int(abs(pt1[0]-pt2[0]) / 50.0)
-            step2 = int(abs(pt1[1]-pt2[1]) / 50.0)
+        for wpt_idx in range(len(rpaths[(obj * 2, obj * 2 + 1)]) - 1):
+            pt1 = rpaths[(obj * 2, obj * 2 + 1)][wpt_idx]
+            pt2 = rpaths[(obj * 2, obj * 2 + 1)][wpt_idx + 1]
+            step1 = int(abs(pt1[0] - pt2[0]) / 50.0)
+            step2 = int(abs(pt1[1] - pt2[1]) / 50.0)
             if step1 == 0 and step2 == 0:
                 n_steps = 1
             else:
                 n_steps = max(step1, step2)
-            for step in range(n_steps+1):
+            for step in range(n_steps + 1):
                 ### update current_pts
-                current_pts[obj] = ( pt1[0]+(pt2[0]-pt1[0])/n_steps*step,  pt1[1]+(pt2[1]-pt1[1])/n_steps*step)
+                current_pts[obj] = (
+                    pt1[0] + (pt2[0] - pt1[0]) / n_steps * step, pt1[1] + (pt2[1] - pt1[1]) / n_steps * step
+                )
                 ### check if the current object reaches the goal
                 if current_pts[obj] == goal_pts[obj]:
-                    isGoalReached[obj] = True            
-                
+                    isGoalReached[obj] = True
+
                 ax.cla()
                 ax.plot(wallx, wally, 'blue')
 
@@ -234,10 +256,12 @@ def animatedMotions(HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, obj
                     ### goal
                     if not isGoalReached[nn]:
                         polygon = pn.Polygon(objectShape + goal_pts[nn])
-                        patch = createPolygonPatch_distinct(pu.pointList(polygon), color_pool[nn], isGoal=True, zorder=1)
+                        patch = createPolygonPatch_distinct(
+                            pu.pointList(polygon), color_pool[nn], isGoal=True, zorder=1
+                        )
                         ax.add_patch(patch)
                         ax.text(goal_pts[nn][0], goal_pts[nn][1], str(nn), fontweight='bold', fontsize=10, zorder=1)
-                
+
                 plt.pause(0.0000005)
 
     plt.show()
@@ -251,7 +275,6 @@ def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_
     wallx = [0, WIDTH, WIDTH, 0, 0]
     wally = [0, 0, HEIGHT, HEIGHT, 0]
     plt.plot(wallx, wally, 'blue')
-
 
     if polygons is not None:
         for i in range(len(polygons)):
@@ -281,7 +304,7 @@ def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_
     #         ax.add_patch(patch)
 
     rads = {}
-    cc = 0.0
+    # cc = 0.0
     for obj, path in paths.items():
         # cc += 1.0 / len(paths)
         # color = patches.colors.hsv_to_rgb((cc, 1, 1))
@@ -299,9 +322,7 @@ def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_
                 "",
                 xy=vto,
                 xytext=vfrom,
-                arrowprops=dict(
-                    arrowstyle="simple", connectionstyle="arc3,rad=" + str(rad), color=color
-                )
+                arrowprops=dict(arrowstyle="simple", connectionstyle="arc3,rad=" + str(rad), color=color)
             )
             # ax.annotate(
             #     "",
@@ -315,9 +336,7 @@ def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_
                 "",
                 xy=vto,
                 xytext=vfrom,
-                arrowprops=dict(
-                    arrowstyle="->", connectionstyle="arc3,rad=" + str(rad), color="black"
-                )
+                arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=" + str(rad), color="black")
             )
 
             pcolor = "black"
@@ -327,10 +346,12 @@ def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_
             ax.add_patch(circ)
     if saveimage:
         path = os.getcwd() + "/figures/"
-        plt.savefig(path + str(numObjs) + "_" + str(int(RAD)) + "_" + str(HEIGHT) + "_" + str(WIDTH) + "_" + str(example_index) + "_paths.png")
+        plt.savefig(
+            path + str(numObjs) + "_" + str(int(RAD)) + "_" + str(HEIGHT) + "_" + str(WIDTH) + "_" +
+            str(example_index) + "_paths.png"
+        )
     plt.show()
     return
-
 
 
 def isCollisionFree(robot, point, obstacles):
@@ -352,10 +373,11 @@ def isEdgeCollisionFree(robot, edge, obstacles):
 
     return True
 
+
 def getColorMap(numObjs):
     # set colormap
-    gist_ncar = cm = plt.get_cmap('gist_ncar')
-    cNorm  = colors.Normalize(vmin=0, vmax=1)
+    gist_ncar = plt.get_cmap('gist_ncar')
+    cNorm = colors.Normalize(vmin=0, vmax=1)
     scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=gist_ncar)
 
     color_values = np.linspace(0, 0.9, numObjs)
@@ -363,10 +385,11 @@ def getColorMap(numObjs):
 
     return color_pool
 
+
 def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
-    
+
     ### get some colors from colormap
-    color_pool = getColorMap(numObjs)   
+    # color_pool = getColorMap(numObjs)
 
     epsilon = EPSILON
     polygon = np.array(poly_disk([0, 0], RAD, 30))
@@ -521,7 +544,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
             drawProblem(HEIGHT, WIDTH, wall_pts, obstacles, (path, color), robotStart, robotGoal)
 
     if display:
-        drawConGraph(HEIGHT, WIDTH, paths, objects)
+        drawConGraph(HEIGHT, WIDTH, [], paths, objects)
 
     graph = {}
     for uv, p in paths.items():
@@ -551,8 +574,8 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
     return graph, paths, objects
 
 
-def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile,saveimage, example_index):
-    
+def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index, debug=False):
+
     ### get some colors from colormap
     color_pool = getColorMap(numObjs)
 
@@ -614,7 +637,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile,s
         polysum += obj
 
         if displayMore:
-            drawConGraph(HEIGHT, WIDTH, {}, regions.values(), False)
+            drawConGraph(HEIGHT, WIDTH, {}, color_pool, regions.values(), False)
 
     obj2reg = {}
     for rind, r in regions.items():
@@ -665,28 +688,42 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile,s
         rind1, r1 = rkv1
         rind2, r2 = rkv2
         # print(rind1, r1, rind2, r2)
+        if rind1[0] > 0 and rind2[0] > 0:
+            s1 = set(rind1[:-1])
+            s2 = set(rind2[:-1])
+            if len(s1 - s2) + len(s2 - s1) > 1:
+                continue
 
         r1, pstart = r1
         r2, pgoal = r2
+        r1Ar2 = r1 + r2
         pointStart = pstart + polygon * 0.1
         pointGoal = pgoal + polygon * 0.1
 
         interR = set(pu.pointList(r1)) & set(pu.pointList(r2))
         if len(interR) > 0:
+            rect = ps.Rectangle(dist(pstart, pgoal), 1)
+            vsg = np.subtract(pgoal, pstart)
+            rect.rotate(np.angle(vsg[0] + 1j * vsg[1]))
+            rect.warpToBox(*bbox([pstart, pgoal]))
+            hasDirectPath = (r1Ar2).covers(rect) if len(r1Ar2) == 1 else False
+
             if displayMore:
                 drawConGraph(
                     HEIGHT, WIDTH, {
                         0: pu.pointList(pu.fillHoles(r1)),
-                        1: pu.pointList(pu.fillHoles(r2))
-                    }, regions.values(), False
+                        1: pu.pointList(pu.fillHoles(r2)),
+                        2: pu.pointList(rect)
+                    }, color_pool, regions.values(), False
                 )
+                print('Direct?: ', hasDirectPath)
                 # drawProblem(
                 #     HEIGHT, WIDTH, wall_mink, regions.values(), None, pu.pointList(pu.fillHoles(r1)),
                 #     pu.pointList(pu.fillHoles(r2))
                 # )
 
             # collides = False
-            if display:
+            if display and not hasDirectPath:
                 interR = min(interR, key=lambda x: dist(pstart, x) + dist(x, pgoal))
                 wall_mink_poly = pu.fillHoles(r1)
                 # if displayMore:
@@ -698,7 +735,10 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile,s
                 env = vis.Environment(env_polys_vis)
                 if not env.is_valid(epsilon):
                     displayMore = True
-                    drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall_mink_poly, regions.values(), color_pool, points, example_index, saveimage, None, pointStart, pointGoal)
+                    drawProblem(
+                        HEIGHT, WIDTH, numObjs, RAD, wall_mink_poly, regions.values(), color_pool, points,
+                        example_index, saveimage, None, pointStart, pointGoal
+                    )
                     if savefile:
                         savefile += ".env_error"
                     else:
@@ -726,7 +766,10 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile,s
                 env = vis.Environment(env_polys_vis)
                 if not env.is_valid(epsilon):
                     displayMore = True
-                    drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall_mink_poly, regions.values(), color_pool, points, example_index, saveimage, None, pointStart, pointGoal)
+                    drawProblem(
+                        HEIGHT, WIDTH, numObjs, RAD, wall_mink_poly, regions.values(), color_pool, points,
+                        example_index, saveimage, None, pointStart, pointGoal
+                    )
                     if savefile:
                         savefile += ".env_error"
                     else:
@@ -744,7 +787,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile,s
 
                 path += [(p.x(), p.y()) for p in ppath.path()][1:]
             else:
-                path = []
+                path = [pstart, pgoal]
 
             # if not collides:
             paths[(rind1, rind2)] = path
@@ -755,9 +798,10 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile,s
 
             if display and displayMore:
                 # drawProblem(HEIGHT, WIDTH, r1 + r2, regions.values(), (path, color), pointStart, pointGoal)
-                drawConGraph(HEIGHT, WIDTH, {0: path}, regions.values(), False)
+                drawConGraph(HEIGHT, WIDTH, {0: path}, color_pool, regions.values(), False)
 
     if display:
+        drawConGraph(HEIGHT, WIDTH, paths, color_pool, regions.values(), False)
         drawConGraph(HEIGHT, WIDTH, paths, color_pool, objects)
 
     graph = {}
@@ -787,6 +831,8 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile,s
                 output,
             )
 
+    if debug:
+        return graph, paths, objects, obj2reg, regions, polygon
     return graph, paths, objects, color_pool, points, polygon, obj2reg
 
 
@@ -905,7 +951,7 @@ def loadCGraph(savefile, repath, display, displayMore):
                 drawProblem(HEIGHT, WIDTH, wall_pts, obstacles, (path, color), robotStart, robotGoal)
 
     if display:
-        drawConGraph(HEIGHT, WIDTH, paths, objects)
+        drawConGraph(HEIGHT, WIDTH, paths, color_pool, objects)
 
     if repath:
         new_graph = {}
@@ -971,7 +1017,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
             polysum += obj
 
             if displayMore:
-                drawConGraph(HEIGHT, WIDTH, {}, regions.values(), False)
+                drawConGraph(HEIGHT, WIDTH, {}, color_pool, regions.values(), False)
 
         obj2reg = {}
         for rind, r in regions.items():
@@ -1016,34 +1062,47 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
         #     paths[r] = [p.center()] * 2
 
         if display:
-            drawConGraph(HEIGHT, WIDTH, {}, regions.values(), False)
+            drawConGraph(HEIGHT, WIDTH, {}, color_pool, regions.values(), False)
 
         for rkv1, rkv2 in combinations(regions.items(), 2):
             rind1, r1 = rkv1
             rind2, r2 = rkv2
-            # print(rind1, r1, rind2, r2)
+            if rind1[0] > 0 and rind2[0] > 0:
+                s1 = set(rind1[:-1])
+                s2 = set(rind2[:-1])
+                if len(s1 - s2) + len(s2 - s1) > 1:
+                    continue
 
             r1, pstart = r1
             r2, pgoal = r2
+            r1Ar2 = r1 + r2
             pointStart = pstart + polygon * 0.1
             pointGoal = pgoal + polygon * 0.1
 
             interR = set(pu.pointList(r1)) & set(pu.pointList(r2))
             if len(interR) > 0:
+                rect = ps.Rectangle(dist(pstart, pgoal), 1)
+                vsg = np.subtract(pgoal, pstart)
+                rect.rotate(np.angle(vsg[0] + 1j * vsg[1]))
+                rect.warpToBox(*pn.Polygon([pstart, pgoal]).boundingBox())
+                hasDirectPath = (r1Ar2).covers(rect) if len(r1Ar2) == 1 else False
+
                 if displayMore:
                     drawConGraph(
                         HEIGHT, WIDTH, {
                             0: pu.pointList(pu.fillHoles(r1)),
-                            1: pu.pointList(pu.fillHoles(r2))
-                        }, regions.values(), False
+                            1: pu.pointList(pu.fillHoles(r2)),
+                            2: pu.pointList(rect)
+                        }, color_pool, regions.values(), False
                     )
+                    print('Direct?: ', hasDirectPath)
                     # drawProblem(
                     #     HEIGHT, WIDTH, wall_mink, regions.values(), None, pu.pointList(pu.fillHoles(r1)),
                     #     pu.pointList(pu.fillHoles(r2))
                     # )
 
                 # collides = False
-                if display:
+                if display and not hasDirectPath:
                     interR = min(interR, key=lambda x: dist(pstart, x) + dist(x, pgoal))
                     wall_mink_poly = pu.fillHoles(r1)
                     # if displayMore:
@@ -1101,7 +1160,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
 
                     path += [(p.x(), p.y()) for p in ppath.path()][1:]
                 else:
-                    path = []
+                    path = [pstart, pgoal]
 
                 # if not collides:
                 paths[(rind1, rind2)] = path
@@ -1112,10 +1171,11 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
 
                 if display and displayMore:
                     # drawProblem(HEIGHT, WIDTH, r1 + r2, regions.values(), (path, color), pointStart, pointGoal)
-                    drawConGraph(HEIGHT, WIDTH, {0: path}, regions.values(), False)
+                    drawConGraph(HEIGHT, WIDTH, {0: path}, color_pool, regions.values(), False)
 
     if display:
-        drawConGraph(HEIGHT, WIDTH, paths, objects)
+        drawConGraph(HEIGHT, WIDTH, paths, color_pool, regions.values(), False)
+        drawConGraph(HEIGHT, WIDTH, paths, color_pool, objects)
 
     if repath:
         new_graph = {}
@@ -1126,9 +1186,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
                 new_graph[v] = sorted(new_graph.get(v, []) + [u])
 
         # assert (new_graph == graph)
-        # graph = new_graph
-        print(new_graph)
-        print(obj2reg)
+        graph = new_graph
 
     return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths, obj2reg
 
@@ -1170,8 +1228,6 @@ if __name__ == "__main__":
         loadSave = sys.argv[8] not in ('n', 'N')
 
     if loadSave:
-        loadDenseCGraph(savefile, True, display, displayMore)
+        print(loadDenseCGraph(savefile, True, display, displayMore))
     else:
-        graph, paths, objects, obj2reg = genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile)
-        print(graph)
-        print(obj2reg)
+        print(genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, None, None))

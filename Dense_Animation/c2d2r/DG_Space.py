@@ -2,7 +2,7 @@ import os
 import sys
 import copy
 from collections import OrderedDict
-from cgraph import genCGraph,genDenseCGraph, loadCGraph, drawMotions, animatedMotions
+from cgraph import genCGraph, genDenseCGraph, loadCGraph, drawMotions, animatedMotions
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import gurobipy as gp
@@ -31,13 +31,12 @@ class Experiments(object):
         )
         while (graph == False):
             graph, paths, objects, color_pool, points, objectShape, object_locations = genDenseCGraph(
-            numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
+                numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
             )
-        
 
         if graph is paths is objects is False:
             return -1
-        gpd = Dense_Path_Generation(graph,object_locations)
+        gpd = Dense_Path_Generation(graph, object_locations)
         # if RECORD:
         #     with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl" %
         #                            (int(W_X / scaler), int(W_Y / scaler), OBJ_NUM, iter)),
@@ -56,24 +55,27 @@ class Experiments(object):
         vertex_setSize, vertices, path_selection, object_ordering = IP.optimum
         # print ind_opt, DGs.DGs[ind_opt]
         path_opts = gpd.path_dict
-        
+
         new_paths = {}
         for r1, r2 in paths.keys():
-            new_paths[(gpd.region_dict[r1], gpd.region_dict[r2])] = copy.deepcopy(paths[(r1,r2)])
+            new_paths[(gpd.region_dict[r1], gpd.region_dict[r2])] = copy.deepcopy(paths[(r1, r2)])
 
         if display:
-            rpaths = self.drawSolution(HEIGHT, WIDTH, numObjs, RAD, new_paths, path_opts, path_selection, objects, color_pool, points, example_index, saveimage)
-        
-            animatedMotions(HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, object_ordering, example_index, objectShape)
-        
-        return vertex_setSize        
+            rpaths = self.drawSolution(
+                HEIGHT, WIDTH, numObjs, RAD, new_paths, path_opts, path_selection, objects, color_pool, points,
+                example_index, saveimage
+            )
+
+            animatedMotions(
+                HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, object_ordering, example_index, objectShape
+            )
+
+        return vertex_setSize
 
     def load_instance(self, savefile, repath, display, displayMore):
 
         # scaler = 1000.0
-        numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths = loadCGraph(
-            savefile, repath, display, displayMore
-        )
+        numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths = loadCGraph(savefile, repath, display, displayMore)
         print "linked list", graph
         gpd = Generate_Path_Dictionary(graph)
         print "Dependency dict(key: obj index; value: list of paths as dependencies)"
@@ -89,7 +91,10 @@ class Experiments(object):
         # if display:
         #     self.drawSolution(HEIGHT, WIDTH, paths, path_opts, ind_opt, objects)
 
-    def drawSolution(self, HEIGHT, WIDTH, numObjs, RAD, paths, path_opts, ind_opt, objects,  color_pool, points, example_index, saveimage):
+    def drawSolution(
+        self, HEIGHT, WIDTH, numObjs, RAD, paths, path_opts, ind_opt, objects, color_pool, points, example_index,
+        saveimage
+    ):
         rpaths = OrderedDict()
         for obj, iopt in enumerate(ind_opt, 0):
             dpath = path_opts[obj][iopt]
@@ -101,9 +106,9 @@ class Experiments(object):
             # print(deps)
 
             rpath = [points[start]]
-            for i in range(len(dpath)-2):
+            for i in range(len(dpath) - 2):
                 region1 = dpath[i]
-                region2 = dpath[i+1]
+                region2 = dpath[i + 1]
                 if (region1, region2) in paths.keys():
                     rpath += paths[(region1, region2)][:-1]
                 elif (region2, region1) in paths.keys():
@@ -111,7 +116,7 @@ class Experiments(object):
                 else:
                     print "invalid path"
                     exit()
-            if len(dpath)>=2:
+            if len(dpath) >= 2:
                 region1 = dpath[-2]
                 region2 = dpath[-1]
                 if (region1, region2) in paths.keys():
@@ -153,21 +158,16 @@ class Experiments(object):
                     #             (OR.start_pose, OR.goal_pose), output, pickle.HIGHEST_PROTOCOL
                     #         )
                     DGs = DG_Space(gpd.dependency_dict)
-                    DG_num_matrix[int(W_X / scaler) - 3,
-                                  int(W_Y / scaler) - 3] += len(DGs.DGs.keys())
+                    DG_num_matrix[int(W_X / scaler) - 3, int(W_Y / scaler) - 3] += len(DGs.DGs.keys())
                     if RECORD:
-                        with open(os.path.join(
-                                my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl" %
-                            (int(W_X / scaler), int(W_Y / scaler), OBJ_NUM, iter)),
-                                  'wb') as output:
+                        with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl" %
+                                               (int(W_X / scaler), int(W_Y / scaler), OBJ_NUM, iter)), 'wb') as output:
                             pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
                     IP = feekback_vertex_ILP(gpd.dependency_dict)
                     # IP = feekback_arc_ILP(gpd.dependency_dict)
-                    min_feedback_matrix[int(W_X / scaler) - 3,
-                                        int(W_Y / scaler) - 3] += IP.optimum
+                    min_feedback_matrix[int(W_X / scaler) - 3, int(W_Y / scaler) - 3] += IP.optimum
                 DG_num_matrix[int(W_X / scaler) - 3, int(W_Y / scaler) - 3] /= Iteration_time
-                min_feedback_matrix[int(W_X / scaler) - 3,
-                                    int(W_Y / scaler) - 3] /= Iteration_time
+                min_feedback_matrix[int(W_X / scaler) - 3, int(W_Y / scaler) - 3] /= Iteration_time
 
         fig = plt.figure()
         ax = fig.gca(projection='3d')
@@ -178,9 +178,7 @@ class Experiments(object):
         X, Y = np.meshgrid(X, Y)
 
         # Plot the surface.
-        surf = ax.plot_surface(
-            X, Y, DG_num_matrix, cmap=cm.coolwarm, linewidth=0, antialiased=False
-        )
+        surf = ax.plot_surface(X, Y, DG_num_matrix, cmap=cm.coolwarm, linewidth=0, antialiased=False)
 
         # Add a color bar which maps values to colors.
         fig.colorbar(surf, shrink=0.5, aspect=5)
@@ -190,9 +188,7 @@ class Experiments(object):
         fig = plt.figure()
         ax = fig.gca(projection='3d')
 
-        surf = ax.plot_surface(
-            X, Y, min_feedback_matrix, cmap=cm.coolwarm, linewidth=0, antialiased=False
-        )
+        surf = ax.plot_surface(X, Y, min_feedback_matrix, cmap=cm.coolwarm, linewidth=0, antialiased=False)
 
         # Add a color bar which maps values to colors.
         fig.colorbar(surf, shrink=0.5, aspect=5)
@@ -211,8 +207,8 @@ class Experiments(object):
         for W_X in range(3, 8):
             for W_Y in range(3, 8):
                 for iter in range(Iteration_time):
-                    with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl" %
-                                           (W_X, W_Y, OBJ_NUM, iter)), 'rb') as input:
+                    with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl" % (W_X, W_Y, OBJ_NUM, iter)),
+                              'rb') as input:
                         DGs = pickle.load(input)
                     for stat in DGs.values():
                         count_DG += 1
@@ -382,9 +378,7 @@ class DG_Space(object):
                 Y[i, j] = y[i, j].x
         obj_indexes = [i for i in range(n)]
         order_count = np.sum(Y, axis=1)
-        final_order = [
-            obj_index for _, obj_index in sorted(zip(order_count, obj_indexes), reverse=True)
-        ]
+        final_order = [obj_index for _, obj_index in sorted(zip(order_count, obj_indexes), reverse=True)]
 
         return obj.getValue(), vertices_to_be_removed, final_order
 
@@ -525,9 +519,7 @@ class feekback_vertex_ILP(object):
                 Y[i, j] = y[i, j].x
         obj_indexes = [i for i in range(n)]
         order_count = np.sum(Y, axis=1)
-        final_order = [
-            obj_index for _, obj_index in sorted(zip(order_count, obj_indexes), reverse=True)
-        ]
+        final_order = [obj_index for _, obj_index in sorted(zip(order_count, obj_indexes), reverse=True)]
         print("Final objects order: ")
         print(final_order)
 
@@ -704,16 +696,12 @@ class Object_Rearrangement(object):
             while current_node in parents:
                 path.append(nodes[current_node])
                 if nodes[current_node] in self.pose_overlap:
-                    dependency_set = dependency_set.union(
-                        set(self.pose_overlap[nodes[current_node]])
-                    )
+                    dependency_set = dependency_set.union(set(self.pose_overlap[nodes[current_node]]))
                 dependency_set = dependency_set.union({nodes[current_node]})
                 current_node = parents[current_node]
             path.append(current_node)
             if nodes[current_node] in self.pose_overlap:
-                dependency_set = dependency_set.union(
-                    set(self.pose_overlap[nodes[current_node]])
-                )
+                dependency_set = dependency_set.union(set(self.pose_overlap[nodes[current_node]]))
             dependency_set = dependency_set.union({nodes[current_node]})
             dependency_set = dependency_set.difference({(key, 0), (key, 1)})
             self.path_dict[key].append(list(reversed(path)))
@@ -795,10 +783,10 @@ class Object_Rearrangement(object):
         for pose in [(i, j) for i in self.start_pose.keys() for j in range(2)]:
             if (pose == pose1) or (pose == pose2):
                 continue
-            if (((pose1 not in self.pose_overlap) or
-                 ((pose1 in self.pose_overlap) and (pose not in self.pose_overlap[pose1]))) and
-                ((pose2 not in self.pose_overlap) or ((pose2 in self.pose_overlap) and
-                                                      (pose not in self.pose_overlap[pose2])))):
+            if (((pose1 not in self.pose_overlap) or ((pose1 in self.pose_overlap) and
+                                                      (pose not in self.pose_overlap[pose1])))
+                    and ((pose2 not in self.pose_overlap) or ((pose2 in self.pose_overlap) and
+                                                              (pose not in self.pose_overlap[pose2])))):
                 if pose[1]:
                     pose_loc = self.goal_pose[pose[0]]
                 else:
@@ -909,15 +897,10 @@ class Generate_Path_Dictionary(object):
             self.dependency_dict[key].append(dependency_set)
 
 
-
-
-
-
-
 class Dense_Path_Generation(object):
     # Input: Danniel's region connectivity graph
     # Output: the dependency dictionary
-    def __init__(self, graph,obj_locations):
+    def __init__(self, graph, obj_locations):
         self.obj_locations = obj_locations
         self.path_dict = {}
         self.dependency_dict = {}
@@ -927,7 +910,7 @@ class Dense_Path_Generation(object):
         self.linked_list_conversion(graph)
         self.construct_path_dict()
         self.dependency_dict_conversion()
-        
+
     def dependency_dict_conversion(self):
         for key in self.dependency_dict.keys():
             number_set_list = self.dependency_dict[key]
@@ -935,15 +918,15 @@ class Dense_Path_Generation(object):
             for number_set in number_set_list:
                 pose_set = set()
                 for number in number_set:
-                    pose_set = pose_set.union({(number//2, number%2)})
+                    pose_set = pose_set.union({(number // 2, number % 2)})
                 pose_set_list.append(pose_set)
             self.dependency_dict[key] = pose_set_list
 
     def linked_list_conversion(self, graph):
         print "graph"
         print graph
-        self.region_dict = {} # (1,2,'a'): 0
-        self.LL = {} # 0:[1,2,3]
+        self.region_dict = {}  # (1,2,'a'): 0
+        self.LL = {}  # 0:[1,2,3]
         for key in graph:
             index = len(self.region_dict.keys())
             self.region_dict[key] = index
@@ -965,7 +948,7 @@ class Dense_Path_Generation(object):
 
     def pruning_search(self, key):
         self.path_dict[key] = []
-        self.dependency_dict[key] = [] # key:obj, value: a list of dependency set
+        self.dependency_dict[key] = []  # key:obj, value: a list of dependency set
         region_depandency_on_path = {}
         for i in self.region_dict.values():
             region_depandency_on_path[i] = []
@@ -973,22 +956,22 @@ class Dense_Path_Generation(object):
         parents = {}
         pruning = {}
         goal_nodes = []
-        nodes[1] = self.region_dict[self.obj_locations[2*key]]
+        nodes[1] = self.region_dict[self.obj_locations[2 * key]]
         queue = [1]
-        current_dependency_set = self.get_dependency_set_from_index(self.region_dict[self.obj_locations[2*key]])
-        region_depandency_on_path[self.region_dict[self.obj_locations[2*key]]].append(current_dependency_set)
+        current_dependency_set = self.get_dependency_set_from_index(self.region_dict[self.obj_locations[2 * key]])
+        region_depandency_on_path[self.region_dict[self.obj_locations[2 * key]]].append(current_dependency_set)
         while len(queue) > 0:
             node = queue.pop()
-            if nodes[node] == self.region_dict[self.obj_locations[2*key+1]]:
+            if nodes[node] == self.region_dict[self.obj_locations[2 * key + 1]]:
                 goal_nodes.append(node)
                 continue
-            if node in parents: # if the node is not the root
+            if node in parents:  # if the node is not the root
                 pruning_set = pruning[parents[node]]
             else:
                 pruning_set = {nodes[node]}
-            if nodes[node] in self.LL: # if it has neighbor
+            if nodes[node] in self.LL:  # if it has neighbor
                 for pose in self.LL[nodes[node]]:
-                    if pose not in pruning_set: # if the path should not be pruned.
+                    if pose not in pruning_set:  # if the path should not be pruned.
                         index = len(nodes) + 1
                         nodes[index] = pose
                         queue.append(index)
@@ -1001,34 +984,36 @@ class Dense_Path_Generation(object):
             current_node = node
             path = []
             dependency_set = set()
-            while current_node in parents: # while it is not the root(start pose).
+            while current_node in parents:  # while it is not the root(start pose).
                 path.append(nodes[current_node])
                 dependency_set = dependency_set.union(self.get_dependency_set_from_index(nodes[current_node]))
                 current_node = parents[current_node]
             path.append(current_node)
             dependency_set = dependency_set.union(self.get_dependency_set_from_index(nodes[current_node]))
-            dependency_set = dependency_set.difference({2*key, 2*key+1})
+            dependency_set = dependency_set.difference({2 * key, 2 * key + 1})
             self.path_dict[key].append(list(reversed(path)))
             self.dependency_dict[key].append(dependency_set)
 
     def dependency_set_pruning_search(self, key):
         self.path_dict[key] = []
-        self.dependency_dict[key] = [] # key:obj, value: a list of dependency set
+        self.dependency_dict[key] = []  # key:obj, value: a list of dependency set
         vertex2node_dict = {}
         for region in self.region_dict.values():
             vertex2node_dict[region] = []
-        node_dependency_set_dict = {} # the dictionary for the dependency set of each node in the search tree
+        node_dependency_set_dict = {}  # the dictionary for the dependency set of each node in the search tree
         nodes = {}
         parents = {}
-        nodes[1] = self.region_dict[self.obj_locations[2*key]]
+        nodes[1] = self.region_dict[self.obj_locations[2 * key]]
         node_dependency_set_dict[1] = self.get_dependency_set_from_index(nodes[1])
-        vertex2node_dict[self.region_dict[self.obj_locations[2*key]]].append(1)
+        vertex2node_dict[self.region_dict[self.obj_locations[2 * key]]].append(1)
         queue = [1]
         while len(queue) > 0:
             old_node = queue.pop()
-            if nodes[old_node] in self.LL: # if it has neighbor
+            if nodes[old_node] in self.LL:  # if it has neighbor
                 for pose in self.LL[nodes[old_node]]:
-                    current_dependency_set = node_dependency_set_dict[old_node].union( self.get_dependency_set_from_index(pose))
+                    current_dependency_set = node_dependency_set_dict[old_node].union(
+                        self.get_dependency_set_from_index(pose)
+                    )
                     Abandoned = False
                     for n in vertex2node_dict[pose]:
                         if current_dependency_set.issuperset(node_dependency_set_dict[n]):
@@ -1043,17 +1028,17 @@ class Dense_Path_Generation(object):
                         vertex2node_dict[pose].append(node)
                         queue.append(node)
                         node_dependency_set_dict[node] = current_dependency_set
-                        
-        goal_nodes = vertex2node_dict[self.region_dict[self.obj_locations[2*key+1]]]
+
+        goal_nodes = vertex2node_dict[self.region_dict[self.obj_locations[2 * key + 1]]]
 
         for node in goal_nodes:
             current_node = node
             path = []
-            while current_node in parents: # while it is not the root(start pose).
+            while current_node in parents:  # while it is not the root(start pose).
                 path.append(nodes[current_node])
                 current_node = parents[current_node]
             path.append(nodes[current_node])
-            node_dependency_set_dict[node] = node_dependency_set_dict[node].difference({2*key, 2*key+1})
+            node_dependency_set_dict[node] = node_dependency_set_dict[node].difference({2 * key, 2 * key + 1})
             self.path_dict[key].append(list(reversed(path)))
             self.dependency_dict[key].append(node_dependency_set_dict[node])
 
@@ -1065,18 +1050,17 @@ class Dense_Path_Generation(object):
         # print "vertex2node_dict"
         # print vertex2node_dict
 
-
-    def get_path_dependency_set(self, node, parents, nodes,key):
+    def get_path_dependency_set(self, node, parents, nodes, key):
         current_node = node
         path = []
         dependency_set = set()
-        while current_node in parents: # while it is not the root(start pose).
+        while current_node in parents:  # while it is not the root(start pose).
             path.append(nodes[current_node])
             dependency_set = dependency_set.union(self.get_dependency_set_from_index(nodes[current_node]))
             current_node = parents[current_node]
         path.append(current_node)
         dependency_set = dependency_set.union(self.get_dependency_set_from_index(nodes[current_node]))
-        dependency_set = dependency_set.difference({2*key, 2*key+1})
+        dependency_set = dependency_set.difference({2 * key, 2 * key + 1})
         self.path_dict[key].append(list(reversed(path)))
         self.dependency_dict[key].append(dependency_set)
 
@@ -1092,7 +1076,7 @@ class Dense_Path_Generation(object):
                 value = int(i)
             except ValueError:
                 pass  # it was a string, not an int.
-            if value >=-0.5:  
+            if value >= -0.5:
                 dependency_set = dependency_set.union({value})
         return dependency_set
 
@@ -1156,6 +1140,9 @@ if __name__ == "__main__":
     loadfile = False
     if (len(sys.argv) > 8):
         loadfile = sys.argv[8] not in ('n', 'N')
+        if sys.argv[8] in ('x', 'X'):
+            savefile = False
+            loadfile = False
 
     saveimage = False
     if (len(sys.argv) > 9):
