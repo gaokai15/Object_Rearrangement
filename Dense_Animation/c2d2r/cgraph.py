@@ -312,8 +312,8 @@ def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_
         obj_idx = obj[0] // 2
         color = color_pool[obj_idx]
         for i in range(1, len(path)):
-            vfrom = path[i - 1]
-            vto = path[i]
+            vfrom = tuple(path[i - 1])
+            vto = tuple(path[i])
             rad = rads.get((vfrom, vto), -0.2) + 0.2
             rads[(vfrom, vto)] = rad
             rads[(vto, vfrom)] = rad
@@ -862,7 +862,7 @@ def loadCGraph(savefile, repath, display, displayMore):
         minkowski_objs.append(pn.Polygon(mink_obj))
 
     if display:
-        drawProblem(HEIGHT, WIDTH, wall_pts, objects)
+        drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, color_pool, points, example_index, saveimage)
 
     if repath:
         for indStart, indGoal in combinations(range(numObjs * 2), 2):
@@ -985,6 +985,10 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
     wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
     wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
 
+    color_pool = getColorMap(numObjs)
+    example_index = 1
+    saveimage = False
+
     # staticObs = []
     minkowski_objs = []
     # minkowski_poly = []
@@ -993,7 +997,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
         minkowski_objs.append(pn.Polygon(mink_obj))
 
     if display:
-        drawProblem(HEIGHT, WIDTH, wall_pts, objects)
+        drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, color_pool, points, example_index, saveimage)
 
     if repath:
         paths = {}
@@ -1188,7 +1192,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
         # assert (new_graph == graph)
         graph = new_graph
 
-    return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths, obj2reg
+    return numObjs, RAD, HEIGHT, WIDTH, points, graph, paths, objects, color_pool, points, polygon, obj2reg
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ import os
 import sys
 import copy
 from collections import OrderedDict
-from cgraph import genCGraph, genDenseCGraph, loadCGraph, drawMotions, animatedMotions
+from cgraph import genCGraph, genDenseCGraph, loadDenseCGraph, drawMotions, animatedMotions
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import gurobipy as gp
@@ -75,9 +75,11 @@ class Experiments(object):
     def load_instance(self, savefile, repath, display, displayMore):
 
         # scaler = 1000.0
-        numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths = loadCGraph(savefile, repath, display, displayMore)
+        numObjs, RAD, HEIGHT, WIDTH, points, graph, paths, objects, color_pool, points, polygon, obj2reg = loadDenseCGraph(
+            savefile, repath, display, displayMore
+        )
         print "linked list", graph
-        gpd = Generate_Path_Dictionary(graph)
+        gpd = Dense_Path_Generation(graph, obj2reg)
         print "Dependency dict(key: obj index; value: list of paths as dependencies)"
         print gpd.dependency_dict
         # DGs = DG_Space(gpd.dependency_dict)
@@ -85,11 +87,26 @@ class Experiments(object):
         # print "ILP result(the smallest size of FAS):", IP.optimum
         # print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
         # print DGs.DGs
-        opt, ind_opt = IP.optimum
+        vertex_setSize, vertices, path_selection, object_ordering = IP.optimum
         # print ind_opt, DGs.DGs[ind_opt]
-        path_opts = gpd.dependency_dict
+        path_opts = gpd.path_dict
         # if display:
         #     self.drawSolution(HEIGHT, WIDTH, paths, path_opts, ind_opt, objects)
+        new_paths = {}
+        for r1, r2 in paths.keys():
+            new_paths[(gpd.region_dict[r1], gpd.region_dict[r2])] = copy.deepcopy(paths[(r1, r2)])
+
+        if display:
+            rpaths = self.drawSolution(
+                HEIGHT, WIDTH, numObjs, RAD, new_paths, path_opts, path_selection, objects, color_pool, points,
+                example_index, saveimage
+            )
+
+            animatedMotions(
+                HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, object_ordering, example_index, polygon
+            )
+
+        return vertex_setSize
 
     def drawSolution(
         self, HEIGHT, WIDTH, numObjs, RAD, paths, path_opts, ind_opt, objects, color_pool, points, example_index,
