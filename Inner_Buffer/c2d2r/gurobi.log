@@ -2302,3 +2302,409 @@ Solution count 2: 3 -0
 
 Optimal solution found (tolerance 1.00e-04)
 Best objective 3.000000000000e+00, best bound 3.000000000000e+00, gap 0.0000%
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon May  4 22:08:52 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 3477 rows, 1000 columns and 7380 nonzeros
+Model has 11216 quadratic constraints
+Variable types: 0 continuous, 1000 integer (1000 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  QMatrix range    [1e+00, 1e+00]
+  QLMatrix range   [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Presolve removed 2821 rows and 638 columns
+Presolve time: 0.36s
+Presolved: 656 rows, 362 columns, 2167 nonzeros
+Variable types: 0 continuous, 362 integer (362 binary)
+
+Root relaxation: objective 5.000000e+00, 25 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    5.00000    0    3          -    5.00000      -     -    0s
+     0     0    5.00000    0    2          -    5.00000      -     -    0s
+     0     0    5.00000    0    2          -    5.00000      -     -    0s
+     0     0    5.00000    0    2          -    5.00000      -     -    0s
+     0     2    5.00000    0    2          -    5.00000      -     -    0s
+  2602  1338    5.00000   24   52          -    5.00000      -   5.5    5s
+H 2605  1274                       3.0000000    5.00000  66.7%   5.8    6s
+H 2605  1211                       4.0000000    5.00000  25.0%   5.8    6s
+
+Cutting planes:
+  Gomory: 3
+  Implied bound: 1
+  Flow cover: 4
+  Zero half: 8
+
+Explored 2612 nodes (16381 simplex iterations) in 7.31 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 2: 4 3 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 4.000000000000e+00, best bound 4.000000000000e+00, gap 0.0000%
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon May  4 22:29:03 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 2220 rows, 600 columns and 4752 nonzeros
+Model has 7461 quadratic constraints
+Variable types: 0 continuous, 600 integer (600 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  QMatrix range    [1e+00, 1e+00]
+  QLMatrix range   [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Presolve removed 1809 rows and 357 columns
+Presolve time: 0.20s
+Presolved: 411 rows, 243 columns, 1304 nonzeros
+Variable types: 0 continuous, 243 integer (243 binary)
+
+Root relaxation: objective 5.000000e+00, 10 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    5.00000    0    8          -    5.00000      -     -    0s
+     0     0    5.00000    0    7          -    5.00000      -     -    0s
+     0     0    5.00000    0    5          -    5.00000      -     -    0s
+     0     0    5.00000    0    3          -    5.00000      -     -    0s
+     0     0    5.00000    0    2          -    5.00000      -     -    0s
+     0     0    5.00000    0    4          -    5.00000      -     -    0s
+     0     0    5.00000    0    4          -    5.00000      -     -    0s
+     0     2    5.00000    0    4          -    5.00000      -     -    0s
+  2248  1119    3.00000   24   32          -    3.00000      -   4.9    5s
+  2280  1142    2.00000   17   36          -    2.00000      -   7.8   10s
+
+Cutting planes:
+  Gomory: 5
+  Clique: 10
+  Flow cover: 10
+  Zero half: 13
+
+Explored 2422 nodes (32741 simplex iterations) in 13.16 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 0
+
+Model is infeasible
+Best objective -, best bound -, gap -
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon May  4 22:32:44 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 124 rows, 48 columns and 256 nonzeros
+Model has 205 quadratic constraints
+Variable types: 0 continuous, 48 integer (48 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  QMatrix range    [1e+00, 1e+00]
+  QLMatrix range   [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Presolve removed 112 rows and 30 columns
+Presolve time: 0.00s
+Presolved: 12 rows, 18 columns, 34 nonzeros
+Variable types: 0 continuous, 18 integer (18 binary)
+
+Root relaxation: objective 2.000000e+00, 0 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    2.00000    0    2          -    2.00000      -     -    0s
+     0     0 infeasible    0               - infeasible      -     -    0s
+
+Explored 1 nodes (16 simplex iterations) in 0.00 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 0
+
+Model is infeasible
+Best objective -, best bound -, gap -
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon May  4 22:33:37 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 89 rows, 48 columns and 186 nonzeros
+Model has 135 quadratic constraints
+Variable types: 0 continuous, 48 integer (48 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  QMatrix range    [1e+00, 1e+00]
+  QLMatrix range   [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Presolve removed 71 rows and 26 columns
+Presolve time: 0.00s
+Presolved: 18 rows, 22 columns, 46 nonzeros
+Variable types: 0 continuous, 22 integer (22 binary)
+
+Root relaxation: objective 2.000000e+00, 0 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    2.00000    0    1          -    2.00000      -     -    0s
+     0     0    2.00000    0    3          -    2.00000      -     -    0s
+     0     0    2.00000    0    3          -    2.00000      -     -    0s
+     0     2    2.00000    0    3          -    2.00000      -     -    0s
+H    4     6                       2.0000000    2.00000  0.00%   1.0    0s
+
+Explored 6 nodes (39 simplex iterations) in 0.03 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 1: 2 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 2.000000000000e+00, best bound 2.000000000000e+00, gap 0.0000%
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon May  4 22:37:20 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 2110 rows, 600 columns and 4576 nonzeros
+Model has 7131 quadratic constraints
+Variable types: 0 continuous, 600 integer (600 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  QMatrix range    [1e+00, 1e+00]
+  QLMatrix range   [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Presolve removed 1632 rows and 323 columns
+Presolve time: 0.22s
+Presolved: 478 rows, 277 columns, 1538 nonzeros
+Variable types: 0 continuous, 277 integer (277 binary)
+
+Root relaxation: objective 5.000000e+00, 5 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    5.00000    0    5          -    5.00000      -     -    0s
+     0     0    5.00000    0    3          -    5.00000      -     -    0s
+     0     0    5.00000    0    5          -    5.00000      -     -    0s
+     0     0    5.00000    0    5          -    5.00000      -     -    0s
+     0     2    5.00000    0    5          -    5.00000      -     -    0s
+H  932    59                       5.0000000    5.00000  0.00%   3.4    1s
+
+Explored 1045 nodes (3742 simplex iterations) in 1.78 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 1: 5 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 5.000000000000e+00, best bound 5.000000000000e+00, gap 0.0000%
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon May  4 22:40:14 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 2561 rows, 800 columns and 5462 nonzeros
+Model has 7756 quadratic constraints
+Variable types: 0 continuous, 800 integer (800 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  QMatrix range    [1e+00, 1e+00]
+  QLMatrix range   [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Presolve removed 2093 rows and 505 columns
+Presolve time: 0.25s
+Presolved: 468 rows, 295 columns, 1667 nonzeros
+Variable types: 0 continuous, 295 integer (295 binary)
+
+Root relaxation: objective 5.000000e+00, 16 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    5.00000    0    6          -    5.00000      -     -    0s
+     0     0    5.00000    0    7          -    5.00000      -     -    0s
+     0     0    5.00000    0    7          -    5.00000      -     -    0s
+     0     2    5.00000    0    7          -    5.00000      -     -    0s
+H 1762   919                       2.0000000    5.00000   150%   7.0    3s
+H 1763   874                       3.0000000    5.00000  66.7%   7.0    3s
+H 1764   830                       4.0000000    5.00000  25.0%   7.0    3s
+
+Cutting planes:
+  Gomory: 1
+  Clique: 5
+  Zero half: 1
+
+Explored 1764 nodes (13051 simplex iterations) in 3.77 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 3: 4 3 2 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 4.000000000000e+00, best bound 4.000000000000e+00, gap 0.0000%
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon May  4 23:05:48 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 2126 rows, 700 columns and 4514 nonzeros
+Model has 5966 quadratic constraints
+Variable types: 0 continuous, 700 integer (700 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  QMatrix range    [1e+00, 1e+00]
+  QLMatrix range   [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Presolve removed 1741 rows and 463 columns
+Presolve time: 0.18s
+Presolved: 385 rows, 237 columns, 1314 nonzeros
+Variable types: 0 continuous, 237 integer (237 binary)
+
+Root relaxation: objective 5.000000e+00, 10 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    5.00000    0    1          -    5.00000      -     -    0s
+     0     0    5.00000    0    2          -    5.00000      -     -    0s
+     0     0    5.00000    0    2          -    5.00000      -     -    0s
+     0     2    5.00000    0    2          -    5.00000      -     -    0s
+  4494  2252    4.00000   23    2          -    4.00000      -   6.2    6s
+H 4494  2139                       3.0000000    4.00000  33.3%   6.2    6s
+H 4495  2033                       4.0000000    4.00000  0.00%   6.2    6s
+
+Explored 4495 nodes (28027 simplex iterations) in 6.15 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 2: 4 3 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 4.000000000000e+00, best bound 4.000000000000e+00, gap 0.0000%
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon May  4 23:38:59 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 1348 rows, 800 columns and 3336 nonzeros
+Model has 3191 quadratic constraints
+Variable types: 0 continuous, 800 integer (800 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  QMatrix range    [1e+00, 1e+00]
+  QLMatrix range   [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Presolve removed 908 rows and 544 columns
+Presolve time: 0.10s
+Presolved: 440 rows, 256 columns, 1371 nonzeros
+Variable types: 0 continuous, 256 integer (256 binary)
+
+Root relaxation: objective 5.000000e+00, 9 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    5.00000    0    4          -    5.00000      -     -    0s
+     0     0    5.00000    0    2          -    5.00000      -     -    0s
+     0     0    5.00000    0    4          -    5.00000      -     -    0s
+     0     0    5.00000    0    4          -    5.00000      -     -    0s
+     0     2    5.00000    0    4          -    5.00000      -     -    0s
+H 3118  1534                       4.0000000    5.00000  25.0%   5.5    2s
+
+Explored 3118 nodes (17603 simplex iterations) in 2.46 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 1: 4 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 4.000000000000e+00, best bound 4.000000000000e+00, gap 0.0000%
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon May  4 23:48:57 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 960 rows, 500 columns and 2326 nonzeros
+Model has 2406 quadratic constraints
+Variable types: 0 continuous, 500 integer (500 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  QMatrix range    [1e+00, 1e+00]
+  QLMatrix range   [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Presolve removed 610 rows and 308 columns
+Presolve time: 0.07s
+Presolved: 350 rows, 192 columns, 1078 nonzeros
+Variable types: 0 continuous, 192 integer (192 binary)
+
+Root relaxation: objective 5.000000e+00, 11 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    5.00000    0    4          -    5.00000      -     -    0s
+     0     0    5.00000    0    3          -    5.00000      -     -    0s
+     0     0    5.00000    0    2          -    5.00000      -     -    0s
+     0     0    5.00000    0    3          -    5.00000      -     -    0s
+     0     0    5.00000    0    3          -    5.00000      -     -    0s
+     0     2    5.00000    0    3          -    5.00000      -     -    0s
+  2564  1261   -0.00000   16   26          -   -0.00000      -   5.6    5s
+  2602  1288 infeasible   41               -   -0.00000      -   3.6   10s
+
+Cutting planes:
+  Clique: 14
+  Flow cover: 2
+  Zero half: 10
+
+Explored 2684 nodes (27049 simplex iterations) in 11.37 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 0
+
+Model is infeasible
+Best objective -, best bound -, gap -
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon May  4 23:49:37 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 1137 rows, 500 columns and 2720 nonzeros
+Model has 3491 quadratic constraints
+Variable types: 0 continuous, 500 integer (500 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  QMatrix range    [1e+00, 1e+00]
+  QLMatrix range   [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Presolve removed 688 rows and 251 columns
+Presolve time: 0.11s
+Presolved: 449 rows, 249 columns, 1414 nonzeros
+Variable types: 0 continuous, 249 integer (249 binary)
+
+Root relaxation: objective 5.000000e+00, 3 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    5.00000    0    1          -    5.00000      -     -    0s
+     0     0    5.00000    0    1          -    5.00000      -     -    0s
+     0     0    5.00000    0    1          -    5.00000      -     -    0s
+     0     2    5.00000    0    1          -    5.00000      -     -    0s
+* 3623  1648              13       5.0000000    5.00000  0.00%   5.3    3s
+
+Explored 3623 nodes (19418 simplex iterations) in 3.09 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 1: 5 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 5.000000000000e+00, best bound 5.000000000000e+00, gap 0.0000%
