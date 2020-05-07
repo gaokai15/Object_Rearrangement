@@ -17,6 +17,7 @@ import cPickle as pickle
 
 import IPython
 
+import time
 my_path = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -112,14 +113,17 @@ class Experiments(object):
         rpaths = OrderedDict()
         for pose in range(2*numObjs):
             iopt = ind_opt[pose//2 + (pose%2)*numObjs]
-            dpath = path_opts[(pose, buffer_selection[pose//2])][iopt]
             if pose%2:
                 start = buffer_selection[pose//2]
                 goal = pose
-                dpath = list(reversed(dpath))
             else:
                 start = pose
                 goal = buffer_selection[pose//2]
+
+            if (start <= goal):
+                dpath = path_opts[(start, goal)][iopt]
+            else:
+                dpath = path_opts[(goal, start)][iopt]
             # deps = {2 * (x[0]) + x[1] for x in dpath}
             # deps = set(dpath)
             print "dpath", dpath
@@ -1301,4 +1305,14 @@ if __name__ == "__main__":
     if loadfile:
         EXP.load_instance(savefile, True, display, displayMore)
     else:
-        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        # running_time = []
+        # for i in range(10):
+        #     start = time.time()
+        #     try:
+                EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        #     except :
+        #         pass
+        #     stop = time.time()
+        #     print stop-start
+        #     running_time.append(stop-start)
+        # print running_time
