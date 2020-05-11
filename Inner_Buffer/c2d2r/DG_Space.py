@@ -17,6 +17,7 @@ import cPickle as pickle
 
 import IPython
 
+import time
 my_path = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -42,14 +43,22 @@ class Experiments(object):
         #                            (int(W_X / scaler), int(W_Y / scaler), OBJ_NUM, iter)),
         #               'wb') as output:
         #         pickle.dump((OR.start_pose, OR.goal_pose), output, pickle.HIGHEST_PROTOCOL)
-        print "Dependency dict(key: obj index; value: list of paths as dependencies)"
-        for key, value in gpd.dependency_dict.items():
-            print key
-            print value
-        for key, value in gpd.path_dict.items():
-            print key
-            for path in value:
-                print path
+        ### print dependency set and path set
+        # print "Dependency dict(key: obj index; value: list of paths as dependencies)"
+        # for key, value in gpd.dependency_dict.items():
+        #     print key
+        #     print value
+        # for key, value in gpd.path_dict.items():
+        #     print key
+        #     for path in value:
+        #         labelled_path = []
+        #         for index in path:
+        #             for key, value in gpd.region_dict.items():
+        #                 if value == index:
+        #                     labelled_path.append(key)
+        #                     break
+        #         print labelled_path
+
         # DGs = DG_Space(gpd.dependency_dict)
         # if RECORD:
         #     with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl" %
@@ -110,8 +119,11 @@ class Experiments(object):
             else:
                 start = pose
                 goal = buffer_selection[pose//2]
-            print "buffer", buffer_selection
-            dpath = path_opts[(pose, buffer_selection[pose//2])][iopt]
+
+            if (start <= goal):
+                dpath = path_opts[(start, goal)][iopt]
+            else:
+                dpath = path_opts[(goal, start)][iopt]
             # deps = {2 * (x[0]) + x[1] for x in dpath}
             # deps = set(dpath)
             print "dpath", dpath
@@ -740,10 +752,16 @@ class Inner_Buffer_IQP(object):
                             break
                     break
         
-        for i in range(2*self.n):
-            for j in range(2*self.n):
-                lst = [x[i,j,k].x for k in range(MOST_PATH)]
-                print "x", [i,j], lst
+        # print x and c
+        # for i in range(2*self.n):
+        #     for j in range(2*self.n):
+        #         lst = [x[i,j,k].x for k in range(MOST_PATH)]
+        #         print "x", [i,j], lst
+
+        # for i in range(2*self.n):
+        #     for j in range(2*self.n):
+        #         if c[i,j].x>=0.5:
+        #             print i,j
 
         ### figure out the order
         order = []
@@ -1108,7 +1126,7 @@ class Dense_Path_Generation(object):
     def construct_path_dict(self):
         for i in range(len(self.poses)):
             key1 = self.poses[i]
-            for j in range(len(self.poses)):
+            for j in range(i,len(self.poses)):
                 if i == j:
                     if j%2:
                         self.dependency_dict[(key1, key1)] = [self.get_dependency_set_from_index(self.region_dict[self.obj_locations[key1]])]
@@ -1139,12 +1157,15 @@ class Dense_Path_Generation(object):
                         self.get_dependency_set_from_index(pose)
                     )
                     Abandoned = False
+                    remove_list = []
                     for n in vertex2node_dict[pose]:
                         if current_dependency_set.issuperset(node_dependency_set_dict[n]):
                             Abandoned = True
                             break
                         if node_dependency_set_dict[n].issuperset(current_dependency_set):
-                            vertex2node_dict[pose].remove(n)
+                            remove_list.append(n)
+                    for n in remove_list:
+                        vertex2node_dict[pose].remove(n)
                     if not Abandoned:
                         node = len(nodes) + 1
                         nodes[node] = pose
@@ -1284,4 +1305,14 @@ if __name__ == "__main__":
     if loadfile:
         EXP.load_instance(savefile, True, display, displayMore)
     else:
-        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        # running_time = []
+        # for i in range(10):
+        #     start = time.time()
+        #     try:
+                EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        #     except :
+        #         pass
+        #     stop = time.time()
+        #     print stop-start
+        #     running_time.append(stop-start)
+        # print running_time
