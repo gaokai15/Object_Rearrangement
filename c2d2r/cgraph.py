@@ -17,6 +17,7 @@ import Polygon.Utils as pu
 import Polygon.Shapes as ps
 
 EPSILON = 2**-8
+CDEG = 10
 
 
 def setupPlot(HEIGHT, WIDTH):
@@ -232,7 +233,7 @@ def isEdgeCollisionFree(robot, edge, obstacles):
 
 def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
     epsilon = EPSILON
-    polygon = np.array(poly_disk([0, 0], RAD, 30))
+    polygon = np.array(poly_disk([0, 0], RAD, CDEG))
     wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
     wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
 
@@ -416,7 +417,7 @@ def genCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile):
 
 def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, debug=False):
     epsilon = EPSILON
-    polygon = np.array(poly_disk([0, 0], RAD, 30))
+    polygon = np.array(poly_disk([0, 0], RAD, CDEG))
     wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
     wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
 
@@ -570,8 +571,15 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
                     if isHole: env_polys_vis += [vis.Polygon([vis.Point(*p) for p in reversed(cont)])]
                 env = vis.Environment(env_polys_vis)
                 if not env.is_valid(epsilon):
-                    displayMore = True
-                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                    # displayMore = True
+                    # drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                    drawConGraph(
+                        HEIGHT, WIDTH, {
+                            0: pointStart,
+                            1: pointGoal,
+                            2: pu.pointList(wall_mink_poly)
+                        }, regions.values(), False
+                    )
                     if savefile:
                         savefile += ".env_error"
                     else:
@@ -598,8 +606,15 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
                     if isHole: env_polys_vis += [vis.Polygon([vis.Point(*p) for p in reversed(cont)])]
                 env = vis.Environment(env_polys_vis)
                 if not env.is_valid(epsilon):
-                    displayMore = True
-                    drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                    # displayMore = True
+                    # drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                    drawConGraph(
+                        HEIGHT, WIDTH, {
+                            0: pointStart,
+                            1: pointGoal,
+                            2: pu.pointList(wall_mink_poly)
+                        }, regions.values(), False
+                    )
                     if savefile:
                         savefile += ".env_error"
                     else:
@@ -679,7 +694,7 @@ def loadCGraph(savefile, repath, display, displayMore):
     paths = {eval(k): v for k, v in data['path'].items()}
 
     epsilon = EPSILON
-    polygon = np.array(poly_disk([0, 0], RAD, 30))
+    polygon = np.array(poly_disk([0, 0], RAD, CDEG))
     wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
     wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
 
@@ -805,19 +820,21 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
     HEIGHT = data['HEIGHT']
     WIDTH = data['WIDTH']
     points = data['points']
-    objects = [pn.Polygon(o) for o in data['objects']]
+    # objects = [pn.Polygon(o) for o in data['objects']]
     graph = {eval(k): v for k, v in data['graph'].items()}
     paths = {eval(k): v for k, v in data['path'].items()}
 
     epsilon = EPSILON
-    polygon = np.array(poly_disk([0, 0], RAD, 30))
+    polygon = np.array(poly_disk([0, 0], RAD, CDEG))
     wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
     wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
 
     # staticObs = []
     minkowski_objs = []
+    objects = []
     # minkowski_poly = []
     for point in points:
+        objects.append(pn.Polygon(polygon + point))
         mink_obj = 2 * polygon + point
         minkowski_objs.append(pn.Polygon(mink_obj))
 
@@ -828,7 +845,9 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
         paths = {}
         regions = {}
         polysum = pn.Polygon()
-        for i, obj in enumerate(minkowski_objs):
+        for i, obj in enumerate(reversed(minkowski_objs)):
+            print("Before: ", len(regions))
+
             for rind, r in regions.items():
                 rANDobj = r & obj
                 if rANDobj:
@@ -848,12 +867,25 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
             if displayMore:
                 drawConGraph(HEIGHT, WIDTH, {}, regions.values(), False)
 
+            print("After: ", len(regions))
+
+        # print(len(regions), regions)
         obj2reg = {}
         for rind, r in regions.items():
+            print("Before: ", len(regions))
             # if len(r) > 1:
             char = 'a'
+            # if abs(r.area()) < pn.getTolerance():
+            #     # print(rind, r)
+            #     del regions[rind]
+            #     continue
+
             for cont in r:
                 poly = pn.Polygon(cont)
+                # print(poly, poly.area(), pn.getTolerance())
+                # if abs(poly.area()) == 0:
+                if abs(poly.area()) < 50 * pn.getTolerance():
+                    continue
                 rind_n = rind + (char, )
                 char = chr(ord(char) + 1)
 
@@ -867,9 +899,11 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
                         obj2reg[i] = rind_n
 
             del regions[rind]
+            print("After: ", len(regions))
 
         cfree = wall_mink - polysum
         for i, pfree in enumerate(pu.fillHoles(cfree), 1):
+            print("Before: ", len(regions))
             r = pn.Polygon(pfree)
             for isHole, cont in zip(cfree.isHole(), cfree):
                 if isHole: r -= pn.Polygon(cont)
@@ -877,6 +911,8 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
                 regions[(-i, )] = (r, r.center())
             else:
                 regions[(-i, )] = (r, r.sample(random))
+
+            print("After: ", len(regions))
         # freeInd = 0
         # for strip in (wall_mink - polysum).triStrip():
         #     freeInd -= 1
@@ -906,8 +942,8 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
             r1, pstart = r1
             r2, pgoal = r2
             r1Ar2 = r1 + r2
-            pointStart = pstart + polygon * 0.1
-            pointGoal = pgoal + polygon * 0.1
+            # pointStart = pstart + polygon * 0.1
+            # pointGoal = pgoal + polygon * 0.1
 
             interR = set(pu.pointList(r1)) & set(pu.pointList(r2))
             if len(interR) > 0:
@@ -943,8 +979,15 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
                         if isHole: env_polys_vis += [vis.Polygon([vis.Point(*p) for p in reversed(cont)])]
                     env = vis.Environment(env_polys_vis)
                     if not env.is_valid(epsilon):
-                        displayMore = True
-                        drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                        # displayMore = True
+                        # drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                        # drawConGraph(
+                        #     HEIGHT, WIDTH, {
+                        #         0: pointStart,
+                        #         1: pointGoal,
+                        #         2: pu.pointList(wall_mink_poly)
+                        #     }, regions.values(), False
+                        # )
                         if savefile:
                             savefile += ".env_error"
                         else:
@@ -971,8 +1014,15 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
                         if isHole: env_polys_vis += [vis.Polygon([vis.Point(*p) for p in reversed(cont)])]
                     env = vis.Environment(env_polys_vis)
                     if not env.is_valid(epsilon):
-                        displayMore = True
-                        drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                        # displayMore = True
+                        # drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
+                        # drawConGraph(
+                        #     HEIGHT, WIDTH, {
+                        #         0: pointStart,
+                        #         1: pointGoal,
+                        #         2: pu.pointList(wall_mink_poly)
+                        #     }, regions.values(), False
+                        # )
                         if savefile:
                             savefile += ".env_error"
                         else:
@@ -1017,7 +1067,15 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
         # assert (new_graph == graph)
         graph = new_graph
 
-    return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths, obj2reg
+    counts = {}
+    for i in regions:
+        for x in i:
+            if type(x) is int:
+                if x >= 0:
+                    counts[x] = counts.get(x, 0) + 1
+
+    # return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths, obj2reg
+    return len(regions), counts.items()
 
 
 if __name__ == "__main__":
