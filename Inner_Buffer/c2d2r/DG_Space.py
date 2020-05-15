@@ -18,26 +18,38 @@ import cPickle as pickle
 import IPython
 
 import time
+
+import resource
 my_path = os.path.abspath(os.path.dirname(__file__))
 
+def set_max_memory(MAX):
+    soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+    resource.setrlimit(resource.RLIMIT_AS, (MAX, hard))
 
 class Experiments(object):
     def single_instance(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
         # OBJ_NUM = numObjs
         # RECORD is False when I'm debugging and don't want to rewrite the data
         # RECORD = False
-
+        timeout = 10
         graph, paths, objects, color_pool, points, objectShape, object_locations = genDenseCGraph(
             numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
         )
-        while (graph == False):
+        while (graph == False) & timeout >0:
             graph, paths, objects, color_pool, points, objectShape, object_locations = genDenseCGraph(
                 numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
             )
+            timeout -= 1
 
         if graph is paths is objects is False:
+            print "Connectivity graph generation fails for 10 times..."
+            print "Quit."
             return -1
         gpd = Dense_Path_Generation(graph, object_locations)
+        keys = sorted(gpd.path_dict.keys())
+        for key in keys:
+            print key
+            print gpd.path_dict[key]
         # if RECORD:
         #     with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl" %
         #                            (int(W_X / scaler), int(W_Y / scaler), OBJ_NUM, iter)),
@@ -87,6 +99,72 @@ class Experiments(object):
 
         return num_of_actions
 
+    def multi_instances(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
+        Trials = 10
+        OBJ_NUM = [13]
+        Radius = range(10, 25, 7)
+        # Trials = 1
+        # OBJ_NUM = [3]
+        # Radius = [10]
+        data_collection = []
+        for numObjs_edited in OBJ_NUM:
+            for RAD_edited in Radius:
+                for i in range(Trials):
+                    print "************ current **********"
+                    print numObjs_edited, RAD_edited, i
+                    timeout = 10
+                    graph = False
+                    try:
+                        graph, paths, objects, color_pool, points, objectShape, object_locations = genDenseCGraph(
+                            numObjs_edited, RAD_edited, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
+                        )
+                    except Exception:
+                        pass
+                    while (graph == False) & timeout >0:
+                        try:
+                            graph, paths, objects, color_pool, points, objectShape, object_locations = genDenseCGraph(
+                                numObjs_edited, RAD_edited, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
+                            )
+                        except Exception:
+                            pass
+                        timeout -= 1
+
+                    if graph is False:
+                        print "Connectivity graph generation fails for 10 times..."
+                        print "Quit."
+                        continue
+                    gpd = Dense_Path_Generation(graph, object_locations)
+                    IP = Inner_Buffer_IQP(gpd.dependency_dict, len(objects)//2)
+                    try:
+                        print "ILP result(the smallest size of FAS):", IP.optimum
+                        # print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
+                        num_of_actions, buffer_selection, path_selection, object_ordering = IP.optimum
+                        # print ind_opt, DGs.DGs[ind_opt]
+                        path_opts = gpd.path_dict
+                    except Exception:
+                        pass
+
+                    print "data", [numObjs_edited, RAD_edited, i] + IP.data
+
+                    data_collection.append([numObjs_edited, RAD_edited, i] + IP.data)
+
+                    new_paths = {}
+                    for r1, r2 in paths.keys():
+                        new_paths[(gpd.region_dict[r1], gpd.region_dict[r2])] = copy.deepcopy(paths[(r1, r2)])
+
+                    if display:
+                        rpaths = self.drawSolution(
+                            HEIGHT, WIDTH, numObjs_edited, RAD_edited, new_paths, path_opts, path_selection, buffer_selection, objects, color_pool, points,
+                            example_index, saveimage
+                        )
+
+                        animatedMotions(
+                            HEIGHT, WIDTH, numObjs_edited, RAD_edited, rpaths, color_pool, points, object_ordering, example_index, objectShape
+                        )
+        with open(os.path.join(my_path, "Experiments13.pkl"), 'wb') as output:
+            pickle.dump(data_collection, output, pickle.HIGHEST_PROTOCOL)
+        print data_collection
+
     def load_instance(self, savefile, repath, display, displayMore):
 
         # scaler = 1000.0
@@ -123,10 +201,10 @@ class Experiments(object):
             if (start <= goal):
                 dpath = path_opts[(start, goal)][iopt]
             else:
-                dpath = path_opts[(goal, start)][iopt]
+                dpath = list(reversed(path_opts[(goal, start)][iopt]))
             # deps = {2 * (x[0]) + x[1] for x in dpath}
             # deps = set(dpath)
-            print "dpath", dpath
+            # print "dpath", dpath
             # print(deps)
 
             rpath = [points[start]]
@@ -631,30 +709,62 @@ class Inner_Buffer_IQP(object):
     def __init__(self, path_dict, n):
         self.n = n
         self.path_dict = path_dict
-        self.optimum = self.run_single_buffer_IQP()
-
+        self.data = [True]
+        start = time.time()
+        try:
+            self.optimum = self.run_single_buffer_IQP()
+        except Exception:
+            self.data[0] = False
+            self.optimum = []
+            print "Fail to solve the problem!"
+        stop = time.time()
+        self.data.append(stop-start)
+    
     def run_single_buffer_IQP(self):
         MOST_PATH = 0
+        Total_Path = 0
         for paths in self.path_dict.values():
             MOST_PATH = max(MOST_PATH, len(paths))
+            Total_Path += len(paths)
 
+        self.data.append(MOST_PATH)
+        self.data.append(Total_Path)
+
+        print "MOST PATH", MOST_PATH
+        print "total paths", Total_Path
         m = gp.Model()
+
+        m.Params.NodefileStart = 0.5
+        m.Params.TimeLimit = 200.0
+        m.Params.Threads = 8
+        # m.Params.MIPFocus = 1
+        # m.Params.MinRelNodes = 1
+        m.Params.Method = 1
+        # m.setParam(m.Params.Method, 1)
 
         # m.setParam('OutputFlag',0)
         m.modelSense = GRB.MAXIMIZE
 
         ######### IQP #############
         ### Variables
+        z1 = m.addVar(vtype = GRB.INTEGER, ub = self.n)
+        z2 = m.addVar(vtype = GRB.INTEGER, lb = 0)
         y = m.addVars(2*self.n, 2*self.n, vtype = GRB.BINARY)
         c = m.addVars(2*self.n, 2*self.n, vtype = GRB.BINARY)
         x = m.addVars(2*self.n, 2*self.n, MOST_PATH, vtype = GRB.BINARY)
         ### Objective function ###
         m.setObjective(
-            sum(
-                sum(x[2*i, 2*i+1,k] for k in range(MOST_PATH)) for i in range(self.n)
-            )
+            z1 - (self.n+1)*z2
         )
         ### constraints ###
+        
+        m.addConstr(
+            sum(
+                sum(x[2*i, 2*i+1,k] for k in range(MOST_PATH)) for i in range(self.n)
+            ) >=z1
+
+        )
+
         for i in range(self.n):
             # each object choose one buffer
             m.addConstr(
@@ -677,7 +787,7 @@ class Inner_Buffer_IQP(object):
                         c[l,i]*(1-y[i,l]) for l in range(i, 2*self.n)
                     )
                 ) for i in range(2*self.n)
-            ) <= 0
+            ) <= z2
         )
 
         for k in range(2*self.n):
@@ -729,8 +839,18 @@ class Inner_Buffer_IQP(object):
                 # if there is no such path, you cannot use it
                 for k in range(len(self.path_dict[key]), MOST_PATH):
                     m.addConstr(x[path_key[0], path_key[1], k]<=0)
+        
+
         m.optimize()
         obj = m.getObjective()
+        if obj.getValue()>=0:
+            self.data.append(True)
+        else:
+            self.data.append(False)
+        try:
+            self.data.append(self.n - obj.getValue())
+        except Exception:
+            self.data.append(-1)
 
         ### figure out what path options are chosen
         path_selection = {}
@@ -779,8 +899,6 @@ class Inner_Buffer_IQP(object):
         print "buffer_selection", buffer_selection
         print "final order", final_order
         return 2*self.n - obj.getValue(), buffer_selection, tuple([path_selection[i] for i in range(2*self.n)]), final_order
-
-
 
 class Object_Rearrangement(object):
     def __init__(self, W_X, W_Y, OBJ_NUM):
@@ -1300,19 +1418,10 @@ if __name__ == "__main__":
     # print DGs.DGs
     # IP = feekback_arc_ILP(path_dict)
     EXP = Experiments()
-    print numObjs
-    print RAD
+    set_max_memory(1.3*2**(34))#2**34=16G
     if loadfile:
         EXP.load_instance(savefile, True, display, displayMore)
     else:
-        # running_time = []
-        # for i in range(10):
-        #     start = time.time()
-        #     try:
-                EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        #     except :
-        #         pass
-        #     stop = time.time()
-        #     print stop-start
-        #     running_time.append(stop-start)
-        # print running_time
+        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        
+
