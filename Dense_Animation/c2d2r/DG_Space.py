@@ -1,6 +1,7 @@
 import os
 import sys
 import copy
+import time
 from collections import OrderedDict
 from cgraph import genCGraph, genDenseCGraph, loadDenseCGraph, drawMotions, animatedMotions
 from mpl_toolkits.mplot3d import Axes3D
@@ -15,6 +16,8 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import cPickle as pickle
 
+from itertools import combinations
+
 import IPython
 
 my_path = os.path.abspath(os.path.dirname(__file__))
@@ -25,18 +28,28 @@ class Experiments(object):
         # OBJ_NUM = numObjs
         # RECORD is False when I'm debugging and don't want to rewrite the data
         # RECORD = False
-
-        graph, paths, objects, color_pool, points, objectShape, object_locations = genDenseCGraph(
-            numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
-        )
-        while (graph == False):
+        timeout = 10
+        Success = False
+        # while (not Success) and (timeout>=0):
+        try: 
             graph, paths, objects, color_pool, points, objectShape, object_locations = genDenseCGraph(
                 numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
             )
+            Success = True
+        except Exception:
+            # timeout -= 1
+            print "fail to generate the instance"
+            return -1
 
         if graph is paths is objects is False:
+            print "fail to generate the instance"
             return -1
+
+        print "Start path pruning"
+        start = time.time()
         gpd = Dense_Path_Generation(graph, object_locations)
+        stop = time.time()
+        Pruning_time = stop - start
         # if RECORD:
         #     with open(os.path.join(my_path, "settings/W%s_H%s_n%s_iter%s_0301.pkl" %
         #                            (int(W_X / scaler), int(W_Y / scaler), OBJ_NUM, iter)),
@@ -49,12 +62,24 @@ class Experiments(object):
         #     with open(os.path.join(my_path, "DG/W%s_H%s_n%s_iter%s_0301.pkl" %
         #                            (int(WIDTH), int(HEIGHT), OBJ_NUM, iter)), 'wb') as output:
         #         pickle.dump(DGs.DGs, output, pickle.HIGHEST_PROTOCOL)
+        print "Start ILP"
+        start = time.time()
         IP = feekback_vertex_ILP(gpd.dependency_dict)
+        stop = time.time()
+        IP_time = stop - start
         print "ILP result(the smallest size of FAS):", IP.optimum
-        # print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
-        vertex_setSize, vertices, path_selection, object_ordering = IP.optimum
-        # print ind_opt, DGs.DGs[ind_opt]
+        # # print "DGs(key: path indices; value: [total_num_constr, num_edges, FAS size])"
+        # vertex_setSize, vertices, path_selection, object_ordering = IP.optimum
+        # # print ind_opt, DGs.DGs[ind_opt]
+        print "Start Dynamic Programming"
+        start = time.time()
+        DP = Dynamic_Programming(numObjs, gpd.dependency_dict)
+        stop = time.time()
+        DP_time = stop - start
         path_opts = gpd.path_dict
+
+        # print "path selection", DP.path_selection
+        print "DP object ordering", DP.object_ordering
 
         new_paths = {}
         for r1, r2 in paths.keys():
@@ -62,15 +87,118 @@ class Experiments(object):
 
         if display:
             rpaths = self.drawSolution(
-                HEIGHT, WIDTH, numObjs, RAD, new_paths, path_opts, path_selection, objects, color_pool, points,
+                HEIGHT, WIDTH, numObjs, RAD, new_paths, path_opts, DP.path_selection, objects, color_pool, points,
                 example_index, saveimage
             )
 
             animatedMotions(
-                HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, object_ordering, example_index, objectShape
+                HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, DP.object_ordering, example_index, objectShape
             )
 
-        return vertex_setSize
+        time_tuple = (Pruning_time, IP_time, DP_time)
+
+        return 1
+
+    def multi_instances(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
+        numObjs_list = [5,9,13,17]
+        numTrials = 10
+        Pruning_data = {}
+        IP_data = {}
+        DP_data = {}
+        for numObjs_var in numObjs_list:
+            print "numOBJ", numObjs_var
+            Pruning_data[numObjs_var] = []
+            IP_data[numObjs_var] = []
+            DP_data[numObjs_var] = []
+            RAD_var = int(math.sqrt((float(HEIGHT*WIDTH))/(20*numObjs_var)))
+            print "rad", RAD_var
+            for trial in xrange(numTrials):
+                print "trial", trial
+                Monotone = False
+                timeout = 10
+                while (timeout>=0) and (not Monotone):
+                    try:
+                        Pruning_time, IP_time, DP_time = self.single_instance(numObjs_var, RAD_var, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+                        
+                        
+                        Pruning_data[numObjs_var].append(Pruning_time)
+                        IP_data[numObjs_var].append(IP_time)
+                        DP_data[numObjs_var].append(DP_time)
+                        print "[Pruning, IP, DP]", Pruning_time, IP_time, DP_time
+                        Monotone = True
+                    except Exception:
+                        timeout -= 1
+        # with open(os.path.join(my_path, "Experiment0517.pkl"), 'wb') as output:
+        #     pickle.dump((Pruning_data, IP_data, DP_data), output, pickle.HIGHEST_PROTOCOL)
+        # with open(os.path.join(my_path, "Experiment0517.pkl"), 'rb') as input:
+        #     Pruning_data, IP_data, DP_data = pickle.load(input)
+        
+        # Pruning_data_average = []
+        # IP_data_average = []
+        # DP_data_average = []
+        # for num in numObjs_list:
+        #     Pruning_data_average.append(np.average(Pruning_data[num]))
+        #     IP_data_average.append(np.average(IP_data[num]))
+        #     DP_data_average.append(np.average(DP_data[num]))
+
+        # width = 0.8
+        # fig, ax = plt.subplots()
+
+        # p = ax.bar([x - 1.0*width for x in numObjs_list], Pruning_data_average, width, label='PathPruning')
+        # p = ax.bar([x - 0.0*width for x in numObjs_list], IP_data_average, width, label='ILP')
+        # p = ax.bar([x + 1.0*width for x in numObjs_list], DP_data_average, width, label='DP')
+
+        # plt.xticks(numObjs_list)
+        # plt.title('Computation Time')
+        # plt.yscale('log',basey=10)
+        # plt.legend()
+        # plt.xlabel('obj numbers')
+        # plt.ylabel('Time')
+        # plt.show()
+
+    def density_test(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
+        D_list = [0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]
+        Trial_Times = 50
+        Data = {}
+        for D in D_list:
+            Data[D] = [0,0,0]
+            RAD_edited = int(math.sqrt(D*HEIGHT * WIDTH / float(2*numObjs*math.pi)))
+            print "RAD", RAD_edited
+            for trial in xrange(Trial_Times):
+                try:
+                    result = self.single_instance(numObjs, RAD_edited, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+                    if result == -1:
+                        Data[D][0] += 1
+                    elif result == 1:
+                        Data[D][1] += 1
+                    else:
+                        print "Unexpected!"
+                        exit(0)
+                except Exception:
+                    Data[D][2] += 1
+        for key in Data.keys():
+            print key
+            print Data[key]
+        with open(os.path.join(my_path, "DensityExperiments_n"+str(numObjs)+"_0518.pkl"), 'wb') as output:
+            pickle.dump(Data, output, pickle.HIGHEST_PROTOCOL)
+        # with open(os.path.join(my_path, "DensityExperiments_n"+str(numObjs)+"_0518.pkl"), 'rb') as input:
+        #     Data = pickle.load(input)
+
+        width = 0.05
+        fig, ax = plt.subplots()
+        p = ax.bar([x for x in D_list], [Data[x][0] for x in D_list], width, label='Fail to Generate An instance')
+        p = ax.bar([x for x in D_list], [Data[x][1] for x in D_list], width, bottom=[Data[x][0] for x in D_list],label='monotone')
+        p = ax.bar([x for x in D_list], [Data[x][2] for x in D_list], width, bottom=[Data[x][0]+Data[x][1] for x in D_list],label='non-monotone')
+        plt.xticks(D_list)
+        ax.set_ylim([0, 65])
+        plt.legend()
+        plt.xlabel('D(n='+str(numObjs)+')')
+        plt.ylabel('number of instances')
+        plt.show()
+
+
+
+
 
     def load_instance(self, savefile, repath, display, displayMore):
 
@@ -456,6 +584,7 @@ class feekback_vertex_ILP(object):
         m = gp.Model()
 
         m.setParam('OutputFlag', 0)
+        m.setParam('Threads', 1)
         m.modelSense = GRB.MINIMIZE
 
         ###### Minimum feedback vertex ILP formulation ######
@@ -922,7 +1051,6 @@ class Dense_Path_Generation(object):
         self.path_dict = {}
         self.dependency_dict = {}
         self.n = len(obj_locations) / 2
-        # print "the number of objects:", self.n
         self.start_pose = range(0, self.n)
         self.linked_list_conversion(graph)
         self.construct_path_dict()
@@ -940,8 +1068,8 @@ class Dense_Path_Generation(object):
             self.dependency_dict[key] = pose_set_list
 
     def linked_list_conversion(self, graph):
-        print "graph"
-        print graph
+        # print "graph"
+        # print graph
         self.region_dict = {}  # (1,2,'a'): 0
         self.LL = {}  # 0:[1,2,3]
         for key in graph:
@@ -951,10 +1079,10 @@ class Dense_Path_Generation(object):
         for key in graph:
             for v in graph[key]:
                 self.LL[self.region_dict[key]].append(self.region_dict[v])
-        print "LL"
-        print self.LL
-        print "region dict"
-        print self.region_dict
+        # print "LL"
+        # print self.LL
+        # print "region dict"
+        # print self.region_dict
 
     def construct_path_dict(self):
         for key in self.start_pose:
@@ -1097,7 +1225,128 @@ class Dense_Path_Generation(object):
                 dependency_set = dependency_set.union({value})
         return dependency_set
 
+class Dynamic_Programming(object):
+    def __init__(self, numObjs, dp_set):
+        # self.obj_locations = obj_locations
+        self.n = numObjs
+        self.dp_set = dp_set
+        self.dynamic_programming()
 
+    def dynamic_programming(self):
+        parent = {}
+        path_option = {}
+        object_ordering = []
+        for finish_num in range(1,self.n+1): #how many objs have gone to the goal in this layer
+            for obj_set in combinations(range(self.n), finish_num): 
+                task_index = self.generate_task_index(obj_set)
+                for waiting_object in obj_set: # choose the last-picked object
+                    previous_task_index = task_index - 2**(waiting_object)
+                    if (previous_task_index > 0) and (previous_task_index not in path_option): # If the configuration is impossible
+                        continue
+
+                    occupied_poses = []
+                    for i in reversed(xrange(self.n)):
+                        if i == waiting_object: # none of the poses of the current obj is occupied
+                            continue
+                        elif (previous_task_index >= 2**(i)):
+                            previous_task_index -= 2**(i)
+                            occupied_poses.append(2*i+1)
+                        else:
+                            occupied_poses.append(2*i)
+
+                    path_index = self.transformation(occupied_poses, waiting_object)
+                    if path_index >= 0:
+                        path_option[task_index] = path_index
+                        parent[task_index] = task_index - 2**(waiting_object)
+                        break
+
+        task_index = 2**self.n - 1
+        if task_index in path_option:
+            current_task = task_index
+            path_selection_dict = {}
+            while current_task in parent:
+                parent_task = parent[current_task]
+                last_object = int(math.log(current_task - parent_task, 2))
+                path_selection_dict[last_object] = path_option[current_task]
+                object_ordering.append( last_object)
+                current_task = parent_task
+            path_selection_list = []
+            for i in range(self.n):
+                path_selection_list.append(path_selection_dict[i])
+            # print "path_option", path_option
+            # print "path_dict", path_selection_dict
+            # print "path_list", path_selection_list
+            self.path_selection = tuple(path_selection_list)
+            self.object_ordering = list(reversed(object_ordering))
+        else:
+            print "Non-monotone"
+            # exit(0)
+            print MISTAKE
+            
+
+
+
+    def generate_task_index(self, obj_set):
+        task_index = 0
+        for obj in obj_set:
+            task_index += 2**obj
+        return task_index
+
+    def transformation(self,occupied_poses, obj):
+        for path_index in range(len(self.dp_set[obj])):
+            path = self.dp_set[obj][path_index]
+            OCCUPIED = False
+            for pose in path:
+                pose_index = 2*pose[0] + pose[1]
+                if pose_index in occupied_poses:
+                    OCCUPIED = True
+                    break
+            if not OCCUPIED:
+                return path_index
+        return -1
+
+    def get_dependency_set_from_index(self, index):
+        for key, value in self.region_dict.items():
+            if value == index:
+                region_tuple = key
+                break
+        dependency_set = set()
+        for i in region_tuple:
+            value = -1
+            try:
+                value = int(i)
+            except ValueError:
+                pass  # it was a string, not an int.
+            if value >= -0.5:
+                dependency_set = dependency_set.union({value})
+        return dependency_set
+
+    def waiting_objects(self, success):
+        waiting = []
+        for i in reversed(xrange(1,self.n+1)):
+            if (success >= 2**(i-1)):
+                success -= 2**(i-1)
+            else:
+                waiting.append(i)
+        return waiting
+
+
+    def linked_list_conversion(self, graph):
+        # print "graph"
+        # print graph
+        self.region_dict = {}  # (1,2,'a'): 0
+        self.LL = {}  # 0:[1,2,3]
+        for key in graph:
+            index = len(self.region_dict.keys())
+            self.region_dict[key] = index
+            self.LL[index] = []
+        for key in graph:
+            for v in graph[key]:
+                self.LL[self.region_dict[key]].append(self.region_dict[v])
+        print "LL"
+        print self.LL
+        print "region dict"
+        print self.region_dict
 ################################################################################################
 
 # path_dict = {}
@@ -1176,4 +1425,6 @@ if __name__ == "__main__":
     if loadfile:
         EXP.load_instance(savefile, True, display, displayMore)
     else:
-        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        EXP.density_test(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        # EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        # EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
