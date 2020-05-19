@@ -9,6 +9,8 @@
 #include <CGAL/Filtered_extended_homogeneous.h>
 #include <CGAL/Nef_polyhedron_2.h>
 
+namespace py = boost::python;
+
 typedef CGAL::Exact_integer RT;
 typedef CGAL::Filtered_extended_homogeneous<RT> Extended_kernel;
 typedef CGAL::Nef_polyhedron_2<Extended_kernel> Nef_polyhedron;
@@ -73,49 +75,57 @@ void explore(std::string s, const Nef_polyhedron &poly)
 	}
 	std::cout << "done\n" << std::endl;
 }
-int test()
-{
-	CGAL::set_pretty_mode(std::cout);
-	Nef_polyhedron N0(Nef_polyhedron::COMPLETE);
-	explore("complete", N0);
 
-	Line l(0, 1, -2); // l : 0x + y - 2 = 0
-	Nef_polyhedron N1(l, Nef_polyhedron::INCLUDED);
-	explore("line", N1);
-
-	Point p1(1, 1), p2(10, 1), p3(10, 10);
-	Point triangle[3] = {p1, p2, p3};
-	Nef_polyhedron N2(triangle, triangle + 3);
-	explore("triangle", N2);
+struct IncrementalRegions {
+	IncrementalRegions()
 	{
-		Point p1(4, 2), p2(6, 2), p3(6, 4);
-		Point triangle[3] = {p1, p2, p3};
-		Nef_polyhedron N3(triangle, triangle + 3);
-		N2 -= N3;
-	}
-	{
-		Point p1(7, 2), p2(9, 2), p3(9, 6);
-		Point triangle[3] = {p1, p2, p3};
-		Nef_polyhedron N3(triangle, triangle + 3);
-		N2 -= N3;
 	}
 
-	explore("triangle with two triangular holes", N2);
+	int test()
+	{
+		CGAL::set_pretty_mode(std::cout);
+		Nef_polyhedron N0(Nef_polyhedron::COMPLETE);
+		explore("complete", N0);
 
-	return 0;
-}
+		Line l(0, 1, -2); // l : 0x + y - 2 = 0
+		Nef_polyhedron N1(l, Nef_polyhedron::INCLUDED);
+		explore("line", N1);
 
-// namespace py = pybind11;
+		Point p1(1, 1), p2(10, 1), p3(10, 10);
+		Point triangle[3] = {p1, p2, p3};
+		Nef_polyhedron N2(triangle, triangle + 3);
+		explore("triangle", N2);
+		{
+			Point p1(4, 2), p2(6, 2), p3(6, 4);
+			Point triangle[3] = {p1, p2, p3};
+			Nef_polyhedron N3(triangle, triangle + 3);
+			N2 -= N3;
+		}
+		{
+			Point p1(7, 2), p2(9, 2), p3(9, 6);
+			Point triangle[3] = {p1, p2, p3};
+			Nef_polyhedron N3(triangle, triangle + 3);
+			N2 -= N3;
+		}
 
-// PYBIND11_MODULE(rgraph, m)
-// {
-//         m.doc() = "pybind11 rgraph test"; // optional module docstring
+		explore("triangle with two triangular holes", N2);
 
-//         m.def("explore", &test, "Print the exploration of an Nef triangle");
-// }
+		return 0;
+	}
+
+	void addObject(py::list &obj)
+	{
+		std::cout << "adding object" << '\n';
+		for (int i = 0; i < len(obj); ++i) {
+			std::string s = py::extract<std::string>(obj[i]);
+			std::cout << s << '\n';
+		}
+	}
+};
 
 BOOST_PYTHON_MODULE(rgraph)
 {
-	using namespace boost::python;
-	def("test", test);
+	py::class_<IncrementalRegions>("IncrementalRegions", py::init<>())
+	        .def("test", &IncrementalRegions::test)
+	        .def("addObject", &IncrementalRegions::addObject);
 }
