@@ -40,6 +40,14 @@ def polysCollide(poly1, poly2):
     cpoly2 = pn.Polygon(poly2)
     return cpoly1.overlaps(cpoly2)
 
+### collision checker2 ###
+def collisionCheck(objects):
+    for i in range(len(objects)-1):
+        for poly in objects[i+1:]:
+            if polysCollide(poly, objects[i]):
+                return False
+    return True
+
 ### collision checker ###
 def isCollisionFree(object_shape, center, obstacles):
     object_location = np.add(center, object_shape)

@@ -25,6 +25,7 @@ import matplotlib.cm as cmx
 import IPython
 import os
 
+
 EPSILON = 2**-8
 
 def setupPlot(HEIGHT, WIDTH):
@@ -138,6 +139,68 @@ def drawConGraph(
     plt.show()
     return
 
+def drawArrangement(
+    HEIGHT,
+    WIDTH,
+    numObjs,
+    RAD,
+    example_index,
+    wall,
+    polygons,
+    points,
+    curr_index,
+    final_index,
+    color_pool,
+    arrange_idx,
+    saveimage=False
+):
+    _, ax = setupPlot(HEIGHT, WIDTH)
+
+    for walls in wall:
+        # walls = pu.pointList(cont)
+        wallx = [p[0] for p in walls + [walls[0]]]
+        wally = [p[1] for p in walls + [walls[0]]]
+        plt.plot(wallx, wally, 'blue')
+
+    for i in range(len(polygons)):
+        if i in curr_index:
+            ### This is a current slot for an object
+            obj_idx = curr_index.index(i)
+            poly = polygons[i]
+            if type(poly) == tuple:
+                poly, _ = poly
+            for cont in poly:
+                patch = createPolygonPatch_distinct(cont, color_pool[obj_idx], isGoal=False)
+                ax.add_patch(patch)
+                ax.text(points[i][0], points[i][1], str(obj_idx), fontweight='bold', fontsize=10, zorder=3)
+        if i in final_index:
+            ### This is a final location for an object
+            obj_idx = final_index.index(i)
+            poly = polygons[i]
+            if type(poly) == tuple:
+                poly, _ = poly
+            for cont in poly:
+                patch = createPolygonPatch_distinct(cont, color_pool[obj_idx], isGoal=True)
+                ax.add_patch(patch)
+        if (i not in curr_index) and (i not in final_index):
+            ### This is currently a buffer slot
+            poly = polygons[i]
+            if type(poly) == tuple:
+                poly, _ = poly
+            for cont in poly:
+                patch = createPolygonPatch_distinct(cont, "black", False, "buffers")
+                ax.add_patch(patch)
+
+    if saveimage:
+        path = os.getcwd() + "/figures/"
+        plt.savefig(
+            path + str(numObjs) + "_" + str(int(RAD)) + "_" + str(HEIGHT) + "_" + str(WIDTH) + "_" +
+            str(example_index) + "_arrangement_" + str(arrange_idx) + ".png"
+        )
+
+    plt.show()
+    return
+
 def drawProblem(
     HEIGHT, 
     WIDTH,
@@ -200,7 +263,7 @@ def drawProblem(
             if type(poly) == tuple:
                 poly, _ = poly
             for cont in poly:
-                patch = createPolygonPatch_distinct(cont, color_pool[obj_idx], False, "buffers")
+                patch = createPolygonPatch_distinct(cont, "black", False, "buffers")
                 ax.add_patch(patch)
 
     if path is not None:
@@ -293,9 +356,8 @@ def drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, paths, polygons,
     plt.show()
     return
 
-
-
-def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_index, saveimage, polygons=None):
+def drawLocalMotions(
+    HEIGHT, WIDTH, numObjs, RAD, arr_pair, paths, color_pool, points, curr_arrangement, final_arrangement, example_index, polygons, saveimage=True):
     _, ax = setupPlot(HEIGHT, WIDTH)
     scale = max(HEIGHT, WIDTH)
 
@@ -305,28 +367,99 @@ def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_
 
     if polygons is not None:
         for i in range(len(polygons)):
-            obj_idx = i // 2
-            isGoal = i % 2
-            patch = createPolygonPatch_distinct(pu.pointList(polygons[i]), color_pool[obj_idx], isGoal)
-            ax.add_patch(patch)
-
-        ### label these polygon
-        for i in range(len(points)):
-            obj_idx = i // 2
-            isGoal = i % 2
-            if isGoal:
-                ax.text(points[i][0], points[i][1], str(obj_idx), fontweight='bold', fontsize=10, zorder=1)
-            else:
+            if i in curr_arrangement:
+                obj_idx = curr_arrangement.index(i)
+                patch = createPolygonPatch_distinct(pu.pointList(polygons[i]), color_pool[obj_idx], isGoal=False)
+                ax.add_patch(patch)
                 ax.text(points[i][0], points[i][1], str(obj_idx), fontweight='bold', fontsize=10, zorder=3)
+            if i in final_arrangement:
+                obj_idx = final_arrangement.index(i)
+                patch = createPolygonPatch_distinct(pu.pointList(polygons[i]), color_pool[obj_idx], isGoal=True)
+                ax.add_patch(patch)
+            if (i not in curr_arrangement) and (i not in final_arrangement):
+                ### This is a buffer
+                patch = createPolygonPatch_distinct(pu.pointList(polygons[i]), "black", False, "buffers")
+                ax.add_patch(patch)
+
 
     rads = {}
     # cc = 0.0
     for obj, path in paths.items():
-        # cc += 1.0 / len(paths)
-        # color = patches.colors.hsv_to_rgb((cc, 1, 1))
-        # path = paths[(2 * j, 2 * j + 1)]
-        obj_idx = obj[0] // 2
-        color = color_pool[obj_idx]
+        color = color_pool[obj]
+        for i in range(1, len(path)):
+            vfrom = path[i - 1]
+            vto = path[i]
+            rad = rads.get((vfrom, vto), -0.2) + 0.2
+            rads[(vfrom, vto)] = rad
+            rads[(vto, vfrom)] = rad
+
+            ax.annotate(
+                "",
+                xy=vto,
+                xytext=vfrom,
+                arrowprops=dict(arrowstyle="simple", connectionstyle="arc3,rad=" + str(rad), color=color)
+            )
+            # ax.annotate(
+            #     "",
+            #     xy=vto,
+            #     xytext=vfrom,
+            #     arrowprops=dict(
+            #         arrowstyle="->", connectionstyle="arc3,rad=" + str(rad), color=color
+            #     )
+            # )
+            ax.annotate(
+                "",
+                xy=vto,
+                xytext=vfrom,
+                arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=" + str(rad), color="black")
+            )
+
+            pcolor = "black"
+            circ = patches.Circle(path[i - 1], scale / 200.0, color=pcolor, zorder=3)
+            ax.add_patch(circ)
+            circ = patches.Circle(path[i], scale / 200.0, color=pcolor, zorder=3)
+            ax.add_patch(circ)
+    if saveimage:
+        path = os.getcwd() + "/figures/"
+        plt.savefig(
+            path + str(numObjs) + "_" + str(int(RAD)) + "_" + str(HEIGHT) + "_" + str(WIDTH) + "_" +
+            str(example_index) + "_(" + str(arr_pair[0]) + "--" + str(arr_pair[1]) + ").png"
+        )
+    # plt.show()
+    plt.close()
+    return
+
+
+def drawMotions(
+    HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, curr_arrangement, final_arrangement, example_index, polygons, saveimage):
+    _, ax = setupPlot(HEIGHT, WIDTH)
+    scale = max(HEIGHT, WIDTH)
+
+    wallx = [0, WIDTH, WIDTH, 0, 0]
+    wally = [0, 0, HEIGHT, HEIGHT, 0]
+    plt.plot(wallx, wally, 'blue')
+
+    if polygons is not None:
+        for i in range(len(polygons)):
+            if i in curr_arrangement:
+                obj_idx = curr_arrangement.index(i)
+                patch = createPolygonPatch_distinct(pu.pointList(polygons[i]), color_pool[obj_idx], isGoal=False)
+                ax.add_patch(patch)
+                ax.text(points[i][0], points[i][1], str(obj_idx), fontweight='bold', fontsize=10, zorder=3)
+            if i in final_arrangement:
+                obj_idx = final_arrangement.index(i)
+                patch = createPolygonPatch_distinct(pu.pointList(polygons[i]), color_pool[obj_idx], isGoal=True)
+                ax.add_patch(patch)
+            if (i not in curr_arrangement) and (i not in final_arrangement):
+                ### This is a buffer
+                patch = createPolygonPatch_distinct(pu.pointList(polygons[i]), "black", False, "buffers")
+                ax.add_patch(patch)
+
+
+    rads = {}
+    # cc = 0.0
+    for obj, path in paths.items():
+        color = color_pool[obj]
         for i in range(1, len(path)):
             vfrom = path[i - 1]
             vto = path[i]
@@ -368,6 +501,84 @@ def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_
         )
     plt.show()
     return
+
+
+def drawEntireAnimation(
+    HEIGHT, WIDTH, numObjs, RAD, plan, final_arrangement, color_pool, points, example_index, objectShape=None):
+    
+    # n_steps = 5
+
+    if objectShape is None:
+        print("Fail to create the instances. Not to mention to animate... Try it again")
+        return
+
+    ### set the canvas
+    fig, ax = setupPlot(HEIGHT, WIDTH)
+    wallx = [0, WIDTH, WIDTH, 0, 0]
+    wally = [0, 0, HEIGHT, HEIGHT, 0]
+    ax.plot(wallx, wally, 'blue')
+    plt.show(block=False)
+
+    final_pts = [points[i] for i in final_arrangement]  ### This is always fixed
+
+    ### give a prompt to start animation
+    raw_input("Press <ENTER> to start animation")
+
+    # for arr_pair, rpaths in plan.whole_path.items():
+    for path_segment in plan.whole_path:
+        arr_pair = path_segment[0]
+        rpaths = path_segment[1]
+        ### first collect the current pose for each object
+        current_pts = []
+        for obj in range(numObjs):
+            current_pts.append(rpaths[obj][0])
+        ### work on current path of the current object
+        for obj_idx, path in rpaths.items():
+            for wpt_idx in range(len(path)-1):
+                pt1 = path[wpt_idx]
+                pt2 = path[wpt_idx+1]
+                step1 = int(abs(pt1[0] - pt2[0]) / 50.0)
+                step2 = int(abs(pt1[1] - pt2[1]) / 50.0)
+                if step1 == 0 and step2 == 0:
+                    n_steps = 1
+                else:
+                    n_steps = max(step1, step2)
+                for step in range(n_steps + 1):
+                    ### update current_pts
+                    current_pts[obj_idx] = (
+                        pt1[0] + (pt2[0] - pt1[0]) / n_steps * step, pt1[1] + (pt2[1] - pt1[1]) / n_steps * step
+                    )
+
+                    ax.cla()
+                    ax.plot(wallx, wally, 'blue')
+
+                    ### plot the objects
+                    for nn in range(len(current_pts)):
+                        polygon = pn.Polygon(objectShape + current_pts[nn])
+                        patch = createPolygonPatch_distinct(pu.pointList(polygon), color_pool[nn], isGoal=False, zorder=3)
+                        ax.add_patch(patch)
+                        ax.text(current_pts[nn][0], current_pts[nn][1], str(nn), fontweight='bold', fontsize=10, zorder=3)
+                    ### plot goal poses and buffers
+                    for pose_idx in range(len(points)):
+                        if pose_idx in final_arrangement:
+                            ### It's a goal pose
+                            nn = final_arrangement.index(pose_idx)
+                            polygon = pn.Polygon(objectShape + final_pts[nn])
+                            patch = createPolygonPatch_distinct(
+                                pu.pointList(polygon), color_pool[nn], isGoal=True, zorder=2)
+                            ax.add_patch(patch)
+                        else:
+                            ### It's a buffer
+                            polygon = pn.Polygon(objectShape + points[pose_idx])
+                            patch = createPolygonPatch_distinct(
+                                pu.pointList(polygon), "black", False, "buffers")
+                            ax.add_patch(patch)
+
+                    plt.pause(0.0000005)
+
+    plt.show()
+    return
+
 
 def animatedMotions(
         HEIGHT, WIDTH, numObjs, RAD,
@@ -723,15 +934,16 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
 
     points, objects, minkowski_objs = genInstance(numObjs, HEIGHT, WIDTH, polygon)
 
-    ### finish generating the starts and goals
+    # finish generating the starts and goals
     print "Display the original problem without extra buffers"
-    if display:
-        drawProblem(
-            HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, points, color_pool, example_index, None, saveimage=True
-        )
+    # if display:
+    #     drawProblem(
+    #         HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, points, color_pool, example_index, None, saveimage=True
+    #     )
 
-    ### Now let's generate some buffers
-    numBuffs = numObjs
+    ## Now let's generate some buffers
+    # numBuffs = numObjs
+    numBuffs = 2
     buffer_points, buffers, minkowski_buffers = genBuffers(
                     numBuffs, HEIGHT, WIDTH, polygon, objects, trials=5, maximumOverlap=numObjs)
     
@@ -749,26 +961,26 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
         HEIGHT, WIDTH, numObjs, RAD, example_index, wall_mink, points, minkowski_objs, buffer_points, minkowski_buffers)
 
     ## this is a complete decomposition graph with no paths ###
-    print "display space decomposition"
-    if display:
-        drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, {}, regions.values(), saveimage=True, label=False)
+    # print "display space decomposition"
+    # if display:
+    #     drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, {}, regions.values(), saveimage=True, label=False)
 
     ##############################################################################################
 
     ############ Build connections on the region graphs ################
     paths = connectRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, epsilon, regions, polygon, points)
 
-    if display:
-        ## display decomposition with paths
-        print "display space decomposition with paths"
-        drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, 
-            paths, regions.values(), saveimage=True, label=False)
-        ### display decomposition with original object
-        print "display connectivity graph with original objects"
-        drawConGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, 
-            paths, color_pool, points, objects, buffers, 
-                saveimage=True
-        ) 
+    # if display:
+    #     # display decomposition with paths
+    #     print "display space decomposition with paths"
+    #     drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, 
+    #         paths, regions.values(), saveimage=True, label=True)
+    #     ### display decomposition with original object
+    #     print "display connectivity graph with original objects"
+    #     drawConGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, 
+    #         paths, color_pool, points, objects, buffers, 
+    #             saveimage=True
+    #     )
 
     graph = {}
     for uv, p in paths.items():
@@ -798,6 +1010,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
             )
 
     if debug:
-        return graph, paths, objects, obj2reg, regions, polygon
-    return graph, paths, objects, color_pool, points, polygon, obj2reg
+        return graph, paths, objects, wall_pts, color_pool, points, polygon, obj2reg
+        # return graph, paths, objects, obj2reg, regions, polygon
+    return graph, paths, objects+buffers, wall_pts, color_pool, points+buffer_points, polygon, obj2reg
     
