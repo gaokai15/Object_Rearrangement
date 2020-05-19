@@ -128,4 +128,6 @@ BOOST_PYTHON_MODULE(rgraph)
 	py::class_<IncrementalRegions>("IncrementalRegions", py::init<>())
 	        .def("test", &IncrementalRegions::test)
 	        .def("addObject", &IncrementalRegions::addObject);
+	py::def(
+	        "blah", +[]() { return "blah"; });
 }
