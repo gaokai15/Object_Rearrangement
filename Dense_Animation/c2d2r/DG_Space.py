@@ -30,18 +30,15 @@ class Experiments(object):
         # RECORD = False
         timeout = 10
         Success = False
-        # while (not Success) and (timeout>=0):
-        try: 
-            graph, paths, objects, color_pool, points, objectShape, object_locations = genDenseCGraph(
-                numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
-            )
-            Success = True
-        except Exception:
-            # timeout -= 1
-            print "fail to generate the instance"
-            return -1
-
-        if graph is paths is objects is False:
+        while (not Success) and (timeout>=0):
+            try: 
+                graph, paths, objects, color_pool, points, objectShape, object_locations = genDenseCGraph(
+                    numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
+                )
+                Success = True
+            except Exception:
+                timeout -= 1
+        if Success == False:
             print "fail to generate the instance"
             return -1
 
@@ -1425,6 +1422,6 @@ if __name__ == "__main__":
     if loadfile:
         EXP.load_instance(savefile, True, display, displayMore)
     else:
-        EXP.density_test(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        # EXP.density_test(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
         # EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        # EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)

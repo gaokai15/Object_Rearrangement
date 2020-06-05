@@ -36,7 +36,7 @@ with open(os.path.join(my_path, "Experiments11.pkl"),
             'rb') as input:
     data = pickle.load(input)
 data_collection = data_collection + data
-
+print data_collection
 mem = 0
 time = 0
 for data in data_collection:
