@@ -6,7 +6,7 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 from DG_Space import Experiments
 
 
-@timeout_decorator.timeout(200)
+@timeout_decorator.timeout(3600)
 
 def timeout_single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
     EXP = Experiments()

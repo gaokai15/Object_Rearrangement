@@ -122,116 +122,116 @@ class Experiments(object):
         numObjs_list = [5, 9, 13]
         # numObjs_list = [25]
         numTrials = 10
-        D = 0.4
+        D = 0.5
         time_data = {}
         buffer_data = {}
-        # for numObjs_var in numObjs_list:
-        #     print "numOBJ", numObjs_var
-        #     RAD_var = int(math.sqrt((float(HEIGHT*WIDTH*D))/(2*math.pi*numObjs_var)))
-        #     print "rad", RAD_var
-        #     time_data[numObjs_var] = []
-        #     buffer_data[numObjs_var] = []
-        #     for trial in xrange(numTrials):
-        #         print "trial", trial
-        #         try:
-        #             start = time.time()
-        #             ordering = non_monotone_timeout.timeout_single_instance(numObjs_var, RAD_var, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        #             stop = time.time()
-        #             time_data[numObjs_var].append(stop-start)
-        #             buffer_data[numObjs_var].append(len(ordering)-numObjs_var)
-        #             print "time", stop - start
-        #         except Exception:
-        #             time_data[numObjs_var].append(-1)
-        #             buffer_data[numObjs_var].append(-1)
-        # with open(os.path.join(my_path, "Experiment_0601_D5.pkl"), 'wb') as output:
-        #     pickle.dump((time_data, buffer_data), output, pickle.HIGHEST_PROTOCOL)
-        with open(os.path.join(my_path, "Experiment_0601_D5.pkl"), 'rb') as input:
-            time_data, buffer_data = pickle.load(input)
+        for numObjs_var in numObjs_list:
+            print "numOBJ", numObjs_var
+            RAD_var = int(math.sqrt((float(HEIGHT*WIDTH*D))/(2*math.pi*numObjs_var)))
+            print "rad", RAD_var
+            time_data[numObjs_var] = []
+            buffer_data[numObjs_var] = []
+            for trial in xrange(numTrials):
+                print "trial", trial
+                try:
+                    start = time.time()
+                    ordering = non_monotone_timeout.timeout_single_instance(numObjs_var, RAD_var, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+                    stop = time.time()
+                    time_data[numObjs_var].append(stop-start)
+                    buffer_data[numObjs_var].append(len(ordering)-numObjs_var)
+                    print "time", stop - start
+                except Exception:
+                    time_data[numObjs_var].append(-1)
+                    buffer_data[numObjs_var].append(-1)
+        with open(os.path.join(my_path, "Experiment_0605_D5.pkl"), 'wb') as output:
+            pickle.dump((time_data, buffer_data), output, pickle.HIGHEST_PROTOCOL)
+        # with open(os.path.join(my_path, "Experiment_0601_D5.pkl"), 'rb') as input:
+        #     time_data, buffer_data = pickle.load(input)
 
         # print time_data
         # print buffer_data
 
-        for num in numObjs_list:
-            while -1 in time_data[num]:
-                time_data[num].remove(-1)
-                buffer_data[num].remove(-1)
+        # for num in numObjs_list:
+        #     while -1 in time_data[num]:
+        #         time_data[num].remove(-1)
+        #         buffer_data[num].remove(-1)
         
         print time_data
         print buffer_data
 
-        # one = []
-        # two = []
-        # three = []
-        # zero = []
-        # fail = []
-
-        # for num in numObjs_list:
-        #     data = [0,0,0,0,0]
-        #     for b in buffer_data[num]:
-        #         if b == -1:
-        #             data[4] += 1
-        #         else:
-        #             data[b] += 1
-        #     data = [x/float(len(buffer_data[num])) for x in data]
-        #     zero.append(data[0])
-        #     one.append(data[1])
-        #     two.append(data[2])
-        #     three.append(data[3])
-        #     fail.append(data[4])
-        #     print data
-        #     # time_data_avg.append(np.average(time_data[num]))
-        #     # buffer_data_avg.append(np.average(buffer_data[num]))
-        #     # time_data_std.append(np.std(time_data[num]))
-
-        # width = 0.7
-        # fig, ax = plt.subplots()
-
-        # # p = ax.bar([x - 1.0*width for x in numObjs_list], DPP_data_average, width, label='BFS-uni-directional-avg')
-        # p = ax.bar([x - 2.0*width for x in numObjs_list], zero, width, label='zero_buffer')
-        # p = ax.bar([x - 1.0*width for x in numObjs_list], one, width, label='one_buffer')
-        # p = ax.bar([x + 0.0*width for x in numObjs_list], two, width, label='two_buffers')
-        # p = ax.bar([x + 1.0*width for x in numObjs_list], three, width, label='three_buffers')
-        # p = ax.bar([x + 2.0*width for x in numObjs_list], fail, width, label='failure')
-        # # p = ax.bar([x + 1.0*width for x in numObjs_list], DFS_data_average, width, label='DFS-uni-directional-avg')
-        # # p = ax.bar([x - 1.0*width for x in numObjs_list], DPP_data_std, width, bottom = DPP_data_average, label='BFS-uni-directional-std')
-        # # p = ax.bar([x - 0.0*width for x in numObjs_list], time_data_std, width, bottom = time_data_avg, label='DFS-non-monotone-std')
-        # # p = ax.bar([x + 1.0*width for x in numObjs_list], DFS_data_std, width, bottom = DFS_data_average, label='DFS-uni-directional-std')
-
-        # plt.xticks(numObjs_list)
-        # # plt.title('Proportion of Buffer Number')
-        # # plt.yscale('log',basey=10)
-        # plt.legend()
-        # plt.xlabel('obj numbers')
-        # plt.ylabel('Proportion')
-        # plt.show()
-
-
-        time_data_avg = []
-        buffer_data_avg = []
-        time_data_std = []
+        one = []
+        two = []
+        three = []
+        zero = []
+        fail = []
 
         for num in numObjs_list:
-            time_data_avg.append(np.average(time_data[num]))
-            buffer_data_avg.append(np.average(buffer_data[num]))
-            time_data_std.append(np.std(time_data[num]))
+            data = [0,0,0,0,0]
+            for b in buffer_data[num]:
+                if b == -1:
+                    data[4] += 1
+                else:
+                    data[b] += 1
+            data = [x/float(len(buffer_data[num])) for x in data]
+            zero.append(data[0])
+            one.append(data[1])
+            two.append(data[2])
+            three.append(data[3])
+            fail.append(data[4])
+            print data
+            # time_data_avg.append(np.average(time_data[num]))
+            # buffer_data_avg.append(np.average(buffer_data[num]))
+            # time_data_std.append(np.std(time_data[num]))
 
-        width = 2.8
+        width = 0.7
         fig, ax = plt.subplots()
 
         # p = ax.bar([x - 1.0*width for x in numObjs_list], DPP_data_average, width, label='BFS-uni-directional-avg')
-        p = ax.bar([x + 0.0*width for x in numObjs_list], time_data_avg, width, label='DFS-non-monotone-avg')
+        p = ax.bar([x - 2.0*width for x in numObjs_list], zero, width, label='zero_buffer')
+        p = ax.bar([x - 1.0*width for x in numObjs_list], one, width, label='one_buffer')
+        p = ax.bar([x + 0.0*width for x in numObjs_list], two, width, label='two_buffers')
+        p = ax.bar([x + 1.0*width for x in numObjs_list], three, width, label='three_buffers')
+        p = ax.bar([x + 2.0*width for x in numObjs_list], fail, width, label='failure')
         # p = ax.bar([x + 1.0*width for x in numObjs_list], DFS_data_average, width, label='DFS-uni-directional-avg')
         # p = ax.bar([x - 1.0*width for x in numObjs_list], DPP_data_std, width, bottom = DPP_data_average, label='BFS-uni-directional-std')
-        p = ax.bar([x - 0.0*width for x in numObjs_list], time_data_std, width, bottom = time_data_avg, label='DFS-non-monotone-std')
+        # p = ax.bar([x - 0.0*width for x in numObjs_list], time_data_std, width, bottom = time_data_avg, label='DFS-non-monotone-std')
         # p = ax.bar([x + 1.0*width for x in numObjs_list], DFS_data_std, width, bottom = DFS_data_average, label='DFS-uni-directional-std')
 
         plt.xticks(numObjs_list)
-        plt.title('Computation Time')
-        plt.yscale('log',basey=10)
+        # plt.title('Proportion of Buffer Number')
+        # plt.yscale('log',basey=10)
         plt.legend()
         plt.xlabel('obj numbers')
-        plt.ylabel('Time')
+        plt.ylabel('Proportion')
         plt.show()
+
+
+        # time_data_avg = []
+        # buffer_data_avg = []
+        # time_data_std = []
+
+        # for num in numObjs_list:
+        #     time_data_avg.append(np.average(time_data[num]))
+        #     buffer_data_avg.append(np.average(buffer_data[num]))
+        #     time_data_std.append(np.std(time_data[num]))
+
+        # width = 2.8
+        # fig, ax = plt.subplots()
+
+        # # p = ax.bar([x - 1.0*width for x in numObjs_list], DPP_data_average, width, label='BFS-uni-directional-avg')
+        # p = ax.bar([x + 0.0*width for x in numObjs_list], time_data_avg, width, label='DFS-non-monotone-avg')
+        # # p = ax.bar([x + 1.0*width for x in numObjs_list], DFS_data_average, width, label='DFS-uni-directional-avg')
+        # # p = ax.bar([x - 1.0*width for x in numObjs_list], DPP_data_std, width, bottom = DPP_data_average, label='BFS-uni-directional-std')
+        # p = ax.bar([x - 0.0*width for x in numObjs_list], time_data_std, width, bottom = time_data_avg, label='DFS-non-monotone-std')
+        # # p = ax.bar([x + 1.0*width for x in numObjs_list], DFS_data_std, width, bottom = DFS_data_average, label='DFS-uni-directional-std')
+
+        # plt.xticks(numObjs_list)
+        # plt.title('Computation Time')
+        # plt.yscale('log',basey=10)
+        # plt.legend()
+        # plt.xlabel('obj numbers')
+        # plt.ylabel('Time')
+        # plt.show()
 
     def load_instance(self, savefile, repath, display, displayMore):
 
@@ -1455,8 +1455,8 @@ class Non_Monotone_Solver(object):
                     if Degrade:
                         continue
                     # monotone solver input path_dict, dependency_dict, obj_locations, LL, region_dict, obj_buffer_dict
-                    # DFS = DFS_for_Non_Monotone(self.n, self.dependency_dict, self.path_dict, self.obj_locations, self.LL, self.region_dict, obj_buffer_dict)
-                    DFS = DFS_Rec_for_Non_Monotone(self.n, self.dependency_dict, self.path_dict, self.obj_locations, self.LL, self.region_dict, obj_buffer_dict)
+                    DFS = DFS_for_Non_Monotone(self.n, self.dependency_dict, self.path_dict, self.obj_locations, self.LL, self.region_dict, obj_buffer_dict)
+                    # DFS = DFS_Rec_for_Non_Monotone(self.n, self.dependency_dict, self.path_dict, self.obj_locations, self.LL, self.region_dict, obj_buffer_dict)
                     self.dependency_dict = copy.deepcopy(DFS.dependency_dict)
                     self.path_dict = copy.deepcopy(DFS.path_dict)
                     if len(DFS.object_ordering)>0:
@@ -1519,9 +1519,9 @@ class DFS_for_Non_Monotone(object):
         parent = {}
         path_option = {}
         self.object_ordering = []
-        explored = []
+        explored = {}
         queue = [0]
-        explored.append(0)
+        explored[0] = 0
         FOUND = False
         while (len(queue)>0)&(not FOUND):
             old_node = queue.pop(-1)
@@ -1555,7 +1555,7 @@ class DFS_for_Non_Monotone(object):
                     path_option[new_node] = path_index
                     parent[new_node] = old_node
                     queue.append(new_node)
-                    explored.append(new_node)
+                    explored[new_node] = 0
                     if new_node == 2**(self.n+self.b) - 1:
                         FOUND = True
                         break
@@ -1732,9 +1732,9 @@ class DFS_Rec_for_Non_Monotone(object):
         self.parent = {}
         self.path_option = {}
         self.object_ordering = []
-        self.explored = []
+        self.explored = {}
         self.queue = [0]
-        self.explored.append(0)
+        self.explored[0] = 0
         # it is a stack when pop(-1)
         old_node = self.queue.pop(-1)
         # Recursion
@@ -1804,7 +1804,7 @@ class DFS_Rec_for_Non_Monotone(object):
                 self.path_option[new_node] = path_index
                 self.parent[new_node] = old_node
                 self.queue.append(new_node)
-                self.explored.append(new_node)
+                self.explored[new_node] = 0
                 if new_node == 2**(self.n+self.b) - 1:
                     return True
                 FLAG = self.DFS_rec(new_node)
@@ -2016,7 +2016,7 @@ if __name__ == "__main__":
     if loadfile:
         EXP.load_instance(savefile, True, display, displayMore)
     else:
-        # EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        # EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
         
 
