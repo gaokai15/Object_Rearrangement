@@ -1,4 +1,12 @@
 PyVisiLibity
+workspaces
+*.xz
+*.json
+*.png
+*.o
+.clangd
+.ccargs
+
 # Created by https://www.gitignore.io/api/python
 # Edit at https://www.gitignore.io/?templates=python
 
