@@ -1,4 +1,4 @@
-PRODUCT := rgraph.so
+PRODUCT := region.so # rgraph.so
 
 CXX := g++
 LINKER := g++
@@ -9,10 +9,10 @@ SRCDIR := ./src
 SRCFILES := $(wildcard $(SRCDIR)/*.cpp)
 OBJFILES := $(patsubst %.cpp,%.o,$(SRCFILES))
 
-all: $(PRODUCT) $(OBJFILES)
+all: $(PRODUCT)
 
 %.so: $(SRCDIR)/%.o
-	$(LINKER) $(CXXFLAGS) $^ -o $@
+	$(LINKER) $(CXXFLAGS) $< -o $@ # $^ -o $@
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCDIRS) -c $< -o $@

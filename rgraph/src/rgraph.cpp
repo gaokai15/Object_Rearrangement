@@ -77,8 +77,15 @@ void explore(std::string s, const Nef_polyhedron &poly)
 }
 
 struct IncrementalRegions {
+	Nef_polyhedron bounds;
+
 	IncrementalRegions()
 	{
+	}
+
+	IncrementalRegions(py::list &walls)
+	{
+		Point *points = new Point[len(walls)];
 	}
 
 	int test()
@@ -115,10 +122,10 @@ struct IncrementalRegions {
 
 	void addObject(py::list &obj)
 	{
-		std::cout << "adding object" << '\n';
-		for (int i = 0; i < len(obj); ++i) {
-			std::string s = py::extract<std::string>(obj[i]);
-			std::cout << s << '\n';
+		obj.std::cout << "adding object" << '\n';
+		for (int i = 0; i < len(obj); i++) {
+			int n = py::extract<int>(obj[i]);
+			std::cout << n << '\n';
 		}
 	}
 };
