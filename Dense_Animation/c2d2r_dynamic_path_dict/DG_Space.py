@@ -76,6 +76,7 @@ class Experiments(object):
         DFS = DFS_DP(graph, object_locations)
         stop = time.time()
         DFS_time = stop - start
+        DFS_trans = DFS.trans
         print "DFS_time", DFS_time
 
         print "DFS_object_ordering", DFS.object_ordering
@@ -84,6 +85,7 @@ class Experiments(object):
         DFS_rec = DFS_DP_Recursion(graph, object_locations)
         stop = time.time()
         DFS_rec_time = stop - start
+        DFS_rec_trans = DFS.trans
         print "DFS_time", DFS_rec_time
 
         print "DFS_rec_object_ordering", DFS_rec.object_ordering
@@ -108,6 +110,7 @@ class Experiments(object):
         DPP = Dynamic_Path_Programming(graph, object_locations)
         stop = time.time()
         DPP_time = stop - start
+        DPP_trans = DPP.trans
         print "DPP_time", DPP_time
 
         print "DPP object ordering", DPP.object_ordering
@@ -118,9 +121,18 @@ class Experiments(object):
         BFS = BFS_DP(graph, object_locations)
         stop = time.time()
         BFS_time = stop - start
+        BFS_trans = BFS.trans
         print "BFS_time", BFS_time
 
         print "BFS_object_ordering", BFS.object_ordering
+
+        # start = time.time()
+        # DFS_test = DFS_Rec_for_Monotone(range(0,2*numObjs,2), range(1,2*numObjs,2), {}, {}, object_locations, graph)
+        # stop = time.time()
+        # TEST_time = stop - start
+        # print "TEST_time", TEST_time
+
+        # print "TEST_object_ordering", DFS_test.object_ordering
 
         # select a version to make the figure
         path_opts = copy.deepcopy(DFS_rec.path_dict)
@@ -153,46 +165,60 @@ class Experiments(object):
 
         # print DPP_time, BDP_time, DFS_time, DFS_rec_time
 
-        return DPP_time, DFS_time, DFS_rec_time, BFS_time
+        return DPP_time, DFS_time, DFS_rec_time, BFS_time, DPP_trans, DFS_trans, DFS_rec_trans, BFS_trans
 
     def multi_instances(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
         numObjs_list = [9, 13, 17, 21, 25]
         # numObjs_list = [25]
         numTrials = 10
-        D = 0.2
+        D = 0.4
         DPP_data = {}
         BDP_data = {}
         DFS_data = {}
         DFS_rec_data = {}
         BFS_data = {}
-        for numObjs_var in numObjs_list:
-            print "numOBJ", numObjs_var
-            RAD_var = int(math.sqrt((float(HEIGHT*WIDTH*D))/(2*math.pi*numObjs_var)))
-            print "rad", RAD_var
-            DPP_data[numObjs_var] = []
-            BDP_data[numObjs_var] = []
-            DFS_data[numObjs_var] = []
-            DFS_rec_data[numObjs_var] = []
-            BFS_data[numObjs_var] = []
-            for trial in xrange(numTrials):
-                print "trial", trial
-                Monotone = False
-                timeout = 10
-                while (timeout>=0) and (not Monotone):
-                    try:
-                        DPP_time, DFS_time, DFS_rec_time, BFS_time = self.single_instance(numObjs_var, RAD_var, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-                        Monotone = True
-                        DPP_data[numObjs_var].append(DPP_time)
-                        DFS_data[numObjs_var].append(DFS_time)
-                        DFS_rec_data[numObjs_var].append(DFS_rec_time)
-                        BFS_data[numObjs_var].append(BFS_time)
-                        print "DPP, DFS, DFS_rec, BFS", DPP_time, DFS_time, DFS_rec_time, BFS_time
-                    except Exception:
-                        timeout -= 1
-        with open(os.path.join(my_path, "Experiment_0607_D2_judgment.pkl"), 'wb') as output:
-            pickle.dump((DPP_data, DFS_data, DFS_rec_data, BFS_data), output, pickle.HIGHEST_PROTOCOL)
-        # with open(os.path.join(my_path, "Experiment_0604_D4_judgment.pkl"), 'rb') as input:
-        #     DPP_data, BDP_data, DFS_data,DFS_rec_data = pickle.load(input)
+        DPP_trans_data = {}
+        BDP_trans_data = {}
+        DFS_trans_data = {}
+        DFS_rec_trans_data = {}
+        BFS_trans_data = {}
+        # for numObjs_var in numObjs_list:
+        #     print "numOBJ", numObjs_var
+        #     RAD_var = int(math.sqrt((float(HEIGHT*WIDTH*D))/(2*math.pi*numObjs_var)))
+        #     print "rad", RAD_var
+        #     DPP_data[numObjs_var] = []
+        #     BDP_data[numObjs_var] = []
+        #     DFS_data[numObjs_var] = []
+        #     DFS_rec_data[numObjs_var] = []
+        #     BFS_data[numObjs_var] = []
+        #     DPP_trans_data[numObjs_var] = []
+        #     BDP_trans_data[numObjs_var] = []
+        #     DFS_trans_data[numObjs_var] = []
+        #     DFS_rec_trans_data[numObjs_var] = []
+        #     BFS_trans_data[numObjs_var] = []
+        #     for trial in xrange(numTrials):
+        #         print "trial", trial
+        #         Monotone = False
+        #         timeout = 10
+        #         while (timeout>=0) and (not Monotone):
+        #             try:
+        #                 DPP_time, DFS_time, DFS_rec_time, BFS_time, DPP_trans, DFS_trans, DFS_rec_trans, BFS_trans = self.single_instance(numObjs_var, RAD_var, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        #                 Monotone = True
+        #                 DPP_data[numObjs_var].append(DPP_time)
+        #                 DFS_data[numObjs_var].append(DFS_time)
+        #                 DFS_rec_data[numObjs_var].append(DFS_rec_time)
+        #                 BFS_data[numObjs_var].append(BFS_time)
+        #                 DPP_trans_data[numObjs_var].append(DPP_trans)
+        #                 DFS_trans_data[numObjs_var].append(DFS_trans)
+        #                 DFS_rec_trans_data[numObjs_var].append(DFS_rec_trans)
+        #                 BFS_trans_data[numObjs_var].append(BFS_trans)
+        #                 print "DPP, DFS, DFS_rec, BFS", DPP_time, DFS_time, DFS_rec_time, BFS_time
+        #             except Exception:
+        #                 timeout -= 1
+        # with open(os.path.join(my_path, "Experiment_0607_D2_monotone.pkl"), 'wb') as output:
+        #     pickle.dump((DPP_data, DFS_data, DFS_rec_data, BFS_data, DPP_trans_data, DFS_trans_data, DFS_rec_trans_data, BFS_trans_data), output, pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(my_path, "Experiment_0607_D5_nonmonotone.pkl"), 'rb') as input:
+            DPP_data, DFS_data, DFS_rec_data, BFS_data, DPP_trans_data, DFS_trans_data, DFS_rec_trans_data, BFS_trans_data = pickle.load(input)
         
         print DPP_data
         # print BDP_data
@@ -227,17 +253,17 @@ class Experiments(object):
         width = 0.8
         fig, ax = plt.subplots()
 
-        p = ax.bar([x - 1.5*width for x in numObjs_list], DPP_data_average, width, label='DP-avg')
+        p = ax.bar([x - 1.5*width for x in numObjs_list], DPP_data_average, width, label='DP')
         # p = ax.bar([x - 0.5*width for x in numObjs_list], BDP_data_average, width, label='BFS-bi-directional-avg')
-        p = ax.bar([x - 0.5*width for x in numObjs_list], DFS_data_average, width, label='DFS-avg')
-        p = ax.bar([x + 0.5*width for x in numObjs_list], DFS_rec_data_average, width, label='DFS_rec-avg')
-        p = ax.bar([x + 1.5*width for x in numObjs_list], BFS_data_average, width, label='BFS-avg')
+        p = ax.bar([x - 0.5*width for x in numObjs_list], DFS_data_average, width, label='DFS')
+        p = ax.bar([x + 0.5*width for x in numObjs_list], DFS_rec_data_average, width, label='DFS_rec')
+        p = ax.bar([x + 1.5*width for x in numObjs_list], BFS_data_average, width, label='BFS')
         
-        p = ax.bar([x - 1.5*width for x in numObjs_list], DPP_data_std, width, bottom = DPP_data_average, label='DP-std')
+        p = ax.bar([x - 1.5*width for x in numObjs_list], DPP_data_std, width, bottom = DPP_data_average)
         # p = ax.bar([x - 0.5*width for x in numObjs_list], BDP_data_std, width, bottom = BDP_data_average, label='BFS-bi-directional-std')
-        p = ax.bar([x - 0.5*width for x in numObjs_list], DFS_data_std, width, bottom = DFS_data_average, label='DFS-std')
-        p = ax.bar([x + 0.5*width for x in numObjs_list], DFS_rec_data_std, width, bottom = DFS_rec_data_average, label='DFS_rec-std')
-        p = ax.bar([x + 1.5*width for x in numObjs_list], BFS_data_std, width, bottom = BFS_data_average, label='BFS-std')
+        p = ax.bar([x - 0.5*width for x in numObjs_list], DFS_data_std, width, bottom = DFS_data_average)
+        p = ax.bar([x + 0.5*width for x in numObjs_list], DFS_rec_data_std, width, bottom = DFS_rec_data_average)
+        p = ax.bar([x + 1.5*width for x in numObjs_list], BFS_data_std, width, bottom = BFS_data_average)
 
         plt.xticks(numObjs_list)
         plt.title('Computation Time')
@@ -245,6 +271,53 @@ class Experiments(object):
         plt.legend()
         plt.xlabel('obj numbers')
         plt.ylabel('Time')
+        plt.show()
+
+
+        DPP_trans_data_average = []
+        # BDP_data_average = []
+        DFS_trans_data_average = []
+        DFS_rec_trans_data_average = []
+        BFS_trans_data_average = []
+        DPP_trans_data_std = []
+        # BDP_data_std = []
+        DFS_trans_data_std = []
+        DFS_rec_trans_data_std = []
+        BFS_trans_data_std = []
+        for num in numObjs_list:
+            DPP_trans_data_average.append(np.average(DPP_trans_data[num]))
+            # BDP_data_average.append(np.average(BDP_data[num]))
+            DFS_trans_data_average.append(np.average(DFS_trans_data[num]))
+            DFS_rec_trans_data_average.append(np.average(DFS_rec_trans_data[num]))
+            BFS_trans_data_average.append(np.average(BFS_trans_data[num]))
+
+            DPP_trans_data_std.append(np.std(DPP_trans_data[num]))
+            # BDP_data_std.append(np.std(BDP_data[num]))
+            DFS_trans_data_std.append(np.std(DFS_trans_data[num]))
+            DFS_rec_trans_data_std.append(np.std(DFS_trans_data[num]))
+            BFS_trans_data_std.append(np.std(BFS_trans_data[num]))
+
+        width = 0.8
+        fig, ax = plt.subplots()
+
+        p = ax.bar([x - 1.5*width for x in numObjs_list], DPP_trans_data_average, width, label='DP')
+        # p = ax.bar([x - 0.5*width for x in numObjs_list], BDP_data_average, width, label='BFS-bi-directional-avg')
+        p = ax.bar([x - 0.5*width for x in numObjs_list], DFS_trans_data_average, width, label='DFS')
+        p = ax.bar([x + 0.5*width for x in numObjs_list], DFS_rec_trans_data_average, width, label='DFS_rec')
+        p = ax.bar([x + 1.5*width for x in numObjs_list], BFS_trans_data_average, width, label='BFS')
+        
+        p = ax.bar([x - 1.5*width for x in numObjs_list], DPP_trans_data_std, width, bottom = DPP_trans_data_average)
+        # p = ax.bar([x - 0.5*width for x in numObjs_list], BDP_data_std, width, bottom = BDP_data_average, label='BFS-bi-directional-std')
+        p = ax.bar([x - 0.5*width for x in numObjs_list], DFS_trans_data_std, width, bottom = DFS_trans_data_average)
+        p = ax.bar([x + 0.5*width for x in numObjs_list], DFS_rec_trans_data_std, width, bottom = DFS_rec_trans_data_average)
+        p = ax.bar([x + 1.5*width for x in numObjs_list], BFS_trans_data_std, width, bottom = BFS_trans_data_average)
+
+        plt.xticks(numObjs_list)
+        plt.title('Attempts of Generating Edges')
+        plt.yscale('log',basey=10)
+        plt.legend()
+        plt.xlabel('obj numbers')
+        plt.ylabel('Attempts')
         plt.show()
 
     def density_test(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
@@ -1443,6 +1516,7 @@ class Dynamic_Path_Programming(object):
         self.dependency_dict = {}
         self.object_ordering = []
         self.path_selection = []
+        self.trans = 0
         self.n = len(obj_locations) / 2
         self.start_pose = range(0, self.n)
         self.linked_list_conversion(graph)
@@ -1508,7 +1582,7 @@ class Dynamic_Path_Programming(object):
                             occupied_poses.append(2*i+1)
                         else:
                             occupied_poses.append(2*i)
-
+                    self.trans += 1
                     path_index = self.transformation(occupied_poses, waiting_object)
                     if path_index >= 0:
                         # print "success"
@@ -1519,6 +1593,7 @@ class Dynamic_Path_Programming(object):
             # stop = time.time()
             # print self.count_times-old_time
             # print "######### uni-directional"+str(finish_num), stop-start
+        print "DPP_trans", self.trans
         task_index = 2**self.n - 1
         if task_index in path_option:
             current_task = task_index
@@ -2117,11 +2192,12 @@ class DFS_DP(object):
                 path_selection_list.append(path_selection_dict[i])
             self.path_selection = tuple(path_selection_list)
             self.object_ordering = list(reversed(object_ordering))
+            # print MISTAKE
         else:
             print "Non-monotone"
             # exit(0)
             return
-            # print MISTAKE
+            print MISTAKE
 
     def next_object(self, index):
         for i in range(self.n):
@@ -2245,10 +2321,6 @@ class BFS_DP(object):
         self.object_ordering = []
         self.path_selection = []
         self.trans = 0
-        self.trans_time = 0.0
-        self.count = 0
-        self.next_time = 0.0
-        self.test_time = 0.0
         self.n = len(obj_locations) / 2
         self.start_pose = range(0, self.n)
         self.linked_list_conversion(graph)
@@ -2310,6 +2382,7 @@ class BFS_DP(object):
                     else:
                         occupied_poses.append(2*i)
                 
+                self.trans += 1
                 path_index = self.transformation(occupied_poses, next_object)
                 if path_index >= 0:
                     path_option[new_node] = path_index
@@ -2319,6 +2392,7 @@ class BFS_DP(object):
                     if new_node == 2**self.n - 1:
                         FOUND = True
                         break
+        print "BFS_trans", self.trans
         task_index = 2**self.n - 1
         if task_index in path_option:
             current_task = task_index
@@ -2754,6 +2828,7 @@ class DFS_DP_Recursion(object):
         self.dependency_dict = {}
         self.object_ordering = []
         self.path_selection = []
+        self.trans = 0
         self.n = len(obj_locations) / 2
         self.start_pose = range(0, self.n)
         self.linked_list_conversion(graph)
@@ -2798,6 +2873,8 @@ class DFS_DP_Recursion(object):
         old_node = self.queue.pop(-1)
         self.DFS_rec(old_node)
 
+        print "DFS_rec_trans", self.trans
+
         task_index = 2**self.n - 1
         if task_index in self.path_option:
             current_task = task_index
@@ -2838,6 +2915,7 @@ class DFS_DP_Recursion(object):
                 else:
                     occupied_poses.append(2*i)
 
+            self.trans += 1
             path_index = self.transformation(occupied_poses, next_object)
             if path_index >= 0:
                 self.path_option[new_node] = path_index
@@ -2966,6 +3044,215 @@ class DFS_DP_Recursion(object):
                 dependency_set = dependency_set.union({value})
         return dependency_set
 
+class DFS_Rec_for_Monotone(object):
+    def __init__(self, start_poses, goal_poses, dependency_dict, path_dict, object_locations, graph):
+        self.n = len(start_poses)
+        self.start_poses = start_poses
+        self.goal_poses = goal_poses
+        self.dependency_dict = copy.deepcopy(dependency_dict)
+        self.path_dict = copy.deepcopy(path_dict)
+        self.obj_locations = copy.deepcopy(object_locations)
+        self.linked_list_conversion(graph)
+        # self.linked_list = copy.deepcopy(linked_list)
+        # self.region_dict = copy.deepcopy(region_dict)
+        self.dynamic_programming()
+        
+    def linked_list_conversion(self, graph):
+        # print "graph"
+        # print graph
+        self.region_dict = {}  # (1,2,'a'): 0
+        self.linked_list = {}  # 0:[1,2,3]
+        for key in graph:
+            index = len(self.region_dict.keys())
+            self.region_dict[key] = index
+            self.linked_list[index] = []
+        for key in graph:
+            for v in graph[key]:
+                self.linked_list[self.region_dict[key]].append(self.region_dict[v])
+        # print "LL"
+        # print self.LL
+        # print "region dict"
+        # print self.region_dict
+
+    
+    def dynamic_programming(self):
+        self.parent = {}
+        self.path_option = {}
+        self.object_ordering = []
+        self.explored = {}
+        self.queue = [0]
+        self.explored[0] = 0
+        # it is a stack when pop(-1)
+        old_node = self.queue.pop(-1)
+        # Recursion
+        self.DFS_rec(old_node)
+
+        task_index = 2**(self.n) - 1
+        if task_index in self.path_option:
+            current_task = task_index
+            path_selection_dict = {}
+            object_ordering = []
+            while current_task in self.parent:
+                parent_task = self.parent[current_task]
+                last_object = int(math.log(current_task - parent_task, 2))
+                path_selection_dict[last_object] = self.path_option[current_task]
+                object_ordering.append( last_object)
+                
+                
+                current_task = parent_task
+            path_selection_list = []
+            for i in range(self.n):
+                path_selection_list.append(path_selection_dict[i])
+            self.path_selection = tuple(path_selection_list)
+            self.object_ordering = list(reversed(object_ordering))
+            return True
+        else:
+            # print "Non-monotone"
+            # exit(0)
+            return False
+            # print MISTAKE
+
+    def DFS_rec(self, old_node):
+        FLAG = False # Flag = True iff we find a solution to the rearrangement problem
+        for next_object in self.next_object(old_node):
+            new_node = old_node + (1<<next_object)
+            if new_node in self.explored:
+                continue
+            
+            # Detect which poses are occupied
+            occupied_poses = []
+            for i in range(self.n):
+                if i == next_object:
+                    continue
+                elif ((old_node>>i)%2):
+                    occupied_poses.append(self.goal_poses[i])
+                else:
+                    occupied_poses.append(self.start_poses[i])
+
+            path_index = self.transformation(occupied_poses, next_object)
+            if path_index >= 0:
+                self.path_option[new_node] = path_index
+                self.parent[new_node] = old_node
+                self.queue.append(new_node)
+                self.explored[new_node] = 0
+                if new_node == 1<<(self.n) - 1:
+                    return True
+                FLAG = self.DFS_rec(new_node)
+                if FLAG:
+                    break
+        return FLAG
+
+
+    def next_object(self, index):
+        for i in range(self.n):
+            if ((index >> i)%2): # it has moved
+                pass
+            else: # it is at the start pose
+                yield i
+
+    def generate_task_index(self, obj_set):
+        task_index = 0
+        for obj in obj_set:
+            task_index += 2**obj
+        return task_index
+
+    def transformation(self,occupied_poses, obj):
+        start = self.start_poses[obj]
+        goal = self.goal_poses[obj]
+        dependency_dict_key = (min(start, goal), max(start, goal))
+        if dependency_dict_key not in self.dependency_dict:
+            self.dependency_dict[dependency_dict_key] = []
+            self.path_dict[dependency_dict_key] = []
+        for path_index in range(len(self.dependency_dict[dependency_dict_key])):
+            path = self.dependency_dict[dependency_dict_key][path_index]
+            OCCUPIED = False
+            for pose in path:
+                if pose in occupied_poses:
+                    OCCUPIED = True
+                    break
+            if not OCCUPIED:
+                return path_index
+        Available_Regions = []
+        for region in self.region_dict.keys():
+            OCCUPIED = False
+            for pose in region:
+                if pose in occupied_poses:
+                    OCCUPIED = True
+                    break
+            if not OCCUPIED:
+                Available_Regions.append(self.region_dict[region])
+        if (self.region_dict[self.obj_locations[goal]] not in Available_Regions):
+            # print "Not accessable"
+            return -1
+        if (self.region_dict[self.obj_locations[start]] not in Available_Regions):
+            # print "Not accessable"
+            return -1
+        if (self.region_dict[self.obj_locations[start]] == self.region_dict[self.obj_locations[goal]]):
+            path = [self.region_dict[self.obj_locations[start]]]
+            dep_set = set(self.get_dependency_set_from_index(self.region_dict[self.obj_locations[start]]))
+            self.path_dict[dependency_dict_key].append(list(reversed(path)))
+            self.dependency_dict[dependency_dict_key].append(dep_set)
+            return len(self.dependency_dict[dependency_dict_key]) - 1
+            
+        Found = False
+        parents = {}
+        explored = {}
+        for key in self.region_dict.values():
+            explored[key] = 0
+        queue = [self.region_dict[self.obj_locations[start]]]
+        explored[self.region_dict[self.obj_locations[start]]] = 1
+        while (len(queue) >0) and (not Found):
+            # stack(-1) for DFS and queue(0) for BFS
+            old_node = queue.pop(-1)
+            if old_node in self.linked_list:
+                for region in self.linked_list[old_node]:
+                    if explored[region]:
+                        continue
+                    if region not in Available_Regions:
+                        continue
+                    parents[region] = old_node
+                    if region == self.region_dict[self.obj_locations[goal]]:
+                        Found = True
+                        break
+                    queue.append(region)
+                    explored[region] = 1
+            else:
+                print("Linked list error")
+        
+        if Found:
+            path = []
+            dep_set = set()
+            current_node = self.region_dict[self.obj_locations[goal]]
+            while current_node in parents:
+                path.append(current_node)
+                dep_set = dep_set.union(self.get_dependency_set_from_index(current_node))
+                current_node = parents[current_node]
+            path.append(current_node)
+            dep_set = dep_set.union(self.get_dependency_set_from_index(current_node))
+            if dependency_dict_key[0]==start:
+                self.path_dict[dependency_dict_key].append(list(reversed(path)))
+            else:
+                self.path_dict[dependency_dict_key].append(list(path))
+            self.dependency_dict[dependency_dict_key].append(dep_set)
+            return len(self.dependency_dict[dependency_dict_key]) - 1
+        else:
+            return -1
+                    
+    def get_dependency_set_from_index(self, index):
+        for key, value in self.region_dict.items():
+            if value == index:
+                region_tuple = key
+                break
+        dependency_set = set()
+        for i in region_tuple:
+            value = -1
+            try:
+                value = int(i)
+            except ValueError:
+                pass  # it was a string, not an int.
+            if value >= -0.5:
+                dependency_set = dependency_set.union({value})
+        return dependency_set
 
 ################################################################################################
 
@@ -3046,5 +3333,5 @@ if __name__ == "__main__":
         EXP.load_instance(savefile, True, display, displayMore)
     else:
         # EXP.density_test(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        # EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        # EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
