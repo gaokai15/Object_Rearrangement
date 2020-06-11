@@ -297,6 +297,8 @@ py::list Region::get_components()
 				std::cerr << components[face] << '\n';
 			if (components[face])
 				continue;
+			if (!fit->mark())
+				continue;
 
 			Nef_polyhedron to_remove;
 
@@ -363,8 +365,10 @@ py::list Region::get_components()
 	Hole_it hit = expl.holes_begin(fit), hend = expl.holes_end(fit);
 	for (int i = 0; hit != hend; hit++, i++) {
 		if (DEBUG)
-			std::cerr << "--- Hole " << i << " (" << hit->mark() << ", "
-			          << ") ---\n";
+			std::cerr << "Hole " << i << " (" << hit->mark() << ") n";
+		if (!hit->mark() && !DEBUG)
+			continue;
+
 		Hfc_circulator hafc(hit), done(hit);
 		Nef_polyhedron trace;
 		std::vector<Point> points;
@@ -393,6 +397,8 @@ py::list Region::get_components()
 			hafc--;
 		} while (hafc != done);
 		Region comp_candidate(Nef_polyhedron(++points.begin(), points.end(), EXCLUDED) + trace - all_faces);
+		if (!hit->mark())
+			continue;
 		if (!comp_candidate.is_empty())
 			components[comp_candidate] = 1;
 	}
