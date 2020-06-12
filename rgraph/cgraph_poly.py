@@ -21,6 +21,17 @@ from rgraph import *
 
 EPSILON = 2**-8
 
+# def setupPlot(HEIGHT, WIDTH):
+#     fig = plt.figure(num=None, figsize=(5, 5), dpi=120, facecolor='w', edgecolor='k')
+#     ax = fig.subplots()
+#     ax.set_axisbelow(True)
+#     scale = max(HEIGHT, WIDTH)
+#     ax.set_ylim(-0.1 * scale, scale * 1.1)
+#     ax.set_xlim(-0.1 * scale, scale * 1.1)
+#     ax.grid(which='minor', linestyle=':', alpha=0.2)
+#     ax.grid(which='major', linestyle=':', alpha=0.5)
+#     return fig, ax
+
 
 def createPolygonPatch(polygon, color, zorder=1):
     verts = []
@@ -384,7 +395,7 @@ def isEdgeCollisionFree(robot, edge, obstacles):
     cpoly2 = pn.Polygon(np.add(robot, edge[1]))
     rpoly = pu.pointList(pu.convexHull(cpoly1 + cpoly2))
     for poly in obstacles:
-        if polysCollide(poly.tolist(), rpoly.tolist()):
+        if polysCollide(poly, rpoly):
             return False
 
     return True
@@ -408,8 +419,8 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
     color_pool = getColorMap(numObjs)
 
     polygon = np.array(poly_disk([0, 0], RAD, 30))
-    wall_pts = np.array([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
-    wall_mink = region([[RAD, RAD], [WIDTH - RAD, RAD], [WIDTH - RAD, HEIGHT - RAD], [RAD, HEIGHT - RAD]])
+    wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
+    wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
 
     points = []
     objects = []
@@ -423,8 +434,8 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
             while not isfree and timeout > 0:
                 timeout -= 1
                 point = (
-                    int(uniform(0 - min(polygon[:, 0])), int(WIDTH - max(polygon[:, 0]))),
-                    int(uniform(0 - min(polygon[:, 1])), int(HEIGHT - max(polygon[:, 1]))),
+                    uniform(0 - min(polygon[:, 0]),
+                            WIDTH - max(polygon[:, 0])), uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
                 )
                 isfree = isCollisionFree(polygon, point, objects[i % 2::2])
                 # isfree = isCollisionFree(polygon, point, objects)
@@ -434,10 +445,10 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
                 return False, False, False
 
             points.append(point)
-            obj = polygon + point
-            objects.append(region(obj.tolist()))
+            objects.append(pn.Polygon(polygon + point))
             mink_obj = 2 * polygon + point
-            minkowski_objs.append(region(mink_obj.tolist()))
+
+            minkowski_objs.append(pn.Polygon(mink_obj))
 
     if display:
         drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, color_pool, points, example_index, saveimage)

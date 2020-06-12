@@ -11,6 +11,7 @@
 #include <boost/python/list.hpp>
 #include <boost/python/iterator.hpp>
 #include <boost/container_hash/hash.hpp>
+#include <boost/python/tuple.hpp>
 #include <boost/unordered/unordered_map_fwd.hpp>
 #include <boost/unordered_map.hpp>
 #include <vector>
@@ -204,6 +205,8 @@ struct Region {
 		return std::distance(hit, end);
 	}
 
+	py::list to_list();
+
 	py::list get_components();
 
 	bool operator==(Region const &b) const
@@ -229,6 +232,65 @@ struct Region {
 	}
 };
 const Nef_polyhedron Region::null = Nef_polyhedron(Nef_polyhedron::EMPTY);
+py::list Region::to_list()
+{
+	py::list pypoly = py::list();
+	if (poly.is_empty())
+		return pypoly;
+
+	Explorer expl = poly.explorer();
+	Face_it fit = ++expl.faces_begin(); //, fend = expl.faces_end();
+	Hole_it hit = expl.holes_begin(fit), hend = expl.holes_end(fit);
+	if (std::distance(hit, hend) > 1)
+		if (DEBUG)
+			std::cerr << "Warning: Region is disconnected!\n"
+			          << "Split into components first (run get_components())\n";
+
+	if (DEBUG)
+		std::cerr << "--- Outer (" << hit->mark() << ") ---\n";
+	Hfc_circulator hafc(hit), done(hit);
+	std::vector<Point> points;
+	do {
+		Vert src = expl.source(hafc);
+		if (expl.is_standard(src)) {
+			if (DEBUG)
+				std::cerr << "\t" << expl.point(src) << ", " << src->mark() << '\n';
+			points.push_back(expl.point(src));
+		}
+		hafc--;
+	} while (hafc != done);
+	py::list outer = py::list();
+	// outer.append(hit->mark());
+	for (auto pit = points.begin(); pit != points.end(); pit++)
+		outer.append(py::make_tuple((int)pit->hx(), (int)pit->hy()));
+	pypoly.append(outer);
+
+	fit++;
+	hit = expl.holes_begin(fit), hend = expl.holes_end(fit);
+	for (int i = 0; hit != hend; hit++, i++) {
+		if (DEBUG)
+			std::cerr << "Hole " << i << " (" << hit->mark() << "):\n";
+		Hfc_circulator hafc(hit), done(hit);
+		std::vector<Point> points;
+		do {
+			Vert src = expl.source(hafc);
+			if (expl.is_standard(src)) {
+				if (DEBUG)
+					std::cerr << "\t" << expl.point(src) << ", " << src->mark() << '\n';
+				points.push_back(expl.point(src));
+			}
+			hafc--;
+		} while (hafc != done);
+		py::list hole = py::list();
+		// hole.append(hit->mark());
+		for (auto pit = points.begin(); pit != points.end(); pit++)
+			hole.append(py::make_tuple((int)pit->hx(), (int)pit->hy()));
+		pypoly.append(hole);
+	}
+
+	return pypoly;
+}
+
 py::list Region::get_components()
 {
 	py::list pypoly = py::list();
@@ -445,7 +507,8 @@ BOOST_PYTHON_MODULE(region)
 	        .def("num_faces", &Region::number_of_faces)
 	        .def("num_face_cyles", &Region::number_of_face_cycles)
 	        .def("num_connected_components", &Region::number_of_connected_components)
-	        .def("get_components", &Region::get_components);
+	        .def("get_components", &Region::get_components)
+	        .def("to_list", &Region::to_list);
 	// py::def(
 	//	   "blah", +[]() { return "blah"; });
 }
