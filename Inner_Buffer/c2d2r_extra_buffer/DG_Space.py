@@ -59,6 +59,22 @@ class Experiments(object):
 
         print "DFS_non.object_ordering", DFS_non.object_ordering
 
+
+        start_poses = {}
+        goal_poses = {}
+        for i in range(numObjs):
+            start_poses[i] = 2*i
+            goal_poses[i] = 2*i + 1
+
+        start = time.time()
+        DFS_non_gen = Non_Monotone_Solver_General(graph, object_locations, start_poses, goal_poses)
+        stop = time.time()
+        DFS_non_time = stop - start
+        print "DFS_time", DFS_non_time
+
+        print "DFS_non_monotone_object_ordering", DFS_non_gen.object_ordering
+
+
         # gpd = Dense_Path_Generation(numObjs, graph, object_locations)
         # # print path dict
         # keys = sorted(gpd.path_dict.keys())
@@ -125,28 +141,28 @@ class Experiments(object):
         D = 0.5
         time_data = {}
         buffer_data = {}
-        for numObjs_var in numObjs_list:
-            print "numOBJ", numObjs_var
-            RAD_var = int(math.sqrt((float(HEIGHT*WIDTH*D))/(2*math.pi*numObjs_var)))
-            print "rad", RAD_var
-            time_data[numObjs_var] = []
-            buffer_data[numObjs_var] = []
-            for trial in xrange(numTrials):
-                print "trial", trial
-                try:
-                    start = time.time()
-                    ordering = non_monotone_timeout.timeout_single_instance(numObjs_var, RAD_var, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-                    stop = time.time()
-                    time_data[numObjs_var].append(stop-start)
-                    buffer_data[numObjs_var].append(len(ordering)-numObjs_var)
-                    print "time", stop - start
-                except Exception:
-                    time_data[numObjs_var].append(-1)
-                    buffer_data[numObjs_var].append(-1)
-        with open(os.path.join(my_path, "Experiment_0605_D5.pkl"), 'wb') as output:
-            pickle.dump((time_data, buffer_data), output, pickle.HIGHEST_PROTOCOL)
-        # with open(os.path.join(my_path, "Experiment_0601_D5.pkl"), 'rb') as input:
-        #     time_data, buffer_data = pickle.load(input)
+        # for numObjs_var in numObjs_list:
+        #     print "numOBJ", numObjs_var
+        #     RAD_var = int(math.sqrt((float(HEIGHT*WIDTH*D))/(2*math.pi*numObjs_var)))
+        #     print "rad", RAD_var
+        #     time_data[numObjs_var] = []
+        #     buffer_data[numObjs_var] = []
+        #     for trial in xrange(numTrials):
+        #         print "trial", trial
+        #         try:
+        #             start = time.time()
+        #             ordering = non_monotone_timeout.timeout_single_instance(numObjs_var, RAD_var, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        #             stop = time.time()
+        #             time_data[numObjs_var].append(stop-start)
+        #             buffer_data[numObjs_var].append(len(ordering)-numObjs_var)
+        #             print "time", stop - start
+        #         except Exception:
+        #             time_data[numObjs_var].append(-1)
+        #             buffer_data[numObjs_var].append(-1)
+        # with open(os.path.join(my_path, "Experiment_0605_D5.pkl"), 'wb') as output:
+        #     pickle.dump((time_data, buffer_data), output, pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(my_path, "Experiment_0605_D5.pkl"), 'rb') as input:
+            time_data, buffer_data = pickle.load(input)
 
         # print time_data
         # print buffer_data
@@ -2128,6 +2144,302 @@ class DFS_Rec_for_Monotone(object):
                 dependency_set = dependency_set.union({value})
         return dependency_set
 
+class DFS_for_Non_Monotone_General(object):
+    def __init__(self, start_poses, goal_poses, dependency_dict, path_dict, object_locations, linked_list, region_dict, obj_buffer_dict):
+        self.n = len(start_poses)
+        self.start_poses = copy.deepcopy(start_poses)
+        self.goal_poses = copy.deepcopy(goal_poses)
+        self.b = len(obj_buffer_dict)
+        self.dependency_dict = copy.deepcopy(dependency_dict)
+        self.path_dict = copy.deepcopy(path_dict)
+        self.obj_locations = copy.deepcopy(object_locations)
+        self.linked_list = copy.deepcopy(linked_list)
+        self.region_dict = copy.deepcopy(region_dict)
+        self.obj_buffer_dict = copy.deepcopy(obj_buffer_dict)
+        self.path_selection_dict = {}
+        self.buffer_objects = []
+        for value in self.obj_buffer_dict.values():
+            self.buffer_objects.append(value[0])
+        self.dynamic_programming()
+        
+
+    def dynamic_programming(self):
+        complete_index = 0
+        for i in self.start_poses.keys():
+            complete_index += (1<<i)
+        for value in self.obj_buffer_dict.values():
+            complete_index += (1<<value[0])
+        parent = {}
+        path_option = {}
+        self.object_ordering = []
+        explored = []
+        queue = [0]
+        explored.append(0)
+        FOUND = False
+        while (len(queue)>0)&(not FOUND):
+            old_node = queue.pop(-1)
+            for next_object in self.next_object(old_node):
+                new_node = old_node + (1<<next_object)
+                if new_node in explored:
+                    continue
+                
+                # Detect which poses are occupied
+                occupied_poses = []
+                for i in self.start_poses.keys():
+                    if i == next_object:
+                        continue
+                    elif i in self.obj_buffer_dict: # objects using buffers
+                        if self.obj_buffer_dict[i][0] == next_object:
+                            continue
+                        elif ((old_node>>(self.obj_buffer_dict[i][0]))%2):# has been at the goal pose
+                            occupied_poses.append(self.goal_poses[i])
+                        elif ((old_node>>(i))%2):# at the buffer
+                            occupied_poses.append(self.obj_buffer_dict[i][1])
+                        else: # at the start pose
+                            occupied_poses.append(self.start_poses[i])
+                    else:
+                        if ((old_node>>i)%2):
+                            occupied_poses.append(self.goal_poses[i])
+                        else:
+                            occupied_poses.append(self.start_poses[i])
+
+                path_index = self.transformation(occupied_poses, next_object)
+                if path_index >= 0:
+                    path_option[new_node] = path_index
+                    parent[new_node] = old_node
+                    queue.append(new_node)
+                    explored.append(new_node)
+                    if new_node == complete_index:
+                        FOUND = True
+                        break
+
+        task_index = complete_index
+        if task_index in path_option:
+            current_task = task_index
+            object_ordering = []
+            while current_task in parent:
+                parent_task = parent[current_task]
+                last_object = int(math.log(current_task - parent_task, 2))
+                self.path_selection_dict[last_object] = path_option[current_task]
+                if last_object in self.buffer_objects:
+                    for key in self.obj_buffer_dict.keys():
+                        if self.obj_buffer_dict[key][0] == last_object:
+                            real_object = key
+                            break
+                    object_ordering.append( real_object)
+                else:
+                    object_ordering.append( last_object)
+                
+                
+                current_task = parent_task
+            self.object_ordering = list(reversed(object_ordering))
+            return True
+        else:
+            # print "Non-monotone"
+            # exit(0)
+            return False
+            # print MISTAKE
+
+    def next_object(self, index):
+        for i in self.start_poses.keys():
+            if ((index >> i)%2): # it has moved
+                if (i in self.obj_buffer_dict) and (not ((index >> (self.obj_buffer_dict[i][0]))%2)): # it is at the buffer
+                    yield self.obj_buffer_dict[i][0]
+            else: # it is at the start pose
+                yield i
+
+    def generate_task_index(self, obj_set):
+        task_index = 0
+        for obj in obj_set:
+            task_index += 2**obj
+        return task_index
+
+    def transformation(self,occupied_poses, obj):
+        
+        if obj < self.n:
+            start = 2*obj
+            if obj in self.obj_buffer_dict:
+                goal = self.obj_buffer_dict[obj][1]
+            else:
+                goal = 2*obj+1
+        else:
+            for key in self.obj_buffer_dict.keys():
+                if self.obj_buffer_dict[key][0] == obj:
+                    real_object = key
+                    break
+            start = self.obj_buffer_dict[real_object][1]
+            goal = 2*real_object+1
+        dependency_dict_key = (min(start, goal), max(start, goal))
+        if dependency_dict_key not in self.dependency_dict:
+            self.dependency_dict[dependency_dict_key] = []
+            self.path_dict[dependency_dict_key] = []
+        for path_index in range(len(self.dependency_dict[dependency_dict_key])):
+            path = self.dependency_dict[dependency_dict_key][path_index]
+            OCCUPIED = False
+            for pose in path:
+                if pose in occupied_poses:
+                    OCCUPIED = True
+                    break
+            if not OCCUPIED:
+                return path_index
+        Available_Regions = []
+        for region in self.region_dict.keys():
+            OCCUPIED = False
+            for pose in region:
+                if pose in occupied_poses:
+                    OCCUPIED = True
+                    break
+            if not OCCUPIED:
+                Available_Regions.append(self.region_dict[region])
+        if (self.region_dict[self.obj_locations[goal]] not in Available_Regions):
+            # print "Not accessable"
+            return -1
+        if (self.region_dict[self.obj_locations[start]] not in Available_Regions):
+            # print "Not accessable"
+            return -1
+        if (self.region_dict[self.obj_locations[start]] == self.region_dict[self.obj_locations[goal]]):
+            path = [self.region_dict[self.obj_locations[start]]]
+            dep_set = set(self.get_dependency_set_from_index(self.region_dict[self.obj_locations[start]]))
+            self.path_dict[dependency_dict_key].append(list(reversed(path)))
+            self.dependency_dict[dependency_dict_key].append(dep_set)
+            return len(self.dependency_dict[dependency_dict_key]) - 1
+            
+        Found = False
+        parents = {}
+        explored = {}
+        for key in self.region_dict.values():
+            explored[key] = 0
+        queue = [self.region_dict[self.obj_locations[start]]]
+        explored[self.region_dict[self.obj_locations[start]]] = 1
+        while (len(queue) >0) and (not Found):
+            # stack(-1) for DFS and queue(0) for BFS
+            old_node = queue.pop(-1)
+            if old_node in self.linked_list:
+                for region in self.linked_list[old_node]:
+                    if explored[region]:
+                        continue
+                    if region not in Available_Regions:
+                        continue
+                    parents[region] = old_node
+                    if region == self.region_dict[self.obj_locations[goal]]:
+                        Found = True
+                        break
+                    queue.append(region)
+                    explored[region] = 1
+            else:
+                print("Linked list error")
+        
+        if Found:
+            path = []
+            dep_set = set()
+            current_node = self.region_dict[self.obj_locations[goal]]
+            while current_node in parents:
+                path.append(current_node)
+                dep_set = dep_set.union(self.get_dependency_set_from_index(current_node))
+                current_node = parents[current_node]
+            path.append(current_node)
+            dep_set = dep_set.union(self.get_dependency_set_from_index(current_node))
+            if dependency_dict_key[0]==start:
+                self.path_dict[dependency_dict_key].append(list(reversed(path)))
+            else:
+                self.path_dict[dependency_dict_key].append(list(path))
+            self.dependency_dict[dependency_dict_key].append(dep_set)
+            return len(self.dependency_dict[dependency_dict_key]) - 1
+        else:
+            return -1
+                    
+    def get_dependency_set_from_index(self, index):
+        for key, value in self.region_dict.items():
+            if value == index:
+                region_tuple = key
+                break
+        dependency_set = set()
+        for i in region_tuple:
+            value = -1
+            try:
+                value = int(i)
+            except ValueError:
+                pass  # it was a string, not an int.
+            if value >= -0.5:
+                dependency_set = dependency_set.union({value})
+        return dependency_set
+
+class Non_Monotone_Solver_General(object):
+    def __init__(self, graph, obj_locations, start_poses, goal_poses):
+        self.obj_locations = obj_locations
+        self.path_dict = {}
+        self.dependency_dict = {}
+        self.object_ordering = []
+        self.start_poses = copy.deepcopy(start_poses)
+        self.goal_poses = copy.deepcopy(goal_poses)
+        self.n = len(self.start_poses)
+        self.linked_list_conversion(graph)
+        self.enumerate_cases()
+        self.dependency_dict_conversion()
+        
+    def enumerate_cases(self):
+        # enumerate possible cases
+        FOUND = False
+        for obj_num in range(self.n+1): # num of objects that need buffers
+            print "number of objects that use buffers", obj_num
+            for obj_set in combinations(self.start_poses.keys(), obj_num): # which objs need buffers
+                for buffer_set in product(sorted(self.obj_locations.keys(), reverse=True), repeat=obj_num): # which poses are buffers
+                    obj_buffer_dict = {}
+                    Degrade = False # when an object uses its own start or goal pose as a buffer, Degrade = True.
+                    for index in xrange(len(obj_set)):
+                        obj = obj_set[index]
+                        buffer = buffer_set[index]
+                        if (buffer == self.start_poses[obj]) or (buffer == self.goal_poses[obj]):
+                            Degrade = True
+                            break
+                        obj_buffer_dict[obj] = (self.n+index, buffer)
+                    if Degrade:
+                        continue
+                    # monotone solver input path_dict, dependency_dict, obj_locations, LL, region_dict, obj_buffer_dict
+                    DFS = DFS_for_Non_Monotone_General(self.start_poses, self.goal_poses, self.dependency_dict, self.path_dict, self.obj_locations, self.LL, self.region_dict, obj_buffer_dict)
+                    self.dependency_dict = copy.deepcopy(DFS.dependency_dict)
+                    self.path_dict = copy.deepcopy(DFS.path_dict)
+                    if len(DFS.object_ordering)>0:
+                        print "Find a solution!"
+                        FOUND = True
+                        print "obj_buffer_dict", obj_buffer_dict
+                        print "DFS.object_ordering", DFS.object_ordering
+                        self.object_ordering = DFS.object_ordering
+                        break
+                if FOUND:
+                    break
+            if FOUND:
+                break
+        
+        
+
+    def linked_list_conversion(self, graph):
+        # print "graph"
+        # print graph
+        self.region_dict = {}  # (1,2,'a'): 0
+        self.LL = {}  # 0:[1,2,3]
+        for key in graph:
+            index = len(self.region_dict.keys())
+            self.region_dict[key] = index
+            self.LL[index] = []
+        for key in graph:
+            for v in graph[key]:
+                self.LL[self.region_dict[key]].append(self.region_dict[v])
+        # print "LL"
+        # print self.LL
+        # print "region dict"
+        # print self.region_dict
+
+    def dependency_dict_conversion(self):
+        for key in self.dependency_dict.keys():
+            number_set_list = self.dependency_dict[key]
+            pose_set_list = []
+            for number_set in number_set_list:
+                pose_set = set()
+                for number in number_set:
+                    pose_set = pose_set.union({(number // 2, number % 2)})
+                pose_set_list.append(pose_set)
+            self.dependency_dict[key] = pose_set_list
 
 ################################################################################################
 
@@ -2206,7 +2518,7 @@ if __name__ == "__main__":
     if loadfile:
         EXP.load_instance(savefile, True, display, displayMore)
     else:
-        EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        # EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        # EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
         
 
