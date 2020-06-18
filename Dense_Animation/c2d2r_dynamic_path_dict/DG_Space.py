@@ -90,11 +90,11 @@ class Experiments(object):
 
         print "DFS_rec_object_ordering", DFS_rec.object_ordering
 
-        # start = time.time()
+        start = time.time()
         # DFS_non = Non_Monotone_Solver(graph, object_locations, numObjs)
-        # stop = time.time()
-        # DFS_non_time = stop - start
-        # print "DFS_time", DFS_non_time
+        stop = time.time()
+        DFS_non_time = stop - start
+        print "DFS_time", DFS_non_time
 
         # print "DFS_non_monotone_object_ordering", DFS_non.object_ordering
 
@@ -117,14 +117,14 @@ class Experiments(object):
 
         
 
-        start = time.time()
-        BFS = BFS_DP(graph, object_locations)
-        stop = time.time()
-        BFS_time = stop - start
-        BFS_trans = BFS.trans
-        print "BFS_time", BFS_time
+        # start = time.time()
+        # BFS = BFS_DP(graph, object_locations)
+        # stop = time.time()
+        # BFS_time = stop - start
+        # BFS_trans = BFS.trans
+        # print "BFS_time", BFS_time
 
-        print "BFS_object_ordering", BFS.object_ordering
+        # print "BFS_object_ordering", BFS.object_ordering
 
         # start = time.time()
         # DFS_test = DFS_Rec_for_Monotone(range(0,2*numObjs,2), range(1,2*numObjs,2), {}, {}, object_locations, graph)
@@ -134,7 +134,7 @@ class Experiments(object):
 
         # print "TEST_object_ordering", DFS_test.object_ordering
 
-        # select a version to make the figure
+        select a version to make the figure
         path_opts = copy.deepcopy(DFS_rec.path_dict)
         path_selection = copy.deepcopy(DFS_rec.path_selection)
         object_ordering = copy.deepcopy(DFS_rec.object_ordering)
@@ -171,7 +171,7 @@ class Experiments(object):
         numObjs_list = [9, 13, 17, 21, 25]
         # numObjs_list = [25]
         numTrials = 10
-        D = 0.4
+        D = 0.2
         DPP_data = {}
         BDP_data = {}
         DFS_data = {}
@@ -182,43 +182,43 @@ class Experiments(object):
         DFS_trans_data = {}
         DFS_rec_trans_data = {}
         BFS_trans_data = {}
-        # for numObjs_var in numObjs_list:
-        #     print "numOBJ", numObjs_var
-        #     RAD_var = int(math.sqrt((float(HEIGHT*WIDTH*D))/(2*math.pi*numObjs_var)))
-        #     print "rad", RAD_var
-        #     DPP_data[numObjs_var] = []
-        #     BDP_data[numObjs_var] = []
-        #     DFS_data[numObjs_var] = []
-        #     DFS_rec_data[numObjs_var] = []
-        #     BFS_data[numObjs_var] = []
-        #     DPP_trans_data[numObjs_var] = []
-        #     BDP_trans_data[numObjs_var] = []
-        #     DFS_trans_data[numObjs_var] = []
-        #     DFS_rec_trans_data[numObjs_var] = []
-        #     BFS_trans_data[numObjs_var] = []
-        #     for trial in xrange(numTrials):
-        #         print "trial", trial
-        #         Monotone = False
-        #         timeout = 10
-        #         while (timeout>=0) and (not Monotone):
-        #             try:
-        #                 DPP_time, DFS_time, DFS_rec_time, BFS_time, DPP_trans, DFS_trans, DFS_rec_trans, BFS_trans = self.single_instance(numObjs_var, RAD_var, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        #                 Monotone = True
-        #                 DPP_data[numObjs_var].append(DPP_time)
-        #                 DFS_data[numObjs_var].append(DFS_time)
-        #                 DFS_rec_data[numObjs_var].append(DFS_rec_time)
-        #                 BFS_data[numObjs_var].append(BFS_time)
-        #                 DPP_trans_data[numObjs_var].append(DPP_trans)
-        #                 DFS_trans_data[numObjs_var].append(DFS_trans)
-        #                 DFS_rec_trans_data[numObjs_var].append(DFS_rec_trans)
-        #                 BFS_trans_data[numObjs_var].append(BFS_trans)
-        #                 print "DPP, DFS, DFS_rec, BFS", DPP_time, DFS_time, DFS_rec_time, BFS_time
-        #             except Exception:
-        #                 timeout -= 1
-        # with open(os.path.join(my_path, "Experiment_0607_D2_monotone.pkl"), 'wb') as output:
-        #     pickle.dump((DPP_data, DFS_data, DFS_rec_data, BFS_data, DPP_trans_data, DFS_trans_data, DFS_rec_trans_data, BFS_trans_data), output, pickle.HIGHEST_PROTOCOL)
-        with open(os.path.join(my_path, "Experiment_0607_D5_nonmonotone.pkl"), 'rb') as input:
-            DPP_data, DFS_data, DFS_rec_data, BFS_data, DPP_trans_data, DFS_trans_data, DFS_rec_trans_data, BFS_trans_data = pickle.load(input)
+        for numObjs_var in numObjs_list:
+            print "numOBJ", numObjs_var
+            RAD_var = int(math.sqrt((float(HEIGHT*WIDTH*D))/(2*math.pi*numObjs_var)))
+            print "rad", RAD_var
+            DPP_data[numObjs_var] = []
+            BDP_data[numObjs_var] = []
+            DFS_data[numObjs_var] = []
+            DFS_rec_data[numObjs_var] = []
+            BFS_data[numObjs_var] = []
+            DPP_trans_data[numObjs_var] = []
+            BDP_trans_data[numObjs_var] = []
+            DFS_trans_data[numObjs_var] = []
+            DFS_rec_trans_data[numObjs_var] = []
+            BFS_trans_data[numObjs_var] = []
+            for trial in xrange(numTrials):
+                print "trial", trial
+                Monotone = False
+                timeout = 10
+                while (timeout>=0) and (not Monotone):
+                    try:
+                        DPP_time, DFS_time, DFS_rec_time, BFS_time, DPP_trans, DFS_trans, DFS_rec_trans, BFS_trans = self.single_instance(numObjs_var, RAD_var, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+                        Monotone = True
+                        DPP_data[numObjs_var].append(DPP_time)
+                        DFS_data[numObjs_var].append(DFS_time)
+                        DFS_rec_data[numObjs_var].append(DFS_rec_time)
+                        BFS_data[numObjs_var].append(BFS_time)
+                        DPP_trans_data[numObjs_var].append(DPP_trans)
+                        DFS_trans_data[numObjs_var].append(DFS_trans)
+                        DFS_rec_trans_data[numObjs_var].append(DFS_rec_trans)
+                        BFS_trans_data[numObjs_var].append(BFS_trans)
+                        print "DPP, DFS, DFS_rec, BFS", DPP_time, DFS_time, DFS_rec_time, BFS_time
+                    except Exception:
+                        timeout -= 1
+        with open(os.path.join(my_path, "Experiment_0611_D2_monotone.pkl"), 'wb') as output:
+            pickle.dump((DPP_data, DFS_data, DFS_rec_data, BFS_data, DPP_trans_data, DFS_trans_data, DFS_rec_trans_data, BFS_trans_data), output, pickle.HIGHEST_PROTOCOL)
+        # with open(os.path.join(my_path, "Experiment_0611_D2_monotone.pkl"), 'rb') as input:
+        #     DPP_data, DFS_data, DFS_rec_data, BFS_data, DPP_trans_data, DFS_trans_data, DFS_rec_trans_data, BFS_trans_data = pickle.load(input)
         
         print DPP_data
         # print BDP_data
@@ -2197,7 +2197,7 @@ class DFS_DP(object):
             print "Non-monotone"
             # exit(0)
             return
-            print MISTAKE
+            # print MISTAKE
 
     def next_object(self, index):
         for i in range(self.n):
@@ -3333,5 +3333,5 @@ if __name__ == "__main__":
         EXP.load_instance(savefile, True, display, displayMore)
     else:
         # EXP.density_test(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        # EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        # EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
