@@ -330,6 +330,7 @@ py::list Region::to_list()
 
 // #define FOR_BITS(i, bs) for (size_t i = bs.find_first(); i != boost::dynamic_bitset<>::npos; i = bs.find_next(i))
 // #define INIT_BITS(n, bs) bs.resize(std::max(bs.size(), (size_t)n))
+typedef boost::vector_property_map<int> boost_vector;
 
 py::list Region::get_components()
 {
@@ -337,9 +338,12 @@ py::list Region::get_components()
 	if (poly.is_empty())
 		return pypoly;
 
-	boost::vector_property_map<int> rank(1000);
-	boost::vector_property_map<int> parent(1000);
-	boost::disjoint_sets<int *, int *> ds(&rank[0], &parent[0]);
+	// boost::vector_property_map<int> rank(1000);
+	// boost::vector_property_map<int> parent(1000);
+	// boost::disjoint_sets<int *, int *> ds(&rank[0], &parent[0]);
+	boost_vector rank;
+	boost_vector parent;
+	boost::disjoint_sets<boost_vector, boost_vector> ds(rank, parent);
 	boost::unordered_map<int, NefPoly> fi2poly;
 	// boost::unordered_map<NefPoly, boost::dynamic_bitset<>, RHash> poly2fis;
 	boost::unordered_map<NefPoly, std::list<int>, RHash> poly2fis;
@@ -370,14 +374,14 @@ py::list Region::get_components()
 					std::cerr << '\t' << expl.point(fsrc) << ", " << fsrc->mark() << '\n';
 				fpoints.push_back(expl.point(fsrc));
 			}
-			NefPoly pvert = NefPoly(--fpoints.end(), fpoints.end());
+			NefPoly fpvert = NefPoly(--fpoints.end(), fpoints.end());
 			do {
 				Vert tgt = expl.target(fhafc);
 				if (expl.is_standard(tgt)) {
 					fpoints.push_back(expl.point(tgt));
 					NefPoly vert = NefPoly(--fpoints.end(), fpoints.end());
-					NefPoly line = NefPoly(----fpoints.end(), fpoints.end()) - pvert - vert;
-					pvert = vert;
+					NefPoly line = NefPoly(----fpoints.end(), fpoints.end()) - fpvert - vert;
+					fpvert = vert;
 					if (DEBUG)
 						std::cerr << '\t' << expl.point(tgt) << ", " << (vert < poly) << "="
 						          << tgt->mark() << "\n\t\t L__ e: " << (line < poly) << "="
@@ -443,14 +447,15 @@ py::list Region::get_components()
 						std::cerr << "\t\t" << expl.point(tgt) << ", " << tgt->mark() << '\n';
 					hpoints.push_back(expl.point(tgt));
 				}
-				NefPoly pvert = NefPoly(--hpoints.end(), hpoints.end());
+				NefPoly hpvert = NefPoly(--hpoints.end(), hpoints.end());
 				do {
 					Vert hsrc = expl.source(hhafc);
 					if (expl.is_standard(hsrc)) {
 						hpoints.push_back(expl.point(hsrc));
 						NefPoly vert = NefPoly(--hpoints.end(), hpoints.end());
-						NefPoly line = NefPoly(----hpoints.end(), hpoints.end()) - pvert - vert;
-						pvert = vert;
+						NefPoly line =
+						        NefPoly(----hpoints.end(), hpoints.end()) - hpvert - vert;
+						hpvert = vert;
 						if (DEBUG)
 							std::cerr << "\t\t" << expl.point(hsrc) << ", " << (vert < poly)
 							          << "=" << hsrc->mark()
@@ -513,14 +518,14 @@ py::list Region::get_components()
 				std::cerr << '\t' << expl.point(htgt) << ", " << htgt->mark() << '\n';
 			opoints.push_back(expl.point(htgt));
 		}
-		NefPoly pvert = NefPoly(--opoints.end(), opoints.end());
+		NefPoly hpvert = NefPoly(--opoints.end(), opoints.end());
 		do {
 			Vert hsrc = expl.source(hhafc);
 			if (expl.is_standard(hsrc)) {
 				opoints.push_back(expl.point(hsrc));
 				NefPoly vert = NefPoly(--opoints.end(), opoints.end());
-				NefPoly line = NefPoly(----opoints.end(), opoints.end()) - pvert - vert;
-				pvert = vert;
+				NefPoly line = NefPoly(----opoints.end(), opoints.end()) - hpvert - vert;
+				hpvert = vert;
 				if (DEBUG)
 					std::cerr << '\t' << expl.point(hsrc) << ", " << (vert < poly) << "="
 					          << hsrc->mark() << "\n\t\t L__ e: " << (line < poly) << "="
