@@ -82,11 +82,11 @@ def drawProblem(
         patch = createPolygonPatch(robotGoal, 'red', zorder=3)
         ax.add_patch(patch)
 
-    for walls in wall:
-        # walls = pu.pointList(cont)
-        wallx = [p[0] for p in walls + [walls[0]]]
-        wally = [p[1] for p in walls + [walls[0]]]
-        plt.plot(wallx, wally, 'blue')
+    # for walls in wall:
+    walls = wall.tolist() + [wall[0].tolist()]
+    wallx = [p[0] for p in walls]
+    wally = [p[1] for p in walls]
+    plt.plot(wallx, wally, 'blue')
 
     for i in range(len(polygons)):
         obj_idx = i // 2
@@ -103,10 +103,6 @@ def drawProblem(
     for i in range(len(points)):
         obj_idx = i // 2
         ax.text(points[i][0], points[i][1], str(obj_idx), fontweight='bold', fontsize=10, zorder=3)
-
-    # for poly in polygons:
-    #     patch = createPolygonPatch(pu.pointList(poly), 'gray')
-    #     ax.add_patch(patch)
 
     if path is not None:
         pts, color = path
@@ -143,10 +139,11 @@ def drawConGraph(HEIGHT, WIDTH, paths, color_pool, polygons=None, label=True):
             if type(poly) == tuple:
                 poly, _ = poly
             for cont in poly:
-                patch = createPolygonPatch_distinct(cont, color, label and p % 2)
-                ax.add_patch(patch)
-                if label:
-                    ax.annotate(str(p), xy=(0, 0), xytext=pn.Polygon(cont).center())
+                if len(cont) > 1:
+                    patch = createPolygonPatch_distinct(cont, color, label and p % 2)
+                    ax.add_patch(patch)
+                    if label:
+                        ax.annotate(str(p), xy=(0, 0), xytext=pn.Polygon(cont).center())
 
     for path in paths.values():
         color = 'black'
@@ -296,7 +293,7 @@ def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_
         for i in range(len(polygons)):
             obj_idx = i // 2
             isGoal = i % 2
-            patch = createPolygonPatch_distinct(pu.pointList(polygons[i]), color_pool[obj_idx], isGoal)
+            patch = createPolygonPatch_distinct(polygons[i], color_pool[obj_idx], isGoal)
             ax.add_patch(patch)
         ### label these polygons
         for i in range(len(points)):
@@ -371,23 +368,23 @@ def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_
 
 
 def isCollisionFree(robot, point, obstacles):
-    robotAt = np.add(point, robot)
+    robotAt = np.add(point, robot).tolist()
     for poly in obstacles:
-        if polysCollide(poly, robotAt):
+        if regionsCollide(poly[0], robotAt):
             return False
 
     return True
 
 
-def isEdgeCollisionFree(robot, edge, obstacles):
-    cpoly1 = pn.Polygon(np.add(robot, edge[0]))
-    cpoly2 = pn.Polygon(np.add(robot, edge[1]))
-    rpoly = pu.pointList(pu.convexHull(cpoly1 + cpoly2))
-    for poly in obstacles:
-        if polysCollide(poly.tolist(), rpoly.tolist()):
-            return False
+# def isEdgeCollisionFree(robot, edge, obstacles):
+#     rpoly1 = region(np.add(robot, edge[0]))
+#     rpoly2 = region(np.add(robot, edge[1]))
+#     rpoly = pu.pointList(pu.convexHull(cpoly1 + cpoly2))
+#     for poly in obstacles:
+#         if polysCollide(poly.tolist(), rpoly.tolist()):
+#             return False
 
-    return True
+#     return True
 
 
 def getColorMap(numObjs):
@@ -409,7 +406,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
 
     polygon = np.array(poly_disk([0, 0], RAD, 30))
     wall_pts = np.array([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
-    wall_mink = region([[RAD, RAD], [WIDTH - RAD, RAD], [WIDTH - RAD, HEIGHT - RAD], [RAD, HEIGHT - RAD]])
+    wall_mink = region([[RAD, RAD], [WIDTH - RAD, RAD], [WIDTH - RAD, HEIGHT - RAD], [RAD, HEIGHT - RAD]], False)
 
     points = []
     objects = []
@@ -423,8 +420,10 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
             while not isfree and timeout > 0:
                 timeout -= 1
                 point = (
-                    int(uniform(0 - min(polygon[:, 0])), int(WIDTH - max(polygon[:, 0]))),
-                    int(uniform(0 - min(polygon[:, 1])), int(HEIGHT - max(polygon[:, 1]))),
+                    int(uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0]))),
+                    int(uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))),
+                    # uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
+                    # uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1])),
                 )
                 isfree = isCollisionFree(polygon, point, objects[i % 2::2])
                 # isfree = isCollisionFree(polygon, point, objects)
@@ -435,9 +434,10 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
 
             points.append(point)
             obj = polygon + point
-            objects.append(region(obj.tolist()))
+            objects.append([obj.tolist()])
             mink_obj = 2 * polygon + point
-            minkowski_objs.append(region(mink_obj.tolist()))
+            print(mink_obj)
+            minkowski_objs.append(region(mink_obj.tolist(), True))
 
     if display:
         drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, color_pool, points, example_index, saveimage)
@@ -445,24 +445,74 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
     paths = {}
 
     less_regions, polysum = objects2regions(minkowski_objs, wall_mink)
-    graph, regions, obj2reg = regions2graph(less_regions, wall_mink, polysum, points)
+    # regions = {}
+    # mink_boundary = wall_mink
+    # polysum = sum(regions.values(), region([], False))
+    # for i, obj in enumerate(minkowski_objs):
+    #     if display:
+    #         print(polysum.is_empty(), polysum.to_list())
+    #         drawConGraph(HEIGHT, WIDTH, {}, color_pool, [polysum.to_list()], False)
+    #     for rind, r in regions.items():
+    #         rANDobj = r & obj
+    #         if display:
+    #             print(obj.is_empty(), obj.to_list())
+    #             drawConGraph(HEIGHT, WIDTH, {}, color_pool, [obj.to_list()], False)
+    #             print(r.is_empty(), r.to_list())
+    #             drawConGraph(HEIGHT, WIDTH, {}, color_pool, [r.to_list()], False)
+    #             print(rANDobj.is_empty(), rANDobj.to_list())
+    #             drawConGraph(HEIGHT, WIDTH, {}, color_pool, [rANDobj.to_list()], False)
+    #         if not rANDobj.is_empty():
+    #             regions[rind + (i, )] = rANDobj
+    #             rDIFobj = r - obj
+    #             if rDIFobj.is_empty():
+    #                 del regions[rind]
+    #             else:
+    #                 regions[rind] = rDIFobj
 
+    #     objDIFFpolysum = mink_boundary & obj - polysum
+    #     if display:
+    #         print(mink_boundary & obj == mink_boundary.intersection(obj))
+    #         print(mink_boundary.is_empty(), mink_boundary.to_list())
+    #         drawConGraph(HEIGHT, WIDTH, {}, color_pool, [mink_boundary.to_list()], False)
+    #         print(obj.is_empty(), obj.to_list())
+    #         drawConGraph(HEIGHT, WIDTH, {}, color_pool, [obj.to_list()], False)
+    #         print(objDIFFpolysum.is_empty(), objDIFFpolysum.to_list())
+    #         drawConGraph(HEIGHT, WIDTH, {}, color_pool, [objDIFFpolysum.to_list()], False)
+    #     # print(objDIFFpolysum, bool(objDIFFpolysum))
+    #     if not objDIFFpolysum.is_empty():
+    #         regions[(i, )] = objDIFFpolysum
+    #     polysum += obj
+    # less_regions = regions
+
+    reg_list = []
+    for key, reg in less_regions.items():
+        print(key)
+        for comp in reg.get_components():
+            print(comp.to_list())
+            reg_list.append(comp.to_list())
     if display:
-        drawConGraph(HEIGHT, WIDTH, {}, color_pool, regions.values(), False)
+        drawConGraph(HEIGHT, WIDTH, {}, color_pool, reg_list, False)
+
+    graph, regions, obj2reg = regions2graph(less_regions, wall_mink, polysum, points, 0)
+
+    regLists = [x.to_list() for x in regions.values()]
+    print(regions)
+    if display:
+        drawConGraph(HEIGHT, WIDTH, {}, color_pool, regLists, False)
 
     def drawDebug(rect, r1=None, r2=None):
-        if r1 and r2:
+        if r1 is not None and r2 is not None:
             drawConGraph(
                 HEIGHT, WIDTH, {
-                    0: pu.pointList(pu.fillHoles(r1)),
-                    1: pu.pointList(pu.fillHoles(r2)),
-                    2: pu.pointList(rect)
-                }, color_pool, regions.values(), False
+                    0: r1.to_list()[0],
+                    1: r2.to_list()[0],
+                    2: rect.to_list()[0]
+                }, color_pool, regLists, False
             )
         else:
             drawConGraph(HEIGHT, WIDTH, {
-                0: pu.pointList(rect),
-            }, color_pool, regions.values(), False)
+                0: rect.to_list()[0],
+            }, color_pool, regLists, False)
 
     if display:
         for rind1, r1adj in graph.items():
@@ -477,10 +527,10 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
                 paths[(rind1, rind2)] = path
 
                 if displayMore:
-                    drawConGraph(HEIGHT, WIDTH, {0: path}, color_pool, regions.values(), False)
+                    drawConGraph(HEIGHT, WIDTH, {0: path}, color_pool, regLists, False)
 
     if display:
-        drawConGraph(HEIGHT, WIDTH, paths, color_pool, regions.values(), False)
+        drawConGraph(HEIGHT, WIDTH, paths, color_pool, regLists, False)
         drawConGraph(HEIGHT, WIDTH, paths, color_pool, objects)
 
     if savefile:
@@ -492,7 +542,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
                     'HEIGHT': HEIGHT,
                     'WIDTH': WIDTH,
                     'points': points,
-                    'objects': np.array([pu.pointList(p) for p in objects]).tolist(),
+                    'objects': objects,
                     # staticObs = []
                     'graph': {str(k): v
                               for k, v in graph.items()},
@@ -734,19 +784,19 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
 if __name__ == "__main__":
     if (len(sys.argv) < 5):
         print(
-            '''Error: deptree.py: <# objects> <height> <width> <radius>
+            '''Error: graph.py: <# objects> <radius> <height> <width>
             [display?: (y/n)] [display more?: (y/n)] [save file] [load save?: (y/n)]'''
         )
         exit()
 
     try:
         numObjs = int(sys.argv[1])
-        RAD = float(sys.argv[2])
+        RAD = int(sys.argv[2])
         HEIGHT = int(sys.argv[3])
         WIDTH = int(sys.argv[4])
     except ValueError:
         print(
-            '''Error: deptree.py: <# objects> <height> <width> <radius>
+            '''Error: graph.py: <# objects> <radius> <height> <width>
             [display?: (y/n)] [display more?: (y/n)] [save file] [load save?: (y/n)]'''
         )
         exit()

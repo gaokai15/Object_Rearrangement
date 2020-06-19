@@ -21,7 +21,7 @@
 #include <boost/pending/disjoint_sets.hpp>
 #include <boost/property_map/vector_property_map.hpp>
 
-#define DEBUG (false)
+const bool DEBUG = false;
 
 namespace py = boost::python;
 
@@ -43,24 +43,25 @@ typedef CGAL::Circulator_from_iterator<std::vector<Point>::iterator> Cyclic_Poin
 #define EXCLUDED (NefPoly::EXCLUDED)
 #define INCLUDED (NefPoly::INCLUDED)
 
-// struct XY {
-//         int x;
-//         int y;
-//         XY()
-//         {
-//                 x = 0;
-//                 y = 0;
-//         }
-//         XY(Point p)
-//         {
-//                 x = (int)p.hx();
-//                 y = (int)p.hy();
-//         }
-//         bool operator==(XY const &p) const
-//         {
-//                 return x == p.x && y == p.y;
-//         }
-// };
+struct XY {
+	double x;
+	double y;
+	XY()
+	{
+		x = 0;
+		y = 0;
+	}
+	XY(Point p)
+	{
+		double hw = (double)p.hw();
+		x = (double)p.hx() / hw;
+		y = (double)p.hy() / hw;
+	}
+	// bool operator==(XY const &p) const
+	// {
+	//         return x == p.x && y == p.y;
+	// }
+};
 
 struct Region {
 	NefPoly poly;
@@ -77,9 +78,9 @@ struct Region {
 		for (int i = 0; i < len(pypoly); i++) {
 			py::list xy = py::extract<py::list>(pypoly[i]);
 			if (DEBUG)
-				std::cerr << py::extract<int>(xy[0]) << ", " << py::extract<int>(xy[1]) << '\n';
-			int x = py::extract<int>(xy[0]);
-			int y = py::extract<int>(xy[1]);
+				std::cerr << py::extract<double>(xy[0]) << ", " << py::extract<double>(xy[1]) << '\n';
+			double x = py::extract<double>(xy[0]);
+			double y = py::extract<double>(xy[1]);
 			points[i] = Point(x, y);
 		}
 		auto boundary = open ? EXCLUDED : INCLUDED;
@@ -103,12 +104,12 @@ struct Region {
 		return poly.is_empty();
 	}
 
-	bool contains(int x, int y)
+	bool contains(double x, double y)
 	{
 		return poly.contains(poly.locate(Point(x, y)));
 	}
 
-	bool contained_in_boundary(int x, int y)
+	bool contained_in_boundary(double x, double y)
 	{
 		return poly.contained_in_boundary(poly.locate(Point(x, y)));
 	}
@@ -239,6 +240,7 @@ struct RHash {
 		std::size_t seed = 0;
 		boost::hash_combine(seed, boost::hash_value((int)p.hx()));
 		boost::hash_combine(seed, boost::hash_value((int)p.hy()));
+		boost::hash_combine(seed, boost::hash_value((int)p.hw()));
 		return seed;
 	}
 
@@ -263,6 +265,7 @@ struct RHash {
 
 py::list Region::to_list()
 {
+	// const bool DEBUG = true;
 	py::list pypoly = py::list();
 	if (poly.is_empty())
 		return pypoly;
@@ -282,9 +285,9 @@ py::list Region::to_list()
 			std::cerr << "--- Isolated Vertex (" << ivit->mark() << ") ---\n";
 			std::cerr << expl.point(ivit) << '\n';
 		}
-		Point p = expl.point(ivit);
+		XY p = XY(expl.point(ivit));
 		py::list single = py::list();
-		single.append(py::make_tuple((int)p.hx(), (int)p.hy()));
+		single.append(py::make_tuple(p.x, p.y));
 		pypoly.append(single);
 		return pypoly;
 	}
@@ -297,19 +300,19 @@ py::list Region::to_list()
 	if (DEBUG)
 		std::cerr << "--- Outer (" << hit->mark() << ") ---\n";
 	Hfc_circulator ohafc(hit), odone(hit);
-	std::vector<Point> opoints;
+	std::vector<XY> opoints;
 	do {
 		Vert osrc = expl.source(ohafc);
 		if (expl.is_standard(osrc)) {
 			if (DEBUG)
 				std::cerr << "\t" << expl.point(osrc) << ", " << osrc->mark() << '\n';
-			opoints.push_back(expl.point(osrc));
+			opoints.push_back(XY(expl.point(osrc)));
 		}
 		ohafc--;
 	} while (ohafc != odone);
 	py::list outer = py::list();
 	for (auto pit = opoints.begin(); pit != opoints.end(); pit++)
-		outer.append(py::make_tuple((int)pit->hx(), (int)pit->hy()));
+		outer.append(py::make_tuple(pit->x, pit->y));
 	pypoly.append(outer);
 
 	fit++;
@@ -318,19 +321,19 @@ py::list Region::to_list()
 		if (DEBUG)
 			std::cerr << "Hole " << i << " (" << hit->mark() << "):\n";
 		Hfc_circulator hhafc(hit), hdone(hit);
-		std::vector<Point> hpoints;
+		std::vector<XY> hpoints;
 		do {
 			Vert hsrc = expl.source(hhafc);
 			if (expl.is_standard(hsrc)) {
 				if (DEBUG)
 					std::cerr << "\t" << expl.point(hsrc) << ", " << hsrc->mark() << '\n';
-				hpoints.push_back(expl.point(hsrc));
+				hpoints.push_back(XY(expl.point(hsrc)));
 			}
 			hhafc--;
 		} while (hhafc != hdone);
 		py::list hole = py::list();
 		for (auto pit = hpoints.begin(); pit != hpoints.end(); pit++)
-			hole.append(py::make_tuple((int)pit->hx(), (int)pit->hy()));
+			hole.append(py::make_tuple(pit->x, pit->y));
 		pypoly.append(hole);
 	}
 
@@ -341,6 +344,7 @@ typedef boost::vector_property_map<int> boost_vector;
 
 py::list Region::get_components()
 {
+	// const bool DEBUG = true;
 	py::list pypoly = py::list();
 	if (poly.is_empty())
 		return pypoly;
@@ -600,5 +604,5 @@ BOOST_PYTHON_MODULE(region)
 	        .def("get_components", &Region::get_components)
 	        .def("to_list", &Region::to_list);
 	// py::def(
-	//	   "blah", +[]() { return "blah"; });
+	//         "blah", +[]() { std::cout << Point(1.2, 4); });
 }
