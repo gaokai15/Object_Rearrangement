@@ -21,7 +21,7 @@
 #include <boost/pending/disjoint_sets.hpp>
 #include <boost/property_map/vector_property_map.hpp>
 
-#define DEBUG (true)
+#define DEBUG (false)
 
 namespace py = boost::python;
 
@@ -220,12 +220,6 @@ struct Region {
 	{
 		return poly.explorer().number_of_connected_components() -
 		       null.explorer().number_of_connected_components();
-		// if (poly.is_empty())
-		//         return 0;
-		// Explorer expl = poly.explorer();
-		// Face_it fit = ++expl.faces_begin();
-		// Hole_it hit = expl.holes_begin(fit), end = expl.holes_end(fit);
-		// return std::distance(hit, end);
 	}
 
 	py::list to_list();
@@ -269,15 +263,32 @@ struct RHash {
 
 py::list Region::to_list()
 {
-	// if (DEBUG)
-	//         std::cerr << poly;
 	py::list pypoly = py::list();
 	if (poly.is_empty())
 		return pypoly;
 
 	Explorer expl = poly.explorer();
-	Face_it fit = ++expl.faces_begin(); //, fend = expl.faces_end();
+	Face_it fit = ++expl.faces_begin();
 	Hole_it hit = expl.holes_begin(fit), hend = expl.holes_end(fit);
+
+	if (hit == hend) {
+		Iso_Vert_it ivit = expl.isolated_vertices_begin(fit), ivend = expl.isolated_vertices_end(fit);
+		if (std::distance(ivit, ivend) > 1)
+			if (DEBUG)
+				std::cerr << "Warning: Region is disconnected!\n"
+				          << "Split into components first (run get_components())\n";
+
+		if (DEBUG) {
+			std::cerr << "--- Isolated Vertex (" << ivit->mark() << ") ---\n";
+			std::cerr << expl.point(ivit) << '\n';
+		}
+		Point p = expl.point(ivit);
+		py::list single = py::list();
+		single.append(py::make_tuple((int)p.hx(), (int)p.hy()));
+		pypoly.append(single);
+		return pypoly;
+	}
+
 	if (std::distance(hit, hend) > 1)
 		if (DEBUG)
 			std::cerr << "Warning: Region is disconnected!\n"
@@ -285,19 +296,18 @@ py::list Region::to_list()
 
 	if (DEBUG)
 		std::cerr << "--- Outer (" << hit->mark() << ") ---\n";
-	Hfc_circulator fhafc(hit), fdone(hit);
+	Hfc_circulator ohafc(hit), odone(hit);
 	std::vector<Point> opoints;
 	do {
-		Vert osrc = expl.source(fhafc);
+		Vert osrc = expl.source(ohafc);
 		if (expl.is_standard(osrc)) {
 			if (DEBUG)
 				std::cerr << "\t" << expl.point(osrc) << ", " << osrc->mark() << '\n';
 			opoints.push_back(expl.point(osrc));
 		}
-		fhafc--;
-	} while (fhafc != fdone);
+		ohafc--;
+	} while (ohafc != odone);
 	py::list outer = py::list();
-	// outer.append(hit->mark());
 	for (auto pit = opoints.begin(); pit != opoints.end(); pit++)
 		outer.append(py::make_tuple((int)pit->hx(), (int)pit->hy()));
 	pypoly.append(outer);
@@ -319,7 +329,6 @@ py::list Region::to_list()
 			hhafc--;
 		} while (hhafc != hdone);
 		py::list hole = py::list();
-		// hole.append(hit->mark());
 		for (auto pit = hpoints.begin(); pit != hpoints.end(); pit++)
 			hole.append(py::make_tuple((int)pit->hx(), (int)pit->hy()));
 		pypoly.append(hole);
@@ -328,8 +337,6 @@ py::list Region::to_list()
 	return pypoly;
 }
 
-// #define FOR_BITS(i, bs) for (size_t i = bs.find_first(); i != boost::dynamic_bitset<>::npos; i = bs.find_next(i))
-// #define INIT_BITS(n, bs) bs.resize(std::max(bs.size(), (size_t)n))
 typedef boost::vector_property_map<int> boost_vector;
 
 py::list Region::get_components()
@@ -338,21 +345,15 @@ py::list Region::get_components()
 	if (poly.is_empty())
 		return pypoly;
 
-	// boost::vector_property_map<int> rank(1000);
-	// boost::vector_property_map<int> parent(1000);
-	// boost::disjoint_sets<int *, int *> ds(&rank[0], &parent[0]);
 	boost_vector rank;
 	boost_vector parent;
 	boost::disjoint_sets<boost_vector, boost_vector> ds(rank, parent);
 	boost::unordered_map<int, NefPoly> fi2poly;
-	// boost::unordered_map<NefPoly, boost::dynamic_bitset<>, RHash> poly2fis;
 	boost::unordered_map<NefPoly, std::list<int>, RHash> poly2fis;
-	// boost::unordered_map<NefPoly, int, RHash> poly2face;
 
 	Explorer expl = poly.explorer();
 	Face_it fit = ++++expl.faces_begin(), fend = expl.faces_end();
 
-	// NefPoly all_faces;
 	if (DEBUG)
 		std::cerr << "--- Faces ---\n";
 	int f = 1;
@@ -388,12 +389,6 @@ py::list Region::get_components()
 						          << fhafc->mark() << '\n';
 					if (line < poly) {
 						boundary += line;
-						// INIT_BITS(f, poly2fis[line]);
-						// FOR_BITS(i, poly2fis[line])
-						// {
-						//         ds.union_set(f, i);
-						// }
-						// poly2fis[line][f] = 1;
 						BOOST_FOREACH (int i, poly2fis[line]) {
 							ds.union_set(f, i);
 						}
@@ -401,12 +396,6 @@ py::list Region::get_components()
 					}
 					if (vert < poly) {
 						boundary += vert;
-						// INIT_BITS(f, poly2fis[vert]);
-						// FOR_BITS(i, poly2fis[vert])
-						// {
-						//         ds.union_set(f, i);
-						// }
-						// poly2fis[vert][f] = 1;
 						BOOST_FOREACH (int i, poly2fis[vert]) {
 							ds.union_set(f, i);
 						}
@@ -470,8 +459,6 @@ py::list Region::get_components()
 				} while (hhafc != hdone);
 				NefPoly hole(++hpoints.begin(), hpoints.end(), EXCLUDED);
 				assert(poly2fis[hole].empty());
-				// INIT_BITS(f, poly2fis[hole]);
-				// poly2fis[hole][f] = 1;
 				poly2fis[hole].push_back(f);
 				to_remove += hole;
 			}
@@ -482,7 +469,6 @@ py::list Region::get_components()
 			if (!boundary.is_empty()) {
 				face += boundary;
 			}
-			// all_faces += face;
 			fi2poly[f] = face;
 		}
 	}
@@ -506,11 +492,7 @@ py::list Region::get_components()
 		ds.make_set(f);
 		if (DEBUG)
 			std::cerr << "Hole " << i << " (" << hit->mark() << ") \n";
-		// if (!hit->mark() && !DEBUG)
-		//         continue;
-
 		Hfc_circulator hhafc(hit), hdone(hit);
-		// NefPoly trace;
 		std::vector<Point> opoints;
 		Vert htgt = expl.target(hhafc);
 		if (expl.is_standard(htgt)) {
@@ -531,13 +513,6 @@ py::list Region::get_components()
 					          << hsrc->mark() << "\n\t\t L__ e: " << (line < poly) << "="
 					          << hhafc->mark() << '\n';
 				if (line < poly) {
-					// trace += line;
-					// INIT_BITS(f, poly2fis[line]);
-					// FOR_BITS(i, poly2fis[line])
-					// {
-					//         ds.union_set(f, i);
-					// }
-					// poly2fis[line][f] = 1;
 					BOOST_FOREACH (int i, poly2fis[line]) {
 						ds.union_set(f, i);
 					}
@@ -548,13 +523,6 @@ py::list Region::get_components()
 						fi2poly[f] += line;
 				}
 				if (vert < poly) {
-					// trace += vert;
-					// INIT_BITS(f, poly2fis[vert]);
-					// FOR_BITS(i, poly2fis[vert])
-					// {
-					//         ds.union_set(f, i);
-					// }
-					// poly2fis[vert][f] = 1;
 					BOOST_FOREACH (int i, poly2fis[vert]) {
 						ds.union_set(f, i);
 					}
