@@ -247,14 +247,14 @@ def animatedMotions(
                 ### plot the objects
                 for nn in range(len(current_pts)):
                     ### start
-                    polygon = pn.Polygon(objectShape + start_pts[nn])
-                    patch = createPolygonPatch_distinct(pu.pointList(polygon), color_pool[nn], isGoal=True, zorder=1)
+                    polygon = objectShape + start_pts[nn]
+                    patch = createPolygonPatch_distinct(polygon, color_pool[nn], isGoal=True, zorder=1)
                     ax.add_patch(patch)
                     ax.text(start_pts[nn][0], start_pts[nn][1], "S" + str(nn), fontweight='bold', fontsize=10, zorder=1)
 
                     ### current
-                    polygon = pn.Polygon(objectShape + current_pts[nn])
-                    patch = createPolygonPatch_distinct(pu.pointList(polygon), color_pool[nn], isGoal=False, zorder=3)
+                    polygon = objectShape + current_pts[nn]
+                    patch = createPolygonPatch_distinct(polygon, color_pool[nn], isGoal=False, zorder=3)
                     ax.add_patch(patch)
                     ax.text(
                         current_pts[nn][0],
@@ -266,10 +266,8 @@ def animatedMotions(
                     )
                     ### goal
                     if not isGoalReached[nn]:
-                        polygon = pn.Polygon(objectShape + goal_pts[nn])
-                        patch = createPolygonPatch_distinct(
-                            pu.pointList(polygon), color_pool[nn], isGoal=True, zorder=1
-                        )
+                        polygon = objectShape + goal_pts[nn]
+                        patch = createPolygonPatch_distinct(polygon, color_pool[nn], isGoal=True, zorder=1)
                         ax.add_patch(patch)
                         ax.text(
                             goal_pts[nn][0], goal_pts[nn][1], "G" + str(nn), fontweight='bold', fontsize=10, zorder=1
