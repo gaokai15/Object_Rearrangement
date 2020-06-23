@@ -404,47 +404,39 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
     ### get some colors from colormap
     color_pool = getColorMap(numObjs)
 
-    polygon = np.array(poly_disk([0, 0], RAD, 10))
+    polygon = np.array(poly_disk([0, 0], RAD, 30))
     wall_pts = np.array([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
     wall_mink = region([[RAD, RAD], [WIDTH - RAD, RAD], [WIDTH - RAD, HEIGHT - RAD], [RAD, HEIGHT - RAD]], False)
 
-    points = [
-        [550, 500], [555, 505], [750, 500], [755, 505], [350, 500], [355, 505], [450, 673.20508075688775],
-        [455, 678.20508075688775], [650, 673.20508075688775], [655, 678.20508075688775], [450, 326.794919243112254],
-        [455, 331.794919243112254], [650, 326.794919243112254], [655, 331.794919243112254]
-    ]
-
-    # points = []
+    points = []
     objects = []
     # staticObs = []
     minkowski_objs = []
-    for point in points:
-        # for i in range(numObjs):
+    for i in range(numObjs):
+        for i in range(2):
+            isfree = False
+            timeout = 1000
+            while not isfree and timeout > 0:
+                timeout -= 1
+                point = (
+                    int(uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0]))),
+                    int(uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))),
+                    # uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
+                    # uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1])),
+                )
+                isfree = isCollisionFree(polygon, point, objects[i % 2::2])
+                # isfree = isCollisionFree(polygon, point, objects)
 
-        #     for i in range(2):
-        #         isfree = False
-        #         timeout = 1000
-        #         while not isfree and timeout > 0:
-        #             timeout -= 1
-        #             point = (
-        #                 int(uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0]))),
-        #                 int(uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))),
-        #                 # uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
-        #                 # uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1])),
-        #             )
-        #             isfree = isCollisionFree(polygon, point, objects[i % 2::2])
-        #             # isfree = isCollisionFree(polygon, point, objects)
+            if timeout <= 0:
+                # print("Failed to generate!")
+                return False, False, False
 
-        #         if timeout <= 0:
-        #             # print("Failed to generate!")
-        #             return False, False, False
-
-        #         points.append(point)
-        obj = polygon + point
-        objects.append([obj.tolist()])
-        mink_obj = 2 * polygon + point
-        # print(mink_obj)
-        minkowski_objs.append(region(mink_obj.tolist(), True))
+            points.append(point)
+            obj = polygon + point
+            objects.append([obj.tolist()])
+            mink_obj = 2 * polygon + point
+            # print(mink_obj)
+            minkowski_objs.append(region(mink_obj.tolist(), True))
 
     if display:
         drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, color_pool, points, example_index, saveimage)
@@ -454,21 +446,21 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
     less_regions, polysum = objects2regions(minkowski_objs, wall_mink)
 
     for i, x in less_regions.items():
-        print(i, x.get_components())
-        if len(x.get_components()) == 0:
-            print(x)
-            raw_input("Test")
-            print(x.complement().to_list())
-            print(x.to_list())
-        else:
-            if displayMore:
-                drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
+        # print(i, x.get_components())
+        # if len(x.get_components()) == 0:
+        #     print(x)
+        #     raw_input("Test")
+        #     print(x.complement().to_list())
+        #     print(x.to_list())
+        # else:
+        if displayMore:
+            drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
 
     graph, regions, obj2reg = regions2graph(less_regions, wall_mink, polysum, points, 0)
 
     regLists = []
     for i, x in regions.items():
-        print(i, x.get_components()[0] == x)
+        # print(i, x.get_components()[0] == x)
         regLists.append(x.to_list())
         # if display:
         #     drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
@@ -570,21 +562,21 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
         less_regions, polysum = objects2regions(minkowski_objs, wall_mink)
 
         for i, x in less_regions.items():
-            print(i, x.get_components())
-            if len(x.get_components()) == 0:
-                print(x)
-                raw_input("Test")
-                print(x.complement().to_list())
-                print(x.to_list())
-            else:
-                if displayMore:
-                    drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
+            # print(i, x.get_components())
+            # if len(x.get_components()) == 0:
+            #     print(x)
+            #     raw_input("Test")
+            #     print(x.complement().to_list())
+            #     print(x.to_list())
+            # else:
+            if displayMore:
+                drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
 
         graph, regions, obj2reg = regions2graph(less_regions, wall_mink, polysum, points, 0)
 
         regLists = []
         for i, x in regions.items():
-            print(i, x.get_components()[0] == x)
+            # print(i, x.get_components()[0] == x)
             regLists.append(x.to_list())
             # if display:
             #     drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
@@ -629,7 +621,7 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
     if display:
         drawConGraph(HEIGHT, WIDTH, paths, color_pool, objects)
 
-    return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths, obj2reg
+    return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths
 
 
 if __name__ == "__main__":
@@ -665,10 +657,12 @@ if __name__ == "__main__":
         savefile = sys.argv[7]
 
     loadSave = False
+    repath = False
     if (len(sys.argv) > 8):
         loadSave = sys.argv[8] not in ('n', 'N')
+        repath = False if len(sys.argv[8]) == 1 else True
 
     if loadSave:
-        print(loadDenseCGraph(savefile, True, display, displayMore))
+        print(loadDenseCGraph(savefile, repath, display, displayMore))
     else:
         print(genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, None, None))

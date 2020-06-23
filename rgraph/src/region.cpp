@@ -92,7 +92,7 @@ struct Region {
 		poly = init_poly;
 	}
 
-	void test();
+	int test();
 
 	std::string print()
 	{
@@ -226,6 +226,8 @@ struct Region {
 	}
 
 	py::list to_list();
+
+	bool disconnected();
 
 	py::list get_components();
 
@@ -367,6 +369,102 @@ py::list Region::to_list()
 }
 
 typedef boost::vector_property_map<int> boost_vector;
+
+bool Region::disconnected()
+{
+	if (poly.is_empty())
+		return false;
+
+	Explorer expl = poly.explorer();
+	Face_it fit = ++expl.faces_begin(), fend = expl.faces_end();
+	Face_it oface = fit;
+	for (int f = 0; fit != fend; fit++) {
+		if (DEBUG)
+			std::cerr << "Face " << f << " (" << fit->mark() << "):\n";
+		if (!fit->mark()) {
+			Hfc_circulator fhafc = expl.face_cycle(fit);
+			if (fhafc != Hfc_circulator())
+				if (expl.is_frame_edge(fhafc))
+					oface = fit;
+		}
+	}
+	Iso_Vert_it ivit = expl.isolated_vertices_begin(oface), ivend = expl.isolated_vertices_end(oface);
+	int c = std::distance(ivit, ivend);
+	if (c > 1)
+		return true;
+	Hole_it hit = expl.holes_begin(oface), hend = expl.holes_end(oface);
+	c += std::distance(hit, hend);
+	if (c > 1)
+		return true;
+
+	boost::unordered_map<NefPoly, bool, RHash> visited;
+	Hfc_circulator hafc(hit), done(hit);
+	std::vector<Point> points;
+	Vert tgt = expl.target(hafc);
+	if (expl.is_standard(tgt)) {
+		if (DEBUG)
+			std::cerr << '\t' << expl.point(tgt) << ", " << tgt->mark() << '\n';
+		points.push_back(expl.point(tgt));
+	}
+	NefPoly pvert = NefPoly(--points.end(), points.end());
+	do {
+		Vert src = expl.source(hafc);
+		if (expl.is_standard(src)) {
+			points.push_back(expl.point(src));
+			NefPoly vert = NefPoly(--points.end(), points.end());
+			NefPoly line = NefPoly(----points.end(), points.end()) - pvert - vert;
+			pvert = vert;
+			if (DEBUG)
+				std::cerr << '\t' << expl.point(src) << ", " << (vert < poly) << "=" << src->mark()
+				          << "\n\t\t L__ e: " << (line < poly) << "=" << hafc->mark() << '\n';
+			if (!(line < poly)) {
+				if (visited[line])
+					return true;
+				else
+					visited[line] = true;
+			}
+			if (!(vert < poly)) {
+				if (visited[vert])
+					return true;
+				else
+					visited[vert] = true;
+			}
+			hafc--;
+		}
+	} while (hafc != done);
+
+	// boost::unordered_map<NefPoly, bool, RHash> concentric;
+	// for (fit = ++expl.faces_begin(); fit != fend; fit++, f++) {
+	//         if (DEBUG)
+	//                 std::cerr << "Face " << f << " (" << fit->mark() << "):\n";
+
+	//         Hfc_circulator fhafc = expl.face_cycle(fit);
+	//         if (fhafc != Hfc_circulator()) {
+	//                 Hfc_circulator fdone(fhafc);
+	//                 std::vector<Point> fpoints;
+	//                 do {
+	//                         Vert tgt = expl.target(fhafc);
+	//                         if (expl.is_standard(tgt)) {
+	//                                 fpoints.push_back(expl.point(tgt));
+	//                                 if (DEBUG)
+	//                                         std::cerr << '\t' << expl.point(tgt) << tgt->mark()
+	//                                                   << "\n\t\t L__ e: " << fhafc->mark() << '\n';
+	//                         } else {
+	//                                 if (DEBUG)
+	//                                         std::cerr << "***\tray?: " << expl.ray(tgt) << '\n';
+	//                         }
+	//                         fhafc++;
+	//                 } while (fhafc != fdone);
+	//                 if (fpoints.size() > 1) {
+	//                         NefPoly face(fpoints.begin(), fpoints.end(), EXCLUDED);
+	//                         if (!(face <
+	//                         concentric[face] =
+	//                 }
+	//         }
+	// }
+
+	return false;
+}
 
 py::list Region::get_components()
 {
@@ -639,6 +737,7 @@ BOOST_PYTHON_MODULE(region)
 	        .def("num_face_cyles", &Region::number_of_face_cycles)
 	        .def("num_connected_components", &Region::number_of_connected_components)
 	        .def("get_components", &Region::get_components)
+	        .def("disconnected", &Region::disconnected)
 	        .def("to_list", &Region::to_list);
 	// py::def(
 	//         "test", +[]() {

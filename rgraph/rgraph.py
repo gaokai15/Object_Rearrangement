@@ -122,11 +122,17 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
                     continue
 
         interR = set(chain(*r1.to_list())) & set(chain(*r2.to_list()))
-        num_comp = len(r1.join(r2).get_components())
-        print(r1.join(r2).num_connected_components(), num_comp, interR)
-        if num_comp == 1:
-            # if len(interR) > 1:
-            paths.append((rind1, rind2))
+        r1Ur2 = r1 + r2
+        maybe = r1Ur2.disconnected()  # len(r1.join(r2).get_components())
+        if maybe != (len(interR) == 0):
+            print(maybe, interR)
+            if len(interR) == 0:
+                print(r1.to_list())
+                print(r2.to_list())
+        if not maybe:
+            if len(r1Ur2.get_components()) == 1:
+                # if len(interR) > 1:
+                paths.append((rind1, rind2))
 
     graph = {}
     for u, v in paths:
@@ -176,6 +182,8 @@ def regionPath(r1, r2, seed=o55, debug=None):
 
     if not hasDirectPath:
         interR = set(chain(*r1.to_list())) & set(chain(*r2.to_list()))
+        if len(interR) == 0:
+            interR = set(chain(*r1.to_list())).union(set(chain(*r2.to_list())))
         interR = min(interR, key=lambda x: dist(pstart, x) + dist(x, pgoal))
 
         # Start to boundary
