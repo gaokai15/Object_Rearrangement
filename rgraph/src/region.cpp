@@ -92,6 +92,8 @@ struct Region {
 		poly = init_poly;
 	}
 
+	void test();
+
 	std::string print()
 	{
 		std::stringstream ss;
@@ -271,7 +273,19 @@ py::list Region::to_list()
 		return pypoly;
 
 	Explorer expl = poly.explorer();
-	Face_it fit = ++expl.faces_begin();
+	Face_it fit = ++expl.faces_begin(), fend = expl.faces_end();
+	for (int f = 1; fit != fend; fit++, f++) {
+		if (DEBUG)
+			std::cerr << "Face " << f << " (" << fit->mark() << "):\n";
+		if (fit->mark() && !DEBUG)
+			continue;
+
+		Hfc_circulator fhafc = expl.face_cycle(fit);
+		if (fhafc != Hfc_circulator())
+			if (expl.is_frame_edge(fhafc))
+				break;
+	}
+
 	Hole_it hit = expl.holes_begin(fit), hend = expl.holes_end(fit);
 
 	if (hit == hend) {
@@ -315,7 +329,19 @@ py::list Region::to_list()
 		outer.append(py::make_tuple(pit->x, pit->y));
 	pypoly.append(outer);
 
-	fit++;
+	fit = ++expl.faces_begin();
+	for (int f = 1; fit != fend; fit++, f++) {
+		if (DEBUG)
+			std::cerr << "Face " << f << " (" << fit->mark() << "):\n";
+		if (!fit->mark() && !DEBUG)
+			continue;
+
+		Hfc_circulator fhafc = expl.face_cycle(fit);
+		if (fhafc != Hfc_circulator())
+			if (!expl.is_frame_edge(fhafc))
+				break;
+	}
+
 	hit = expl.holes_begin(fit), hend = expl.holes_end(fit);
 	for (int i = 0; hit != hend; hit++, i++) {
 		if (DEBUG)
@@ -356,7 +382,8 @@ py::list Region::get_components()
 	boost::unordered_map<NefPoly, std::list<int>, RHash> poly2fis;
 
 	Explorer expl = poly.explorer();
-	Face_it fit = ++++expl.faces_begin(), fend = expl.faces_end();
+	Face_it fit = ++expl.faces_begin(), fend = expl.faces_end();
+	Face_it oface = fit;
 
 	if (DEBUG)
 		std::cerr << "--- Faces ---\n";
@@ -374,12 +401,19 @@ py::list Region::get_components()
 			NefPoly boundary;
 			std::vector<Point> fpoints;
 			Vert fsrc = expl.source(fhafc);
+			NefPoly fpvert;
 			if (expl.is_standard(fsrc)) {
 				if (DEBUG)
 					std::cerr << '\t' << expl.point(fsrc) << ", " << fsrc->mark() << '\n';
 				fpoints.push_back(expl.point(fsrc));
+				fpvert = NefPoly(--fpoints.end(), fpoints.end());
+			} else {
+				oface = fit;
+				if (DEBUG)
+					fpvert = NefPoly();
+				else
+					continue;
 			}
-			NefPoly fpvert = NefPoly(--fpoints.end(), fpoints.end());
 			do {
 				Vert tgt = expl.target(fhafc);
 				if (expl.is_standard(tgt)) {
@@ -405,16 +439,19 @@ py::list Region::get_components()
 						}
 						poly2fis[vert].push_back(f);
 					}
+				} else {
+					if (DEBUG)
+						std::cerr << "***\tray?: " << expl.ray(tgt) << '\n';
 				}
 				fhafc++;
 			} while (fhafc != fdone);
+			if (!fit->mark())
+				continue;
 			NefPoly face(++fpoints.begin(), fpoints.end(), EXCLUDED);
 
 			if (DEBUG)
 				std::cerr << "Is Hole? " << poly2fis[face].size() << '\n';
 			if (poly2fis[face].size())
-				continue;
-			if (!fit->mark())
 				continue;
 
 			NefPoly to_remove;
@@ -477,11 +514,11 @@ py::list Region::get_components()
 		}
 	}
 
-	fit = ++expl.faces_begin();
+	// fit = ++expl.faces_begin();
 
 	if (DEBUG)
 		std::cerr << "--- Isolated Vertices ---\n";
-	Iso_Vert_it ivit = expl.isolated_vertices_begin(fit), ivend = expl.isolated_vertices_end(fit);
+	Iso_Vert_it ivit = expl.isolated_vertices_begin(oface), ivend = expl.isolated_vertices_end(oface);
 	for (int i = 0; ivit != ivend; ivit++, i++) {
 		if (DEBUG)
 			std::cerr << "Vert " << i << ": " << expl.point(ivit) << ", " << ivit->mark() << '\n';
@@ -491,7 +528,7 @@ py::list Region::get_components()
 
 	if (DEBUG)
 		std::cerr << "--- Isolated Edges ---\n";
-	Hole_it hit = expl.holes_begin(fit), hend = expl.holes_end(fit);
+	Hole_it hit = expl.holes_begin(oface), hend = expl.holes_end(oface);
 	for (int i = 0; hit != hend; hit++, i++, f++) {
 		ds.make_set(f);
 		if (DEBUG)
@@ -521,20 +558,20 @@ py::list Region::get_components()
 						ds.union_set(f, i);
 					}
 					poly2fis[line].push_back(f);
-					if (fi2poly.find(f) == fi2poly.end())
-						fi2poly[f] = line;
-					else
-						fi2poly[f] += line;
+					// if (fi2poly.find(f) == fi2poly.end())
+					//         fi2poly[f] = line;
+					// else
+					fi2poly[f] += line;
 				}
 				if (vert < poly) {
 					BOOST_FOREACH (int i, poly2fis[vert]) {
 						ds.union_set(f, i);
 					}
 					poly2fis[vert].push_back(f);
-					if (fi2poly.find(f) == fi2poly.end())
-						fi2poly[f] = vert;
-					else
-						fi2poly[f] += vert;
+					// if (fi2poly.find(f) == fi2poly.end())
+					//         fi2poly[f] = vert;
+					// else
+					fi2poly[f] += vert;
 				} else {
 					f++;
 					ds.make_set(f);
@@ -542,8 +579,8 @@ py::list Region::get_components()
 			}
 			hhafc--;
 		} while (hhafc != hdone);
-		NefPoly outer(++opoints.begin(), opoints.end(), EXCLUDED);
-		poly2fis[outer].size();
+		// NefPoly outer(++opoints.begin(), opoints.end(), EXCLUDED);
+		// poly2fis[outer].size();
 	}
 
 	// Consolidate Faces / Edges
@@ -604,5 +641,16 @@ BOOST_PYTHON_MODULE(region)
 	        .def("get_components", &Region::get_components)
 	        .def("to_list", &Region::to_list);
 	// py::def(
-	//         "blah", +[]() { std::cout << Point(1.2, 4); });
+	//         "test", +[]() {
+	//                 Point ps1[4] = {Point(50, 50), Point(950, 50), Point(950, 950), Point(50, 950)};
+	//                 Point ps2[12] = {Point(784, 578), Point(798, 528), Point(834, 492), Point(884, 478),
+	//                                  Point(934, 492), Point(970, 528), Point(984, 578), Point(970, 626),
+	//                                  Point(934, 664), Point(884, 678), Point(836, 664), Point(798, 626)};
+	//                 NefPoly p1(ps1, ps1 + 4);
+	//                 NefPoly p2(ps2, ps2 + 12);
+	//                 NefPoly p3 = p1.intersection(p2);
+
+	//                 Region r(p3);
+	//                 return r.get_components();
+	//         });
 }

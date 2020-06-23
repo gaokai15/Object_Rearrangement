@@ -404,40 +404,47 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
     ### get some colors from colormap
     color_pool = getColorMap(numObjs)
 
-    polygon = np.array(poly_disk([0, 0], RAD, 30))
+    polygon = np.array(poly_disk([0, 0], RAD, 10))
     wall_pts = np.array([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
     wall_mink = region([[RAD, RAD], [WIDTH - RAD, RAD], [WIDTH - RAD, HEIGHT - RAD], [RAD, HEIGHT - RAD]], False)
 
-    points = []
+    points = [
+        [550, 500], [555, 505], [750, 500], [755, 505], [350, 500], [355, 505], [450, 673.20508075688775],
+        [455, 678.20508075688775], [650, 673.20508075688775], [655, 678.20508075688775], [450, 326.794919243112254],
+        [455, 331.794919243112254], [650, 326.794919243112254], [655, 331.794919243112254]
+    ]
+
+    # points = []
     objects = []
     # staticObs = []
     minkowski_objs = []
-    for i in range(numObjs):
+    for point in points:
+        # for i in range(numObjs):
 
-        for i in range(2):
-            isfree = False
-            timeout = 1000
-            while not isfree and timeout > 0:
-                timeout -= 1
-                point = (
-                    int(uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0]))),
-                    int(uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))),
-                    # uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
-                    # uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1])),
-                )
-                isfree = isCollisionFree(polygon, point, objects[i % 2::2])
-                # isfree = isCollisionFree(polygon, point, objects)
+        #     for i in range(2):
+        #         isfree = False
+        #         timeout = 1000
+        #         while not isfree and timeout > 0:
+        #             timeout -= 1
+        #             point = (
+        #                 int(uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0]))),
+        #                 int(uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))),
+        #                 # uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
+        #                 # uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1])),
+        #             )
+        #             isfree = isCollisionFree(polygon, point, objects[i % 2::2])
+        #             # isfree = isCollisionFree(polygon, point, objects)
 
-            if timeout <= 0:
-                # print("Failed to generate!")
-                return False, False, False
+        #         if timeout <= 0:
+        #             # print("Failed to generate!")
+        #             return False, False, False
 
-            points.append(point)
-            obj = polygon + point
-            objects.append([obj.tolist()])
-            mink_obj = 2 * polygon + point
-            print(mink_obj)
-            minkowski_objs.append(region(mink_obj.tolist(), True))
+        #         points.append(point)
+        obj = polygon + point
+        objects.append([obj.tolist()])
+        mink_obj = 2 * polygon + point
+        # print(mink_obj)
+        minkowski_objs.append(region(mink_obj.tolist(), True))
 
     if display:
         drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, color_pool, points, example_index, saveimage)
@@ -445,80 +452,51 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
     paths = {}
 
     less_regions, polysum = objects2regions(minkowski_objs, wall_mink)
-    # regions = {}
-    # mink_boundary = wall_mink
-    # polysum = sum(regions.values(), region([], False))
-    # for i, obj in enumerate(minkowski_objs):
-    #     if display:
-    #         print(polysum.is_empty(), polysum.to_list())
-    #         drawConGraph(HEIGHT, WIDTH, {}, color_pool, [polysum.to_list()], False)
-    #     for rind, r in regions.items():
-    #         rANDobj = r & obj
-    #         if display:
-    #             print(obj.is_empty(), obj.to_list())
-    #             drawConGraph(HEIGHT, WIDTH, {}, color_pool, [obj.to_list()], False)
-    #             print(r.is_empty(), r.to_list())
-    #             drawConGraph(HEIGHT, WIDTH, {}, color_pool, [r.to_list()], False)
-    #             print(rANDobj.is_empty(), rANDobj.to_list())
-    #             drawConGraph(HEIGHT, WIDTH, {}, color_pool, [rANDobj.to_list()], False)
-    #         if not rANDobj.is_empty():
-    #             regions[rind + (i, )] = rANDobj
-    #             rDIFobj = r - obj
-    #             if rDIFobj.is_empty():
-    #                 del regions[rind]
-    #             else:
-    #                 regions[rind] = rDIFobj
 
-    #     objDIFFpolysum = mink_boundary & obj - polysum
-    #     if display:
-    #         print(mink_boundary & obj == mink_boundary.intersection(obj))
-    #         print(mink_boundary.is_empty(), mink_boundary.to_list())
-    #         drawConGraph(HEIGHT, WIDTH, {}, color_pool, [mink_boundary.to_list()], False)
-    #         print(obj.is_empty(), obj.to_list())
-    #         drawConGraph(HEIGHT, WIDTH, {}, color_pool, [obj.to_list()], False)
-    #         print(objDIFFpolysum.is_empty(), objDIFFpolysum.to_list())
-    #         drawConGraph(HEIGHT, WIDTH, {}, color_pool, [objDIFFpolysum.to_list()], False)
-    #     # print(objDIFFpolysum, bool(objDIFFpolysum))
-    #     if not objDIFFpolysum.is_empty():
-    #         regions[(i, )] = objDIFFpolysum
-    #     polysum += obj
-    # less_regions = regions
-
-    reg_list = []
-    for key, reg in less_regions.items():
-        print(key)
-        for comp in reg.get_components():
-            print(comp.to_list())
-            reg_list.append(comp.to_list())
-    if display:
-        drawConGraph(HEIGHT, WIDTH, {}, color_pool, reg_list, False)
+    for i, x in less_regions.items():
+        print(i, x.get_components())
+        if len(x.get_components()) == 0:
+            print(x)
+            raw_input("Test")
+            print(x.complement().to_list())
+            print(x.to_list())
+        else:
+            if displayMore:
+                drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
 
     graph, regions, obj2reg = regions2graph(less_regions, wall_mink, polysum, points, 0)
 
-    regLists = [x.to_list() for x in regions.values()]
-    print(regions)
+    regLists = []
+    for i, x in regions.items():
+        print(i, x.get_components()[0] == x)
+        regLists.append(x.to_list())
+        # if display:
+        #     drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
+
     if display:
         drawConGraph(HEIGHT, WIDTH, {}, color_pool, regLists, False)
 
     def drawDebug(rect, r1=None, r2=None):
         if r1 is not None and r2 is not None:
-            drawConGraph(
-                HEIGHT, WIDTH, {
-                    0: r1.to_list()[0],
-                    1: r2.to_list()[0],
-                    2: rect.to_list()[0]
-                }, color_pool, regLists, False
-            )
+            ind = 0
+            trace = {}
+            for x in r1.to_list() + r2.to_list() + rect.to_list():
+                trace[ind] = x
+                ind += 1
+            drawConGraph(HEIGHT, WIDTH, trace, color_pool, regLists, False)
         else:
-            drawConGraph(HEIGHT, WIDTH, {
-                0: rect.to_list()[0],
-            }, color_pool, regLists, False)
+            drawConGraph(HEIGHT, WIDTH, {i: x for i, x in enumerate(rect.to_list())}, color_pool, regLists, False)
+
+    print(graph)
 
     if display:
         for rind1, r1adj in graph.items():
             for rind2 in r1adj:
                 r1 = regions[rind1]
                 r2 = regions[rind2]
+                if displayMore:
+                    drawConGraph(HEIGHT, WIDTH, {}, color_pool, [r1.to_list()], False)
+                    drawConGraph(HEIGHT, WIDTH, {}, color_pool, [r2.to_list()], False)
 
                 if displayMore:
                     path = regionPath(r1, r2, debug=drawDebug)
@@ -566,217 +544,90 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
     HEIGHT = data['HEIGHT']
     WIDTH = data['WIDTH']
     points = data['points']
-    objects = [pn.Polygon(o) for o in data['objects']]
+    objects = data['objects']
+    # staticObs = data['staticObs']
     graph = {eval(k): v for k, v in data['graph'].items()}
     paths = {eval(k): v for k, v in data['path'].items()}
 
-    epsilon = EPSILON
+    ### get some colors from colormap
+    color_pool = getColorMap(numObjs)
+
     polygon = np.array(poly_disk([0, 0], RAD, 30))
-    wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
-    wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
+    wall_pts = np.array([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
+    wall_mink = region([[RAD, RAD], [WIDTH - RAD, RAD], [WIDTH - RAD, HEIGHT - RAD], [RAD, HEIGHT - RAD]], False)
 
     # staticObs = []
     minkowski_objs = []
     # minkowski_poly = []
     for point in points:
         mink_obj = 2 * polygon + point
-        minkowski_objs.append(pn.Polygon(mink_obj))
+        minkowski_objs.append(region(mink_obj.tolist(), True))
 
     if display:
-        drawProblem(HEIGHT, WIDTH, wall_pts, objects)
+        drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, color_pool, points, None, False)
 
     if repath:
-        paths = {}
-        regions = {}
-        polysum = pn.Polygon()
-        for i, obj in enumerate(minkowski_objs):
-            for rind, r in regions.items():
-                rANDobj = r & obj
-                if rANDobj:
-                    regions[rind + (i, )] = rANDobj
-                    rDIFobj = r - obj
-                    if rDIFobj:
-                        regions[rind] = rDIFobj
-                    else:
-                        del regions[rind]
+        less_regions, polysum = objects2regions(minkowski_objs, wall_mink)
 
-            objDIFFpolysum = wall_mink & obj - polysum
-            # print(objDIFFpolysum, bool(objDIFFpolysum))
-            if objDIFFpolysum:
-                regions[(i, )] = objDIFFpolysum
-            polysum += obj
-
-            if displayMore:
-                drawConGraph(HEIGHT, WIDTH, {}, color_pool, regions.values(), False)
-
-        obj2reg = {}
-        for rind, r in regions.items():
-            # if len(r) > 1:
-            char = 'a'
-            for cont in r:
-                poly = pn.Polygon(cont)
-                rind_n = rind + (char, )
-                char = chr(ord(char) + 1)
-
-                if poly.isInside(*poly.center()):
-                    regions[rind_n] = (poly, poly.center())
-                else:
-                    regions[rind_n] = (poly, poly.sample(random))
-
-                for i, p in enumerate(points):
-                    if poly.isInside(*p):
-                        obj2reg[i] = rind_n
-
-            del regions[rind]
-
-        cfree = wall_mink - polysum
-        for i, pfree in enumerate(pu.fillHoles(cfree), 1):
-            r = pn.Polygon(pfree)
-            for isHole, cont in zip(cfree.isHole(), cfree):
-                if isHole: r -= pn.Polygon(cont)
-            if r.isInside(*r.center()):
-                regions[(-i, )] = (r, r.center())
+        for i, x in less_regions.items():
+            print(i, x.get_components())
+            if len(x.get_components()) == 0:
+                print(x)
+                raw_input("Test")
+                print(x.complement().to_list())
+                print(x.to_list())
             else:
-                regions[(-i, )] = (r, r.sample(random))
-        # freeInd = 0
-        # for strip in (wall_mink - polysum).triStrip():
-        #     freeInd -= 1
-        #     slen = len(strip) - 2
-        #     for i in range(slen):
-        #         ptri = pn.Polygon(strip[i:i + 3])
-        #         regions[(freeInd, i - slen // 2)] = ptri
+                if displayMore:
+                    drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
 
-        # print(sorted(regions))
+        graph, regions, obj2reg = regions2graph(less_regions, wall_mink, polysum, points, 0)
 
-        # for r, p in regions.items():
-        #     paths[r] = [p.center()] * 2
+        regLists = []
+        for i, x in regions.items():
+            print(i, x.get_components()[0] == x)
+            regLists.append(x.to_list())
+            # if display:
+            #     drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
 
         if display:
-            drawConGraph(HEIGHT, WIDTH, {}, color_pool, regions.values(), False)
+            drawConGraph(HEIGHT, WIDTH, {}, color_pool, regLists, False)
 
-        for rkv1, rkv2 in combinations(regions.items(), 2):
-            rind1, r1 = rkv1
-            rind2, r2 = rkv2
-            if rind1[0] > 0 and rind2[0] > 0:
-                s1 = set(rind1[:-1])
-                s2 = set(rind2[:-1])
-                if len(s1 - s2) + len(s2 - s1) > 1:
-                    continue
+        def drawDebug(rect, r1=None, r2=None):
+            if r1 is not None and r2 is not None:
+                ind = 0
+                trace = {}
+                for x in r1.to_list() + r2.to_list() + rect.to_list():
+                    trace[ind] = x
+                    ind += 1
+                drawConGraph(HEIGHT, WIDTH, trace, color_pool, regLists, False)
+            else:
+                drawConGraph(HEIGHT, WIDTH, {i: x for i, x in enumerate(rect.to_list())}, color_pool, regLists, False)
 
-            r1, pstart = r1
-            r2, pgoal = r2
-            r1Ar2 = r1 + r2
-            pointStart = pstart + polygon * 0.1
-            pointGoal = pgoal + polygon * 0.1
+        print(graph)
 
-            interR = set(pu.pointList(r1)) & set(pu.pointList(r2))
-            if len(interR) > 0:
-                rect = ps.Rectangle(dist(pstart, pgoal), 1)
-                vsg = np.subtract(pgoal, pstart)
-                rect.rotate(np.angle(vsg[0] + 1j * vsg[1]))
-                rect.warpToBox(*pn.Polygon([pstart, pgoal]).boundingBox())
-                hasDirectPath = (r1Ar2).covers(rect) if len(r1Ar2) == 1 else False
+        if display:
+            for rind1, r1adj in graph.items():
+                for rind2 in r1adj:
+                    r1 = regions[rind1]
+                    r2 = regions[rind2]
+                    if displayMore:
+                        drawConGraph(HEIGHT, WIDTH, {}, color_pool, [r1.to_list()], False)
+                        drawConGraph(HEIGHT, WIDTH, {}, color_pool, [r2.to_list()], False)
 
-                if displayMore:
-                    drawConGraph(
-                        HEIGHT, WIDTH, {
-                            0: pu.pointList(pu.fillHoles(r1)),
-                            1: pu.pointList(pu.fillHoles(r2)),
-                            2: pu.pointList(rect)
-                        }, color_pool, regions.values(), False
-                    )
-                    print('Direct?: ', hasDirectPath)
-                    # drawProblem(
-                    #     HEIGHT, WIDTH, wall_mink, regions.values(), None, pu.pointList(pu.fillHoles(r1)),
-                    #     pu.pointList(pu.fillHoles(r2))
-                    # )
+                    if displayMore:
+                        path = regionPath(r1, r2, debug=drawDebug)
+                    else:
+                        path = regionPath(r1, r2)
+                    paths[(rind1, rind2)] = path
 
-                # collides = False
-                if display and not hasDirectPath:
-                    interR = min(interR, key=lambda x: dist(pstart, x) + dist(x, pgoal))
-                    wall_mink_poly = pu.fillHoles(r1)
-                    # if displayMore:
-                    #     # drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
-                    #     drawConGraph(HEIGHT, WIDTH, {0: pointStart, 1: pointGoal}, regions.values(), False)
-                    env_polys_vis = [vis.Polygon([vis.Point(*p) for p in reversed(pu.pointList(wall_mink_poly))])]
-                    for isHole, cont in zip(r1.isHole(), r1):
-                        if isHole: env_polys_vis += [vis.Polygon([vis.Point(*p) for p in reversed(cont)])]
-                    env = vis.Environment(env_polys_vis)
-                    if not env.is_valid(epsilon):
-                        displayMore = True
-                        drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
-                        if savefile:
-                            savefile += ".env_error"
-                        else:
-                            savefile = "polys.json" + str(time()) + ".env_error"
+                    if displayMore:
+                        drawConGraph(HEIGHT, WIDTH, {0: path}, color_pool, regLists, False)
 
-                    start = vis.Point(*pstart)
-                    goal = vis.Point(*interR)
-
-                    start.snap_to_boundary_of(env, epsilon)
-                    start.snap_to_vertices_of(env, epsilon)
-
-                    t0 = time()
-                    ppath = env.shortest_path(start, goal, epsilon)
-                    print(time() - t0)
-
-                    path = [(p.x(), p.y()) for p in ppath.path()]
-
-                    wall_mink_poly = pu.fillHoles(r2)
-                    # if displayMore:
-                    #     # drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
-                    #     drawConGraph(HEIGHT, WIDTH, {0: pointStart, 1: pointGoal}, regions.values(), False)
-                    env_polys_vis = [vis.Polygon([vis.Point(*p) for p in reversed(pu.pointList(wall_mink_poly))])]
-                    for isHole, cont in zip(r2.isHole(), r2):
-                        if isHole: env_polys_vis += [vis.Polygon([vis.Point(*p) for p in reversed(cont)])]
-                    env = vis.Environment(env_polys_vis)
-                    if not env.is_valid(epsilon):
-                        displayMore = True
-                        drawProblem(HEIGHT, WIDTH, wall_mink_poly, regions.values(), None, pointStart, pointGoal)
-                        if savefile:
-                            savefile += ".env_error"
-                        else:
-                            savefile = "polys.json" + str(time()) + ".env_error"
-
-                    start = vis.Point(*interR)
-                    goal = vis.Point(*pgoal)
-
-                    start.snap_to_boundary_of(env, epsilon)
-                    start.snap_to_vertices_of(env, epsilon)
-
-                    t0 = time()
-                    ppath = env.shortest_path(start, goal, epsilon)
-                    print(time() - t0)
-
-                    path += [(p.x(), p.y()) for p in ppath.path()][1:]
-                else:
-                    path = [pstart, pgoal]
-
-                # if not collides:
-                paths[(rind1, rind2)] = path
-                #     # paths[(rind2, rind1)] = list(reversed(path))
-                #     color = 'blue'
-                # else:
-                #     color = 'red'
-
-                if display and displayMore:
-                    # drawProblem(HEIGHT, WIDTH, r1 + r2, regions.values(), (path, color), pointStart, pointGoal)
-                    drawConGraph(HEIGHT, WIDTH, {0: path}, color_pool, regions.values(), False)
+        if display:
+            drawConGraph(HEIGHT, WIDTH, paths, color_pool, regLists, False)
 
     if display:
-        drawConGraph(HEIGHT, WIDTH, paths, color_pool, regions.values(), False)
         drawConGraph(HEIGHT, WIDTH, paths, color_pool, objects)
-
-    if repath:
-        new_graph = {}
-        for uv, p in paths.items():
-            u, v = uv
-            if p is not None:
-                new_graph[u] = sorted(new_graph.get(u, []) + [v])
-                new_graph[v] = sorted(new_graph.get(v, []) + [u])
-
-        # assert (new_graph == graph)
-        graph = new_graph
 
     return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths, obj2reg
 

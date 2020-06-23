@@ -17,7 +17,7 @@ from matplotlib.path import Path
 import matplotlib.colors as colors
 import matplotlib.patches as patches
 
-from rgraph import *
+from rgraph_poly import *
 
 EPSILON = 2**-8
 

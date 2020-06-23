@@ -88,7 +88,8 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
     regions = ref_regions.copy()
     point2regs = {}
     for rind, r in regions.items():
-        # if len(r) > 1:
+        if r.is_empty():
+            print("Empty: ", rind)
         char = 'a'
         for comp in r.get_components():
             rind_n = rind + (char, )
@@ -121,9 +122,10 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
                     continue
 
         interR = set(chain(*r1.to_list())) & set(chain(*r2.to_list()))
-        print(r1.join(r2).num_connected_components(), interR)
-        # if not r1.intersection(r2).is_empty():
-        if len(interR) > 0:
+        num_comp = len(r1.join(r2).get_components())
+        print(r1.join(r2).num_connected_components(), num_comp, interR)
+        if num_comp == 1:
+            # if len(interR) > 1:
             paths.append((rind1, rind2))
 
     graph = {}
@@ -173,8 +175,12 @@ def regionPath(r1, r2, seed=o55, debug=None):
         print(r1Ar2.get_components())
 
     if not hasDirectPath:
-        wall_mink_poly = r1Ar2  # .regularization()
-        wall_mink_list = r1Ar2.to_list()
+        interR = set(chain(*r1.to_list())) & set(chain(*r2.to_list()))
+        interR = min(interR, key=lambda x: dist(pstart, x) + dist(x, pgoal))
+
+        # Start to boundary
+        wall_mink_poly = r1  # .regularization()
+        wall_mink_list = r1.to_list()
 
         env_polys_vis = [vis.Polygon([vis.Point(*p) for p in wall_mink_list[0]])]
         for hole in wall_mink_list[1:]:
@@ -185,7 +191,7 @@ def regionPath(r1, r2, seed=o55, debug=None):
                 debug(wall_mink_poly)
 
         start = vis.Point(*pstart)
-        goal = vis.Point(*pgoal)
+        goal = vis.Point(*interR)
 
         start.snap_to_boundary_of(env, epsilon)
         start.snap_to_vertices_of(env, epsilon)
@@ -195,6 +201,30 @@ def regionPath(r1, r2, seed=o55, debug=None):
         print(time() - t0)
 
         path = [(p.x(), p.y()) for p in ppath.path()]
+
+        # Boundary to goal
+        wall_mink_poly = r2  # .regularization()
+        wall_mink_list = r2.to_list()
+
+        env_polys_vis = [vis.Polygon([vis.Point(*p) for p in wall_mink_list[0]])]
+        for hole in wall_mink_list[1:]:
+            env_polys_vis.append(vis.Polygon([vis.Point(*p) for p in reversed(hole)]))
+        env = vis.Environment(env_polys_vis)
+        if not env.is_valid(epsilon):
+            if debug:
+                debug(wall_mink_poly)
+
+        start = vis.Point(*interR)
+        goal = vis.Point(*pgoal)
+
+        start.snap_to_boundary_of(env, epsilon)
+        start.snap_to_vertices_of(env, epsilon)
+
+        t0 = time()
+        ppath = env.shortest_path(start, goal, epsilon)
+        print(time() - t0)
+
+        path += [(p.x(), p.y()) for p in ppath.path()][1:]
     else:
         path = [pstart, pgoal]
 

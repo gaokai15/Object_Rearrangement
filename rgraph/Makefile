@@ -2,7 +2,8 @@ PRODUCT := region.so
 
 CXX := g++
 LINKER := g++
-CXXFLAGS := -Wall -Wextra -O0 -shared -lpython2.7 -lboost_python -lmpfr -lgmpxx -lgmp -fpic # -g
+# CXXFLAGS := -Wall -Wextra -O0 -shared -lpython2.7 -lboost_python -lmpfr -lgmpxx -lgmp -fpic -g -pg
+CXXFLAGS := -Wall -Wextra -O3 -shared -lpython2.7 -lboost_python -lmpfr -lgmpxx -lgmp -fpic
 INCDIRS := $(shell pkg-config --cflags python2)
 
 SRCDIR := ./src
