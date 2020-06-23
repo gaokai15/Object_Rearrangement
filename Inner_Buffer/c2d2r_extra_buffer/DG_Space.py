@@ -21,8 +21,6 @@ import time
 from itertools import combinations, product
 import resource
 
-import numpy as np
-
 import non_monotone_timeout
 my_path = os.path.abspath(os.path.dirname(__file__))
 
