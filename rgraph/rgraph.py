@@ -68,7 +68,6 @@ def objects2regions(minkowski_objs, mink_boundary, regions={}):
                     regions[rind] = rDIFobj
 
         objDIFFpolysum = mink_boundary & obj - polysum
-        # print(objDIFFpolysum, bool(objDIFFpolysum))
         if not objDIFFpolysum.is_empty():
             regions[(i, )] = objDIFFpolysum
         polysum += obj
@@ -121,14 +120,23 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
                 if s1 and s2 or prune_dist > 0:
                     continue
 
-        interR = set(chain(*r1.to_list())) & set(chain(*r2.to_list()))
+        # interR = set(chain(*r1.to_list())) & set(chain(*r2.to_list()))
         r1Ur2 = r1 + r2
-        maybe = r1Ur2.disconnected()  # len(r1.join(r2).get_components())
-        if maybe != (len(interR) == 0):
-            print(maybe, interR)
-            if len(interR) == 0:
-                print(r1.to_list())
-                print(r2.to_list())
+        maybe = r1Ur2.disconnected()
+        # # print(rind1, rind2, r1 == r2)
+        # if maybe != (len(interR) == 0):
+        #     print(maybe, interR)
+        #     if len(interR) == 0:
+        #         print(r1.to_list())
+        #         print(r2.to_list())
+        # t0 = time()
+        # print("num", r1Ur2.num_connected_components() <= r1.num_connected_components() + r2.num_connected_components())
+        # print(time() - t0)
+
+        # t0 = time()
+        # print("maybe", r1Ur2.disconnected())
+        # print(time() - t0)
+
         if not maybe:
             if len(r1Ur2.get_components()) == 1:
                 # if len(interR) > 1:

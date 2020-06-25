@@ -490,8 +490,6 @@ py::list Region::get_components()
 		ds.make_set(f);
 		if (DEBUG)
 			std::cerr << "Face " << f << " (" << fit->mark() << "):\n";
-		if (!fit->mark() && !DEBUG)
-			continue;
 
 		Hfc_circulator fhafc = expl.face_cycle(fit);
 		if (fhafc != Hfc_circulator()) {

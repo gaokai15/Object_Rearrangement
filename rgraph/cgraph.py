@@ -443,6 +443,15 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
 
     less_regions, polysum = objects2regions(minkowski_objs, wall_mink)
 
+    # if display:
+    #     drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list() for x in polysum.get_components()], False)
+    # cfree = wall_mink - polysum
+    # ccomps = cfree.get_components()
+    # print(ccomps)
+    # if display:
+    #     for x in ccomps:
+    #         drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
+
     for i, x in less_regions.items():
         # print(i, x.get_components())
         # if len(x.get_components()) == 0:
