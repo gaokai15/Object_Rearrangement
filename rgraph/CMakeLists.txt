@@ -61,4 +61,4 @@ LINK_LIBRARIES(${Boost_LIBRARIES} ${PYTHON_LIBRARIES}) # Deprecated but so conve
 
 # TARGETS
 # create_single_source_cgal_program( "src/region.cpp" )
-PYTHON_ADD_MODULE( rgraph src/region.cpp )
+PYTHON_ADD_MODULE( region src/region.cpp )
