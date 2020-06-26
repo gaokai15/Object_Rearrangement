@@ -16,6 +16,7 @@ from BiRRTPlanner import BiRRTPlanner
 from BiRRTStarPlanner import BiRRTStarPlanner
 from BiRRT_tester import BiRRT_tester
 from BiRRTstar_tester import BiRRTstar_tester
+from BiDirDPPlanner import BiDirDPPlanner
 
 
 class Experiment(object):
@@ -56,7 +57,34 @@ class Experiment(object):
         self.instance.genBuffers(self.HEIGHT, self.WIDTH, self.numObjs)
         self.visualTool.drawProblem(self.instance.objects, self.instance.points, self.instance.buffers)
         print("finishing generating the instance and the buffers")
+        ### index the arrangement
+        self.initial_arrangement = [i for i in range(0, 2*numObjs, 2)]
+        self.final_arrangement = [i for i in range(1, 2*numObjs, 2)]
+        print "initial_arrangement: " + str(self.initial_arrangement)
+        print "final_arrangement: " + str(self.final_arrangement)
 
+        ### Now let's generate the region graph and build its connection
+        self.regionGraph = RegionGraphGenerator(self.instance, self.visualTool, self.wall_mink)
+        ### get the region dict and LL from the graph
+        region_dict, linked_list = self.linked_list_conversion(self.regionGraph.graph)
+
+        self.genSolutionFailure_DP_local = False
+        start_time = time.clock()
+        self.plan_DP_local = BiDirDPPlanner(
+            self.initial_arrangement, self.final_arrangement, self.instance,  
+            self.regionGraph.obj2reg, region_dict, linked_list, 
+            self.visualTool)
+        self.comTime_DP_local = time.clock() - start_time
+        print "Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_local)
+        
+        if self.plan_DP_local.isConnected == False:
+            ### the solution is not found
+            self.genSolutionFailure_DP_local = True
+        else:
+            self.totalActions_DP_local = self.plan_DP_local.totalActions
+
+
+        
         ### Now let's generate the region graph and build its connection
         self.regionGraph = RegionGraphGenerator(self.instance, self.visualTool, self.wall_mink)
         ### Now let's generate path options
@@ -70,11 +98,6 @@ class Experiment(object):
             self.new_paths[(self.gpd.region_dict[r1], self.gpd.region_dict[r2])] = \
                                             copy.deepcopy(self.regionGraph.paths[(r1, r2)])
 
-        self.initial_arrangement = [i for i in range(0, 2*numObjs, 2)]
-        self.final_arrangement = [i for i in range(1, 2*numObjs, 2)]
-        print "initial_arrangement: " + str(self.initial_arrangement)
-        print "final_arrangement: " + str(self.final_arrangement)
-
         ### generate 300 arrangement as samples for both solvers
         nPoses = len(self.instance.objects) + len(self.instance.buffers)
         allPoses = range(nPoses)
@@ -84,50 +107,65 @@ class Experiment(object):
         self.sample_arrangements = []
         for i in range(600):
             self.sample_arrangements.append(self.generateNewArrangement(allPoses))
-        # print "300 arrangements: "
-        # for sample in self.sample_arrangements:
-        #     print sample
-        
-        # self.heuristic_sample_arrangements = []
-        # self.heuristic_sample_arrangements.append(self.generateHeuristicNewArrangement(allPoses))
 
 
-        
-        self.genSolutionFailure = False
+        self.genSolutionFailure_biRRT = False
         start_time = time.clock()
-        self.plan = BiRRT_tester(self.initial_arrangement, self.final_arrangement, self.sample_arrangements, \
+        self.plan_biRRT = BiRRT_tester(self.initial_arrangement, self.final_arrangement, self.sample_arrangements, \
                                     self.gpd, self.instance, self.new_paths, self.visualTool)
-        self.comTime = time.clock()-start_time
-        print "Time to perform arrangement biRRT is: " + str(self.comTime)
-        if self.plan.isConnected == False: 
-            self.genSolutionFailure = True
+        self.comTime_biRRT = time.clock()-start_time
+        print "Time to perform arrangement biRRT is: " + str(self.comTime_biRRT)
+        if self.plan_biRRT.isConnected == False: 
+            self.genSolutionFailure_biRRT = True
         else:
-            self.plan.constructWholePath()
-            self.plan.getSolutionStats()
-            self.totalActions = self.plan.totalActions
+            self.plan_biRRT.constructWholePath()
+            self.plan_biRRT.getSolutionStats()
+            self.totalActions_biRRT = self.plan_biRRT.totalActions
 
-        self.genSolutionFailure_star = False
+        self.genSolutionFailure_biRRTstar = False
         start_time = time.clock()
-        self.plan_star = BiRRTstar_tester(self.initial_arrangement, self.final_arrangement, self.sample_arrangements, \
+        self.plan_biRRTstar = BiRRTstar_tester(self.initial_arrangement, self.final_arrangement, self.sample_arrangements, \
                                     self.gpd, self.instance, self.new_paths, self.visualTool)
-        self.comTime_star = time.clock()-start_time
-        print "Time to perform arrangement biRRT* is: " + str(self.comTime_star)
-        if self.plan_star.isConnected == False: 
-            self.genSolutionFailure_star = True
+        self.comTime_biRRTstar = time.clock()-start_time
+        print "Time to perform arrangement biRRT* is: " + str(self.comTime_biRRTstar)
+        if self.plan_biRRTstar.isConnected == False: 
+            self.genSolutionFailure_biRRTstar = True
         else:
-            self.plan_star.constructWholePath()
-            self.plan_star.getSolutionStats()
-            self.totalActions_star = self.plan_star.totalActions
+            self.plan_biRRTstar.constructWholePath()
+            self.plan_biRRTstar.getSolutionStats()
+            self.totalActions_biRRTstar = self.plan_biRRTstar.totalActions
         
 
 
 
-        # if self.saveimage or self.display:
-        #     self.visualTool.displayLocalPaths(self.plan, self.instance, self.final_arrangement)
-        # if self.display:
-        #     self.visualTool.drawEntireAnimation(self.plan, self.instance, self.final_arrangement)
+        if self.saveimage or self.display:
+            self.visualTool.displayLocalPaths(self.plan, self.instance, self.final_arrangement)
+        if self.display:
+            self.visualTool.drawEntireAnimation(self.plan, self.instance, self.final_arrangement)
+        
 
         return
+
+
+
+
+    def linked_list_conversion(self, graph):
+        # print "graph"
+        # print graph
+        region_dict = {}  # (1,2,'a'): 0
+        LL = {}  # 0:[1,2,3]
+        for key in graph:
+            index = len(region_dict.keys())
+            region_dict[key] = index
+            LL[index] = []
+        for key in graph:
+            for v in graph[key]:
+                LL[region_dict[key]].append(region_dict[v])
+        # print "LL"
+        # print self.LL
+        # print "region dict"
+        # print self.region_dict
+        return region_dict, LL
 
 
     def generateNewArrangement(self, allPoses):
@@ -139,9 +177,6 @@ class Experiment(object):
             isfree = collisionCheck([self.allObjects[t] for t in new_arrangement])
 
         return new_arrangement
-
-    # def generateHeuristicNewArrangement(self, allPoses):
-    #     for i range()
 
 
     def createDirForExp(self, data_path):
