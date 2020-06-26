@@ -1,6 +1,11 @@
 PyVisiLibity
 workspaces
+TEST.py
+figures/
+CGAL-5.0.2/
+boost_1_73_0/
 *.xz
+*.gz
 *.json
 *.png
 *.o
