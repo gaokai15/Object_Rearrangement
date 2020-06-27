@@ -17,7 +17,7 @@
 #include <boost/unordered_map.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/python/iterator.hpp>
-#include <boost/container_hash/hash.hpp>
+#include <boost/functional/hash.hpp>
 #include <boost/pending/disjoint_sets.hpp>
 #include <boost/property_map/vector_property_map.hpp>
 

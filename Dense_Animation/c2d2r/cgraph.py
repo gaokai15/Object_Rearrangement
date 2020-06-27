@@ -578,12 +578,10 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
 
     ### get some colors from colormap
     color_pool = getColorMap(numObjs)
-
     epsilon = EPSILON
     polygon = np.array(poly_disk([0, 0], RAD, 30))
     wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])
     wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
-
     points = []
     objects = []
     # staticObs = []
@@ -603,7 +601,7 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
                 # isfree = isCollisionFree(polygon, point, objects)
 
             if timeout <= 0:
-                # print("Failed to generate!")
+                print("Failed to generate!")
                 return False, False, False
 
             points.append(point)
@@ -611,7 +609,6 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
             mink_obj = 2 * polygon + point
 
             minkowski_objs.append(pn.Polygon(mink_obj))
-
     if display:
         drawProblem(HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, color_pool, points, example_index, saveimage)
 
@@ -803,7 +800,6 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
     if display:
         drawConGraph(HEIGHT, WIDTH, paths, color_pool, regions.values(), False)
         drawConGraph(HEIGHT, WIDTH, paths, color_pool, objects)
-
     graph = {}
     for uv, p in paths.items():
         u, v = uv

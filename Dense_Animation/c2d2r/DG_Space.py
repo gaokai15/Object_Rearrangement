@@ -28,19 +28,30 @@ class Experiments(object):
         # OBJ_NUM = numObjs
         # RECORD is False when I'm debugging and don't want to rewrite the data
         # RECORD = False
-        timeout = 10
+        timeout = 0
         Success = False
         while (not Success) and (timeout>=0):
             try: 
                 graph, paths, objects, color_pool, points, objectShape, object_locations = genDenseCGraph(
                     numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
                 )
-                Success = True
-            except Exception:
+            except ValueError:
                 timeout -= 1
+            else:
+                Success = True
         if Success == False:
             print "fail to generate the instance"
             return -1
+
+        # while (not Success) and (timeout>=0):
+        #     graph, paths, objects, color_pool, points, objectShape, object_locations = genDenseCGraph(
+        #         numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index
+        #     )
+        #     Success = True
+        #     timeout -= 1
+        # if Success == False:
+        #     print "fail to generate the instance"
+        #     return -1
 
         print "Start path pruning"
         start = time.time()
@@ -154,7 +165,7 @@ class Experiments(object):
         # plt.show()
 
     def density_test(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
-        D_list = [0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]
+        D_list = [0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1.0, 1.15, 1.3]
         Trial_Times = 50
         Data = {}
         for D in D_list:
@@ -176,12 +187,12 @@ class Experiments(object):
         for key in Data.keys():
             print key
             print Data[key]
-        with open(os.path.join(my_path, "DensityExperiments_n"+str(numObjs)+"_0518.pkl"), 'wb') as output:
+        with open(os.path.join(my_path, "DensityExperiments_n"+str(numObjs)+"_0624.pkl"), 'wb') as output:
             pickle.dump(Data, output, pickle.HIGHEST_PROTOCOL)
-        # with open(os.path.join(my_path, "DensityExperiments_n"+str(numObjs)+"_0518.pkl"), 'rb') as input:
+        # with open(os.path.join(my_path, "DensityExperiments_n"+str(numObjs)+"_0624.pkl"), 'rb') as input:
         #     Data = pickle.load(input)
 
-        width = 0.05
+        width = 0.12
         fig, ax = plt.subplots()
         p = ax.bar([x for x in D_list], [Data[x][0] for x in D_list], width, label='Fail to Generate An instance')
         p = ax.bar([x for x in D_list], [Data[x][1] for x in D_list], width, bottom=[Data[x][0] for x in D_list],label='monotone')
