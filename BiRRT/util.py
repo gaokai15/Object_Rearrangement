@@ -99,3 +99,7 @@ def bfs(tree, start, goal):
     return path
 
 
+def checkBitStatusAtPos(n, k):
+    #This code is contributed by Gitanjali (GeeksforGeeks)
+    new_num = n >> k
+    return (new_num & 1)

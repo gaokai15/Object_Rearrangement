@@ -1,7 +1,3 @@
-// BEGIN HACK
-#include <CGAL/IO/io_impl.h>
-#include <CGAL/assertions_impl.h>
-// END HACK
 #include <list>
 #include <vector>
 #include <iostream>
