@@ -7,7 +7,6 @@ from DG_Space import Experiments
 
 
 @timeout_decorator.timeout(3600)
-
 def timeout_single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
     EXP = Experiments()
     return EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)

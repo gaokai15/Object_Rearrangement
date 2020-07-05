@@ -57,6 +57,13 @@ class Experiments(object):
 
         print "DFS_non.object_ordering", DFS_non.object_ordering
 
+        start_poses = {}
+        goal_poses = {}
+        for i in range(numObjs):
+            start_poses[i] = 2*i
+            goal_poses[i] = 2*i+1
+        region_dict, LL = linked_list_conversion(graph)
+        DFS_Rec_for_Monotone_General(start_poses, goal_poses, {}, {}, object_locations, LL, region_dict)
 
         start_poses = {}
         goal_poses = {}
@@ -2195,9 +2202,10 @@ class DFS_Rec_for_Monotone_General(object):
                 
                 current_task = parent_task
             self.object_ordering = list(reversed(object_ordering))
+            print "DFS_REC_MONOTONE", self.object_ordering
             return True
         else:
-            # print "Non-monotone"
+            print "Non-monotone"
             # exit(0)
             return False
             # print MISTAKE
@@ -2211,7 +2219,7 @@ class DFS_Rec_for_Monotone_General(object):
             
             # Detect which poses are occupied
             occupied_poses = copy.deepcopy(self.obstacle_lst)
-            for i in range(self.start_poses.keys()):
+            for i in self.start_poses.keys():
                 if i == next_object:
                     continue
                 elif ((old_node>>i)%2):
@@ -2234,7 +2242,7 @@ class DFS_Rec_for_Monotone_General(object):
 
 
     def next_object(self, index):
-        for i in range(self.start_poses.keys()):
+        for i in self.start_poses.keys():
             if ((index >> i)%2): # it has moved
                 pass
             else: # it is at the start pose
@@ -2886,6 +2894,23 @@ class Non_Monotone_Solver_General(object):
                 pose_set_list.append(pose_set)
             self.dependency_dict[key] = pose_set_list
 
+def linked_list_conversion(graph):
+    # print "graph"
+    # print graph
+    region_dict = {}  # (1,2,'a'): 0
+    LL = {}  # 0:[1,2,3]
+    for key in graph:
+        index = len(region_dict.keys())
+        region_dict[key] = index
+        LL[index] = []
+    for key in graph:
+        for v in graph[key]:
+            LL[region_dict[key]].append(region_dict[v])
+    return region_dict, LL
+    # print "LL"
+    # print self.LL
+    # print "region dict"
+    # print self.region_dict
 ################################################################################################
 
 # path_dict = {}
