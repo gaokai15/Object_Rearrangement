@@ -2,6 +2,18 @@ project( rgraph )
 cmake_minimum_required(VERSION 3.1)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Boost and its components
+set( BOOST_ROOT boost_1_73_0 )
+set( Boost_NO_BOOST_CMAKE TRUE )
+
+find_package( Boost COMPONENTS system python27 REQUIRED )
+if ( NOT Boost_FOUND )
+	message(STATUS "This project requires the Boost library, and will not be compiled.")
+	return()
+endif()
+message(STATUS "Boost_LIBRARIES = ${Boost_LIBRARIES}")
+message(STATUS "Boost_INCLUDE_DIRS = ${Boost_INCLUDE_DIRS}")
+
 # CGAL and its components
 set( CGAL_DIR CGAL-5.0.2 )
 find_package( CGAL REQUIRED  )
@@ -9,16 +21,10 @@ if ( NOT CGAL_FOUND )
 	message(STATUS "This project requires the CGAL library, and will not be compiled.")
 	return()
 endif()
+find_package( Boost COMPONENTS python27 REQUIRED )
+
 message(STATUS "CGAL_LIBRARIES = ${CGAL_LIBRARIES}")
 message(STATUS "CGAL_INCLUDE_DIRS = ${CGAL_INCLUDE_DIRS}")
-
-# Boost and its components
-set( BOOST_ROOT boost_1_73_0 )
-find_package( Boost COMPONENTS python27 REQUIRED )
-if ( NOT Boost_FOUND )
-	message(STATUS "This project requires the Boost library, and will not be compiled.")
-	return()
-endif()
 message(STATUS "Boost_LIBRARIES = ${Boost_LIBRARIES}")
 message(STATUS "Boost_INCLUDE_DIRS = ${Boost_INCLUDE_DIRS}")
 
