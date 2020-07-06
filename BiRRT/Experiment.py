@@ -85,57 +85,44 @@ class Experiment(object):
 
 
         
-        ### Now let's generate the region graph and build its connection
-        self.regionGraph = RegionGraphGenerator(self.instance, self.visualTool, self.wall_mink)
         ### Now let's generate path options
-        start_time = time.clock()
-        self.gpd = DensePathGenerator(self.regionGraph.graph, self.regionGraph.obj2reg)
-        print "total time for path generation: " + str(time.clock()-start_time)
-        print "total path connections: " + str(len(self.gpd.dependency_dict))
+        # start_time = time.clock()
+        # self.gpd = DensePathGenerator(self.regionGraph.graph, self.regionGraph.obj2reg)
+        # print "total time for path generation: " + str(time.clock()-start_time)
+        # print "total path connections: " + str(len(self.gpd.dependency_dict))
 
-        self.new_paths = {}
-        for r1, r2 in self.regionGraph.paths.keys():
-            self.new_paths[(self.gpd.region_dict[r1], self.gpd.region_dict[r2])] = \
-                                            copy.deepcopy(self.regionGraph.paths[(r1, r2)])
-
-        ### generate 300 arrangement as samples for both solvers
-        nPoses = len(self.instance.objects) + len(self.instance.buffers)
-        allPoses = range(nPoses)
-        self.allObjects = self.instance.objects + self.instance.buffers
-        print("nPoses: " + str(nPoses))
-        print("allPoses: " + str(allPoses))
-        self.sample_arrangements = []
-        for i in range(600):
-            self.sample_arrangements.append(self.generateNewArrangement(allPoses))
+        # self.new_paths = {}
+        # for r1, r2 in self.regionGraph.paths.keys():
+        #     self.new_paths[(self.gpd.region_dict[r1], self.gpd.region_dict[r2])] = \
+        #                                     copy.deepcopy(self.regionGraph.paths[(r1, r2)])
 
 
-        self.genSolutionFailure_biRRT = False
-        start_time = time.clock()
-        self.plan_biRRT = BiRRT_tester(self.initial_arrangement, self.final_arrangement, self.sample_arrangements, \
-                                    self.gpd, self.instance, self.new_paths, self.visualTool)
-        self.comTime_biRRT = time.clock()-start_time
-        print "Time to perform arrangement biRRT is: " + str(self.comTime_biRRT)
-        if self.plan_biRRT.isConnected == False: 
-            self.genSolutionFailure_biRRT = True
-        else:
-            self.plan_biRRT.constructWholePath()
-            self.plan_biRRT.getSolutionStats()
-            self.totalActions_biRRT = self.plan_biRRT.totalActions
+        # self.genSolutionFailure_biRRT = False
+        # start_time = time.clock()
+        # self.plan_biRRT = BiRRTPlanner(self.initial_arrangement, self.final_arrangement, \
+        #                             self.gpd, self.instance, self.new_paths, self.visualTool)
+        # self.comTime_biRRT = time.clock()-start_time
+        # print "Time to perform arrangement biRRT is: " + str(self.comTime_biRRT)
+        # if self.plan_biRRT.isConnected == False: 
+        #     self.genSolutionFailure_biRRT = True
+        # else:
+        #     self.plan_biRRT.constructWholePath()
+        #     self.plan_biRRT.getSolutionStats()
+        #     self.totalActions_biRRT = self.plan_biRRT.totalActions
 
-        self.genSolutionFailure_biRRTstar = False
-        start_time = time.clock()
-        self.plan_biRRTstar = BiRRTstar_tester(self.initial_arrangement, self.final_arrangement, self.sample_arrangements, \
-                                    self.gpd, self.instance, self.new_paths, self.visualTool)
-        self.comTime_biRRTstar = time.clock()-start_time
-        print "Time to perform arrangement biRRT* is: " + str(self.comTime_biRRTstar)
-        if self.plan_biRRTstar.isConnected == False: 
-            self.genSolutionFailure_biRRTstar = True
-        else:
-            self.plan_biRRTstar.constructWholePath()
-            self.plan_biRRTstar.getSolutionStats()
-            self.totalActions_biRRTstar = self.plan_biRRTstar.totalActions
+        # self.genSolutionFailure_biRRTstar = False
+        # start_time = time.clock()
+        # self.plan_biRRTstar = BiRRTStarPlanner(self.initial_arrangement, self.final_arrangement, \
+        #                             self.gpd, self.instance, self.new_paths, self.visualTool)
+        # self.comTime_biRRTstar = time.clock()-start_time
+        # print "Time to perform arrangement biRRT* is: " + str(self.comTime_biRRTstar)
+        # if self.plan_biRRTstar.isConnected == False: 
+        #     self.genSolutionFailure_biRRTstar = True
+        # else:
+        #     self.plan_biRRTstar.constructWholePath()
+        #     self.plan_biRRTstar.getSolutionStats()
+        #     self.totalActions_biRRTstar = self.plan_biRRTstar.totalActions
         
-
 
 
         if self.saveimage or self.display:

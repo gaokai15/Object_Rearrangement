@@ -5,6 +5,7 @@ from util import *
 import IPython
 from random import sample
 from collections import OrderedDict
+import time
 
 class BiRRTStarPlanner(object):
     ### Input:
@@ -27,7 +28,7 @@ class BiRRTStarPlanner(object):
         self.numObjs = len(self.initial_arrangement)
         self.nPoses = len(self.points)
         self.allPoses = range(self.nPoses)
-        self.isConnected = False
+        
         self.treeL = {}
         self.treeR = {}
         self.trees = {}
@@ -47,6 +48,7 @@ class BiRRTStarPlanner(object):
         self.radius = 4 ### can tune this afterwards
 
         ################## results ################
+        self.isConnected = False
         ### the whole_path is a list of items and each item has the following format
         ### [("node1_id", node2_id), {2:path2, 1:path1, ...}]
         self.whole_path = []
@@ -62,31 +64,27 @@ class BiRRTStarPlanner(object):
         ### initial connection attempt
         self.connectToTreeR(self.treeL["L0"])
 
-        totalTimes = 300
-        timeout = totalTimes
-        while (self.isConnected != True and timeout > 0):     
-            timeout -= 1
+        totalTime_allowed = 500 ### allow 500s for the total search tree construction
+        start_time = time.clock()
+
+        while (self.isConnected != True and time.clock() - start_time < totalTime_allowed):     
             ### expand the left tree
             new_arrNode = self.treeExpansionL()
             ### connect to right tree
             self.connectToTreeR(new_arrNode)
-            if (self.isConnected != True and timeout > 0):
-                timeout -= 1
+            if (self.isConnected != True):
                 ### expand the right tree
                 new_arrNode = self.treeExpansionR()
                 ### connect to left tree
                 self.connectToTreeL(new_arrNode)
 
         if (self.isConnected == True):
-            print("find the solution at timeout " + str(timeout) + "/" + str(totalTimes))
+            return
 
         ### handle failure
         if (self.isConnected == False):
-            print("fail to find a valid within " + str(totalTimes))
-            # self.numNodesInLeftTree = len(self.treeL)
-            # self.numNodesInRightTree = len(self.treeR)
-            # print("num of nodes generated in the left tree: " + str(self.numNodesInLeftTree))
-            # print("num of nodes generated in the right tree: " + str(self.numNodesInRightTree))
+            print("fail the find a solution within " + str(totalTime_allowed) + " seconds...")
+
 
     def treeExpansionL(self):
         new_arrangement = self.generateNewArrangement()

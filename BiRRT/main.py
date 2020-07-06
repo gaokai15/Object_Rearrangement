@@ -53,29 +53,32 @@ if __name__ == "__main__":
         shutil.rmtree(data_path)
     os.mkdir(data_path)
 
-    successGenTimes = 0 ### record the number of times you successfully generate an instance
 
-    successSolTimes_DP_local = 0 ### record the number of times you successfully find a solution
-    comTime_DP_local = 0
-    numActions_DP_local = 0
-    successSolTimes_biRRT = 0 ### record the number of times you successfully find a solution
-    comTime_biRRT = 0
-    numActions_biRRT = 0
-    successSolTimes_biRRTstar = 0 ### record the number of times you successfully find a solution
-    comTime_biRRTstar = 0
-    numActions_biRRTstar = 0
-
-    # para_combinations = [[5,80,700,700], [5,80,650,650]]
     para_combinations=[[10,80,900,900], [13,80,1150,1150], [13,80,1030,1030], \
                         [15,80,1230,1230], [15,80,1100,1100], [18,80,1350,1350], [18,80,1200,1200]]
     f_stat = open("stat.txt", "w")
 
     for para_comb in para_combinations:
+
         numObjs = para_comb[0]
         RAD = para_comb[1]
         HEIGHT = para_comb[2]
         WIDTH = para_comb[3]
         f_stat.write(str(numObjs) + " " + str(RAD) + " " + str(HEIGHT) + " " + str(WIDTH) + "\n")
+
+
+        ### prepare the statistics
+        successGenTimes = 0 ### record the number of times you successfully generate an instance
+        successSolTimes_DP_local = 0 ### record the number of times you successfully find a solution
+        comTime_DP_local = 0
+        numActions_DP_local = 0
+        successSolTimes_biRRT = 0 ### record the number of times you successfully find a solution
+        comTime_biRRT = 0
+        numActions_biRRT = 0
+        successSolTimes_biRRTstar = 0 ### record the number of times you successfully find a solution
+        comTime_biRRTstar = 0
+        numActions_biRRTstar = 0
+
 
         for exp_id in range(1, nExperiments+1):
             print("\nstart experiment " + str(exp_id) + ": " + str(numObjs) + " " + str(int(RAD)) + " " + str(HEIGHT) + " " + str(WIDTH))
