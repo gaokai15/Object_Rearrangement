@@ -6,7 +6,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set( BOOST_ROOT boost_1_73_0 )
 set( Boost_NO_BOOST_CMAKE TRUE )
 
-find_package( Boost COMPONENTS system python27 REQUIRED )
+find_package( Boost COMPONENTS python27 REQUIRED )
 if ( NOT Boost_FOUND )
 	message(STATUS "This project requires the Boost library, and will not be compiled.")
 	return()
