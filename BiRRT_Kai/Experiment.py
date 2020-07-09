@@ -104,6 +104,7 @@ class Experiment(object):
         self.genSolutionFailure_DP_BruteForce = False
         start_time = time.clock()
         try:
+            print Intentional_Error
             start_poses = {}
             goal_poses = {}
             for i in range(len(self.initial_arrangement)):
@@ -132,6 +133,7 @@ class Experiment(object):
         self.genSolutionFailure_GPD = False
         start_time = time.clock()
         try:
+            print Intentional_Error
             self.gpd = timeout_DensePathGenerator(self.regionGraph.graph, self.regionGraph.obj2reg)
         except Exception:
             self.genSolutionFailure_GPD = True

@@ -74,8 +74,8 @@ if __name__ == "__main__":
 
     radius = 80
     para_combinations = []
-    for num in [5, 7]:
-        for D in [ 0.4, 0.5]:
+    for num in [13,15,17,19]:
+        for D in [ 0.4, 0.5, 0.6]:
             H = math.sqrt(2*num*math.pi*radius*radius/D)
             para_combinations.append([num, radius, H, H])
 
@@ -115,7 +115,8 @@ if __name__ == "__main__":
             enablePrint()
             print("\nstart experiment " + str(exp_id) + ": " + str(numObjs) + " " + str(int(RAD)) + " " + str(HEIGHT) + " " + str(WIDTH))
             EXP = Experiment(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, savestat, exp_id, data_path)
-            if EXP.genInstanceFailure == True: 
+            # if (EXP.genInstanceFailure == True) or (EXP.genSolutionFailure_DP_local == True) or (EXP.genSolutionFailure_DP_BruteForce == True) or (EXP.genSolutionFailure_biRRT == True) or (EXP.genSolutionFailure_biRRTstar == True) or (EXP.genSolutionFailure_GPD == True): 
+            if (EXP.genInstanceFailure == True): 
                 continue
             else:
                 successGenTimes += 1

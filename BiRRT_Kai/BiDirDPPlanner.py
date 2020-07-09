@@ -1,11 +1,13 @@
 from __future__ import division
 
 
-from DPLocalSolver import DFS_Rec_for_Monotone
+from DPLocalSolver import DFS_Rec_for_Monotone_General
 from util import *
 import copy
 import IPython
+import time
 import random
+import numpy as np
 from random import sample
 from collections import OrderedDict
 
@@ -26,8 +28,8 @@ class BiDirDPPlanner(object):
         self.numObjs = len(self.initial_arrangement)
         self.nPoses = len(self.points)
         self.allPoses = range(self.nPoses)
-        self.magicNumber = self.getMagicNumber(self.numObjs)
-        print("Magic number: " + str(self.magicNumber))
+        # self.magicNumber = self.getMagicNumber(self.numObjs)
+        # print("Magic number: " + str(self.magicNumber))
 
         ### initialize dependency_dict and path_dict as empty dict
         ### since now we are going to increment these two dicts online, instead of offline
@@ -47,21 +49,22 @@ class BiDirDPPlanner(object):
         self.idLeftRegistr = []
         self.idRightRegistr = []
         ### add the initial_arrangement and final_arrangement as the root node to two trees, respectively
-        self.treeL["L0"] = ArrNode(self.initial_arrangement, "L0", None, None, None)
-        self.treeR["R0"] = ArrNode(self.final_arrangement, "R0", None, None, None)
+        self.treeL["L0"] = ArrNode(self.initial_arrangement, "L0", None, None, None, 0, None)
+        self.treeR["R0"] = ArrNode(self.final_arrangement, "R0", None, None, None, 0, None)
         self.arrLeftRegistr.append(self.initial_arrangement)
         self.arrRightRegistr.append(self.final_arrangement)
         self.idLeftRegistr.append("L0")
         self.idRightRegistr.append("R0")
         self.leftKey = "L0"
         self.rightKey = "R0"
-        self.bridge = [] ### [leftKey, rightKey, object_transition, objectMoved, path_option]
+        self.bridge = [None, None, None, None, None] ### [leftKey, rightKey, object_transition, objectMoved, path_option]
         self.leftLeaves = ["L0"] ### keep track of leaves in the left tree
         self.rightLeaves = ["R0"] ### keep track of leaves in the right tree
 
 
         ################## results ################
         self.isConnected = False
+        self.best_solution_cost = np.inf
         ### the whole_path is a list of items and each item has the following format
         ### [("node1_id", node2_id), {2:path2, 1:path1, ...}]
         self.totalActions = 0 ### record the total number of actions
@@ -79,24 +82,25 @@ class BiDirDPPlanner(object):
         if (self.isConnected != True):
             self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
-        totalTimes = 2000
-        timeout = totalTimes
+        totalTime_allowed = 500 ### allow 500s for the total search tree construction
+        start_time = time.clock()        
 
-        while (self.isConnected != True and timeout > 0):
-            timeout -= 1
-            # print("timeout: " + str(timeout))
+        while (self.isConnected != True and time.clock() - start_time < totalTime_allowed):
             ### The problem is not monotone
-            newChild_id = self.mutateLeftChild()
-            if newChild_id != None:
-                self.growSubTree(self.treeL[newChild_id], self.treeR["R0"], "Left")
+            newChild_nodeID = self.mutateLeftChild()
+            if newChild_nodeID != None:
+                self.growSubTree(self.treeL[newChild_nodeID], self.treeR["R0"], "Left")
             if (self.isConnected != True):
-                newChild_id = self.mutateRightChild()
-                if newChild_id != None:
-                    self.growSubTree(self.treeR[newChild_id], self.treeL["L0"], "Right")
+                newChild_nodeID = self.mutateRightChild()
+                if newChild_nodeID != None:
+                    self.growSubTree(self.treeR[newChild_nodeID], self.treeL["L0"], "Right")
 
 
         if self.isConnected:
             self.getTheStat()
+
+        if self.isConnected == False:
+            print("fail the find a solution within " + str(totalTime_allowed) + " seconds...")
 
     def mutateRightChild(self):
         ### first choose a node to mutate
@@ -120,8 +124,14 @@ class BiDirDPPlanner(object):
             # print("The mutation makes a duplicate")
             return None
         ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
-        subTree = DFS_Rec_for_Monotone(
-            mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict, \
+        start_poses = {}
+        goal_poses = {}
+        for i in range(len(mutated_arrangement)):
+            start_poses[i] = mutated_arrangement[i]
+        for i in range(len(new_arrangement)):
+            goal_poses[i] = new_arrangement[i]
+        subTree = DFS_Rec_for_Monotone_General(
+            start_poses, goal_poses, self.dependency_dict, self.path_dict, \
             self.Object_locations, self.linked_list, self.region_dict)
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
@@ -132,15 +142,13 @@ class BiDirDPPlanner(object):
         else:
             ### we reach here since it is a duplicate and it can be connected
             ### welcome this new arrangement
-            print("the new arrangement after mutation has been accepted")
+            # print("the new arrangement after mutation has been accepted")
             temp_transition = [new_arrangement[obj_idx], mutated_arrangement[obj_idx]]
-            if temp_transition[0] == temp_transition[1]:
-                print("warning!! temp_transition check immediately")
-                IPython.embed()
             temp_object_idx = obj_idx
-            temp_path_option = subTree.path_option[self.magicNumber]
+            temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
+            temp_parent_cost = self.treeR[mutate_id].cost_to_come
             self.treeR["R"+str(self.right_idx)] = ArrNode(
-                        new_arrangement, "R"+str(self.right_idx), temp_transition, temp_object_idx, temp_path_option)
+                        new_arrangement, "R"+str(self.right_idx), temp_transition, temp_object_idx, temp_path_option, temp_parent_cost+1, mutate_id)
             self.arrRightRegistr.append(new_arrangement)
             self.idRightRegistr.append("R"+str(self.right_idx))
             self.right_idx += 1
@@ -170,8 +178,14 @@ class BiDirDPPlanner(object):
             # print("The mutation makes a duplicate")
             return None
         ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
-        subTree = DFS_Rec_for_Monotone(
-            mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict, \
+        start_poses = {}
+        goal_poses = {}
+        for i in range(len(mutated_arrangement)):
+            start_poses[i] = mutated_arrangement[i]
+        for i in range(len(new_arrangement)):
+            goal_poses[i] = new_arrangement[i]
+        subTree = DFS_Rec_for_Monotone_General(
+            start_poses, goal_poses, self.dependency_dict, self.path_dict, \
             self.Object_locations, self.linked_list, self.region_dict)
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
@@ -182,15 +196,13 @@ class BiDirDPPlanner(object):
         else:
             ### we reach here since it is a duplicate and it can be connected
             ### welcome this new arrangement
-            print("the new arrangement after mutation has been accepted")
+            # print("the new arrangement after mutation has been accepted")
             temp_transition = [mutated_arrangement[obj_idx], new_arrangement[obj_idx]]
-            if temp_transition[0] == temp_transition[1]:
-                print("warning!! temp_transition check immediately")
-                IPython.embed()
             temp_object_idx = obj_idx
-            temp_path_option = subTree.path_option[self.magicNumber]
+            temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
+            temp_parent_cost = self.treeL[mutate_id].cost_to_come
             self.treeL["L"+str(self.left_idx)] = ArrNode(
-                        new_arrangement, "L"+str(self.left_idx), temp_transition, temp_object_idx, temp_path_option)
+                        new_arrangement, "L"+str(self.left_idx), temp_transition, temp_object_idx, temp_path_option, temp_parent_cost+1, mutate_id)
             self.arrLeftRegistr.append(new_arrangement)
             self.idLeftRegistr.append("L"+str(self.left_idx))
             self.left_idx += 1
@@ -200,8 +212,16 @@ class BiDirDPPlanner(object):
 
 
     def growSubTree(self, initNode, goalNode, treeSide):
-        subTree = DFS_Rec_for_Monotone(
-            initNode.arrangement, goalNode.arrangement, self.dependency_dict, self.path_dict, \
+        ### construct start_poses and goal_poses
+        start_poses = {}
+        goal_poses = {}
+        for i in range(len(initNode.arrangement)):
+            start_poses[i] = initNode.arrangement[i]
+        for i in range(len(goalNode.arrangement)):
+            goal_poses[i] = goalNode.arrangement[i]
+
+        subTree = DFS_Rec_for_Monotone_General(
+            start_poses, goal_poses, self.dependency_dict, self.path_dict, \
             self.Object_locations, self.linked_list, self.region_dict)
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
@@ -213,115 +233,170 @@ class BiDirDPPlanner(object):
             self.engraftingRightTree(subTree, initNode, goalNode)
 
 
+
     def engraftingRightTree(self, subTree, rootNode, goalNode):
-        ### enumerate the parent info (family tree) of the subTree
-        ### all the keys represents all the new nodes to be added
-        ### the values represents the parents
-        print("Right tree")
+        # print("Right tree")
         # print(subTree.parent)
-        # print(subTree.path_option)
 
+        if len(subTree.parent) == 0:
+            ### The tree does not exist
+            return
+
+        ### first construct a child dict
+        child_dict = {}
         for child_id, parent_id in subTree.parent.items():
-            child_arrangement = self.encodeArrangement(child_id, rootNode.arrangement, goalNode.arrangement)
+            if parent_id not in child_dict.keys():
+                child_dict[parent_id] = []
+            child_dict[parent_id].append(child_id)
+
+        ### use a BFS to add the subTree to the entire tree structure
+        queue = [0]
+        while(len(queue) != 0):
+            parent_id = queue.pop()
             parent_arrangement = self.encodeArrangement(parent_id, rootNode.arrangement, goalNode.arrangement)
-            if child_arrangement == parent_arrangement:
-                continue
-            temp_object_idx = self.getTheObjectMoved(child_id, parent_id)
-            temp_path_option = subTree.path_option[child_id]
-            temp_transition = [child_arrangement[temp_object_idx], parent_arrangement[temp_object_idx]]
-            # print("child_id " + str(child_id) + ": " + str(child_arrangement))
-
-            if child_arrangement in self.arrRightRegistr:
-                ### we don't add duplicate nodes at this point
-                # print("duplicate node")
-                continue
-            elif child_arrangement in self.arrLeftRegistr:
-                ### this is a sign that two trees are connected
-                ### check if it is really a bridge
-                if parent_arrangement not in self.arrLeftRegistr:
-                    print("The tree can be connected")
-                    self.isConnected = True
-                    ### temporary record this node id
-                    self.leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(child_arrangement)]
-                    # print("leftKey: " + str(self.leftKey))
-                    self.rightKey_arr = parent_arrangement
-                    self.bridge_objectMoved = temp_object_idx
-                    self.bridge_path_option = temp_path_option
-                    self.bridge_transition = temp_transition
+            parent_nodeID = self.idRightRegistr[self.arrRightRegistr.index(parent_arrangement)]
+            ### get all the children of this parent node
+            if parent_id not in child_dict.keys():
+                children_ids = []
             else:
-                if temp_transition[0] == temp_transition[1]:
-                    print("warning!! temp_transition check immediately")
-                    IPython.embed()
-                ### this is a new arrangement
-                self.treeR["R"+str(self.right_idx)] = ArrNode(
-                            child_arrangement, "R"+str(self.right_idx), temp_transition, temp_object_idx, temp_path_option)
-                self.arrRightRegistr.append(child_arrangement)
-                self.idRightRegistr.append("R"+str(self.right_idx))
-                self.right_idx += 1
+                children_ids = child_dict[parent_id]
+            for child_id in children_ids:
+                child_arrangement = self.encodeArrangement(child_id, rootNode.arrangement, goalNode.arrangement)
+                temp_object_idx = self.getTheObjectMoved(child_id, parent_id)
+                temp_path_option = subTree.path_option[child_id]
+                temp_transition = [child_arrangement[temp_object_idx], parent_arrangement[temp_object_idx]]
+                ### check if this child arrangement has already in the tree
+                if child_arrangement is self.arrRightRegistr:
+                    ### we don't add duplicate nodes BUT we may rewire it to a better parent
+                    child_nodeID = self.idRightRegistr[self.arrRightRegistr.index(child_arrangement)]
+                    if self.treeR[parent_nodeID].cost_to_come + 1 < self.treeR[child_nodeID].cost_to_come:
+                        ### It indicates that the current parent is a better parent since it costs less
+                        ### update the corresponding infos for the child node
+                        self.treeR[child_nodeID].updateParent(parent_nodeID)
+                        self.treeR[child_nodeID].updateObjectTransition(temp_transition)
+                        self.treeR[child_nodeID].updateObjectMoved(temp_object_idx)
+                        self.treeR[child_nodeID].updatePathOption(temp_path_option)
+                        self.treeR[child_nodeID].updateCostToCome(self.treeR[parent_nodeID].cost_to_come + 1)
 
-        ### You are reaching here since the subTree has been engrafted
-        ### last step: if the bi-directional tree has been claimed to be connected before
-        ### update the bridge information
-        ### [leftKey, rightKey, object_transition, objectMoved, path_option]
-        if self.isConnected:
-            self.rightKey = self.idRightRegistr[self.arrRightRegistr.index(self.rightKey_arr)]
-            self.bridge = [self.leftKey, self.rightKey, self.bridge_transition, self.bridge_objectMoved, self.bridge_path_option]
+                elif child_arrangement in self.arrLeftRegistr:
+                    ### this is a sign that two trees are connected
+                    ### check if it is really a bridge
+                    if parent_arrangement not in self.arrLeftRegistr:
+                        print("a bridge is found")
+                        self.isConnected = True
+                        ### check if it leads to a better solution
+                        temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(child_arrangement)]
+                        temp_rightKey = self.idRightRegistr[self.arrRightRegistr.index(parent_arrangement)]
+                        temp_cost = self.treeL[temp_leftKey].cost_to_come + self.treeR[temp_rightKey].cost_to_come + 1
+                        if temp_cost < self.best_solution_cost:
+                            ### This is a better solution
+                            self.best_solution_cost = temp_cost
+                            ### let's update the bridge
+                            self.leftKey = temp_leftKey
+                            self.rightKey = temp_rightKey
+                            self.bridge_transition = temp_transition
+                            self.bridge_objectMoved = temp_object_idx
+                            self.bridge_path_option = temp_path_option
+                            self.bridge = [self.leftKey, self.rightKey, self.bridge_transition, self.bridge_objectMoved, self.bridge_path_option]
+
+                else:
+                    ### This is a brand new arrangement, let's add to the tree
+                    temp_cost_to_come = self.treeR[parent_nodeID].cost_to_come + 1
+                    self.treeR["R"+str(self.right_idx)] = ArrNode(
+                        child_arrangement, "R"+str(self.right_idx), temp_transition, temp_object_idx, temp_path_option, temp_cost_to_come, parent_nodeID)
+                    self.arrRightRegistr.append(child_arrangement)
+                    self.idRightRegistr.append("R"+str(self.right_idx))
+                    self.right_idx += 1
+                    ### add this child node into queue
+                    queue.insert(0, child_id)
+
+        # for i in self.treeR.keys():
+        #     node = self.treeR[i]
+        #     print(str(i) + ": " + str(node.arrangement) + ", " + str(node.object_transition) + ", " + \
+        #         str(node.objectMoved) + ", " + str(node.cost_to_come) + ", " + str(node.parent_id))
 
 
 
     def engraftingLeftTree(self, subTree, rootNode, goalNode):
-        ### enumerate the parent info (family tree) of the subTree
-        ### all the keys represents all the new nodes to be added
-        ### the values represents the parents
-        print("Left tree")
+        # print("Left tree")
         # print(subTree.parent)
-        # print(subTree.path_option)
 
+        if len(subTree.parent) == 0:
+            ### The tree does not exist
+            return
+
+        ### first construct a child dict
+        child_dict = {}
         for child_id, parent_id in subTree.parent.items():
-            child_arrangement = self.encodeArrangement(child_id, rootNode.arrangement, goalNode.arrangement)
+            if parent_id not in child_dict.keys():
+                child_dict[parent_id] = []
+            child_dict[parent_id].append(child_id)
+
+        ### use a BFS to add the subTree to the entire tree structure
+        queue = [0]
+        while(len(queue) != 0):
+            parent_id = queue.pop()
             parent_arrangement = self.encodeArrangement(parent_id, rootNode.arrangement, goalNode.arrangement)
-            if child_arrangement == parent_arrangement:
-                continue
-            temp_object_idx = self.getTheObjectMoved(child_id, parent_id)
-            temp_path_option = subTree.path_option[child_id]
-            temp_transition = [parent_arrangement[temp_object_idx], child_arrangement[temp_object_idx]]
-            # print("child_id " + str(child_id) + ": " + str(child_arrangement))
-
-            if child_arrangement in self.arrLeftRegistr:
-                ### we don't add duplicate nodes at this point
-                # print("duplicate node")
-                continue
-            elif child_arrangement in self.arrRightRegistr:
-                ### this is a sign that two trees are connected
-                ### check if it is really a bridge
-                if parent_arrangement not in self.arrRightRegistr:
-                    print("The tree can be connected")
-                    self.isConnected = True
-                    ### temporary record this node id
-                    self.rightKey = self.idRightRegistr[self.arrRightRegistr.index(child_arrangement)]
-                    # print("rightKey: " + str(self.rightKey))
-                    self.leftKey_arr = parent_arrangement
-                    self.bridge_objectMoved = temp_object_idx
-                    self.bridge_path_option = temp_path_option
-                    self.bridge_transition = temp_transition
+            parent_nodeID = self.idLeftRegistr[self.arrLeftRegistr.index(parent_arrangement)]
+            ### get all the children of this parent node
+            if parent_id not in child_dict.keys():
+                children_ids = []
             else:
-                if temp_transition[0] == temp_transition[1]:
-                    print("warning!! temp_transition check immediately")
-                    IPython.embed()
-                ### this is a new arrangement
-                self.treeL["L"+str(self.left_idx)] = ArrNode(
-                            child_arrangement, "L"+str(self.left_idx), temp_transition, temp_object_idx, temp_path_option)
-                self.arrLeftRegistr.append(child_arrangement)
-                self.idLeftRegistr.append("L"+str(self.left_idx))
-                self.left_idx += 1
+                children_ids = child_dict[parent_id]
+            for child_id in children_ids:
+                child_arrangement = self.encodeArrangement(child_id, rootNode.arrangement, goalNode.arrangement)
+                temp_object_idx = self.getTheObjectMoved(child_id, parent_id)
+                temp_path_option = subTree.path_option[child_id]
+                temp_transition = [parent_arrangement[temp_object_idx], child_arrangement[temp_object_idx]]
+                ### check if this child arrangement has already in the tree
+                if child_arrangement is self.arrLeftRegistr:
+                    ### we don't add duplicate nodes BUT we may rewire it to a better parent
+                    child_nodeID = self.idLeftRegistr[self.arrLeftRegistr.index(child_arrangement)]
+                    if self.treeL[parent_nodeID].cost_to_come + 1 < self.treeL[child_nodeID].cost_to_come:
+                        ### It indicates that the current parent is a better parent since it costs less
+                        ### update the corresponding infos for the child node
+                        self.treeL[child_nodeID].updateParent(parent_nodeID)
+                        self.treeL[child_nodeID].updateObjectTransition(temp_transition)
+                        self.treeL[child_nodeID].updateObjectMoved(temp_object_idx)
+                        self.treeL[child_nodeID].updatePathOption(temp_path_option)
+                        self.treeL[child_nodeID].updateCostToCome(self.treeL[parent_nodeID].cost_to_come + 1)
 
-        ### You are reaching here since the subTree has been engrafted
-        ### last step: if the bi-directional tree has been claimed to be connected before
-        ### update the bridge information
-        ### [leftKey, rightKey, object_transition, objectMoved, path_option]
-        if self.isConnected:
-            self.leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(self.leftKey_arr)]
-            self.bridge = [self.leftKey, self.rightKey, self.bridge_transition, self.bridge_objectMoved, self.bridge_path_option]
+                elif child_arrangement in self.arrRightRegistr:
+                    ### this is a sign that two trees are connected
+                    ### check if it is really a bridge
+                    if parent_arrangement not in self.arrRightRegistr:
+                        print("a bridge is found")
+                        self.isConnected = True
+                        ### check if it leads to a better solution
+                        temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(parent_arrangement)]
+                        temp_rightKey = self.idRightRegistr[self.arrRightRegistr.index(child_arrangement)]
+                        temp_cost = self.treeL[temp_leftKey].cost_to_come + self.treeR[temp_rightKey].cost_to_come + 1
+                        if temp_cost < self.best_solution_cost:
+                            ### This is a better solution
+                            self.best_solution_cost = temp_cost
+                            ### let's update the bridge
+                            self.leftKey = temp_leftKey
+                            self.rightKey = temp_rightKey
+                            self.bridge_transition = temp_transition
+                            self.bridge_objectMoved = temp_object_idx
+                            self.bridge_path_option = temp_path_option
+                            self.bridge = [self.leftKey, self.rightKey, self.bridge_transition, self.bridge_objectMoved, self.bridge_path_option]
+
+                else:
+                    ### This is a brand new arrangement, let's add to the tree
+                    temp_cost_to_come = self.treeL[parent_nodeID].cost_to_come + 1
+                    self.treeL["L"+str(self.left_idx)] = ArrNode(
+                        child_arrangement, "L"+str(self.left_idx), temp_transition, temp_object_idx, temp_path_option, temp_cost_to_come, parent_nodeID)
+                    self.arrLeftRegistr.append(child_arrangement)
+                    self.idLeftRegistr.append("L"+str(self.left_idx))
+                    self.left_idx += 1
+                    ### add this child node into the queue
+                    queue.insert(0, child_id)
+
+        # for i in self.treeL.keys():
+        #     node = self.treeL[i]
+        #     print(str(i) + ": " + str(node.arrangement) + ", " + str(node.object_transition) + ", " + \
+        #         str(node.objectMoved) + ", " + str(node.cost_to_come) + ", " + str(node.parent_id))
 
 
 
@@ -354,31 +429,30 @@ class BiDirDPPlanner(object):
 
 
     def getTheStat(self):
-        print("Let's get stats!!")
+        # print("Let's get stats!!")
         ### This function is used to get the statistics if the path is found
         self.numNodesInLeftTree = len(self.treeL)
         self.numNodesInRightTree = len(self.treeR)
+        self.numLeftBranches = self.numNodesInLeftTree - 1
+        self.numRightBranches = self.numNodesInRightTree - 1
         self.simplePath = []
         ### from leftKey, back track to left root via parent search 
         curr_waypoint_id = self.leftKey
         self.simplePath.insert(0, curr_waypoint_id)
         while curr_waypoint_id != "L0":
-            nextNode_arr = self.treeL[curr_waypoint_id].getParentArr()
-            curr_waypoint_id = self.idLeftRegistr[self.arrLeftRegistr.index(nextNode_arr)]
-            print("curr_waypoint_id: " + str(curr_waypoint_id))
+            curr_waypoint_id = self.treeL[curr_waypoint_id].parent_id
             self.simplePath.insert(0, curr_waypoint_id)
         ### from rightKey, back track to right root via parent search
         curr_waypoint_id = self.rightKey
         self.simplePath.append(curr_waypoint_id)
         while curr_waypoint_id != "R0":
-            nextNode_arr = self.treeR[curr_waypoint_id].getParentArr()
-            curr_waypoint_id = self.idRightRegistr[self.arrRightRegistr.index(nextNode_arr)]
-            print("curr_waypoint_id: " + str(curr_waypoint_id))
+            curr_waypoint_id = self.treeR[curr_waypoint_id].parent_id
             self.simplePath.append(curr_waypoint_id)
 
         print("path: " + str(self.simplePath))
         self.totalActions = len(self.simplePath) - 1
         print("total action: " + str(self.totalActions))
+        print("solution cost: " + str(self.best_solution_cost)) 
 
 
     def getMagicNumber(self, numObjs):
@@ -391,7 +465,7 @@ class BiDirDPPlanner(object):
 
 
 class ArrNode(object):
-    def __init__(self, arrangement, node_id, object_transition, objectMoved, path_option):
+    def __init__(self, arrangement, node_id, object_transition, objectMoved, path_option, cost_to_come, parent_id):
         self.arrangement = arrangement
         self.node_id = node_id
         ### object_transition indicates the pose for certain objects before and after the transition
@@ -399,6 +473,23 @@ class ArrNode(object):
         self.object_transition = object_transition
         self.objectMoved = objectMoved
         self.path_option = path_option
+        self.cost_to_come = cost_to_come
+        self.parent_id = parent_id
+
+    def updateObjectTransition(object_transition):
+        self.object_transition = object_transition
+
+    def updateObjectMoved(objectMoved):
+        self.objectMoved = objectMoved
+
+    def updatePathOption(path_option):
+        self.path_option = path_option
+
+    def updateCostToCome(cost_to_come):
+        self.cost_to_come = cost_to_come
+
+    def updateParent(parent_id):
+        self.parent_id = parent_id
 
     def getParentArr(self):
         parent_arr = copy.deepcopy(self.arrangement)

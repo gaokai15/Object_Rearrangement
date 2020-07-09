@@ -42,14 +42,6 @@ class Experiments(object):
             print "fail to generate the instance"
             return -1
 
-        # with open(os.path.join(my_path, "WrongInstance.pkl"),
-        #               'wb') as output:
-        #         pickle.dump(( graph, paths, objects, color_pool, points, objectShape, object_locations), output, pickle.HIGHEST_PROTOCOL)
-
-        # with open(os.path.join(my_path, "WrongInstance.pkl"),
-        #     'rb') as input:
-        #     graph, paths, objects, color_pool, points, objectShape, object_locations = pickle.load(input)
-
         # print "Start path pruning"
         # start = time.time()
         # gpd = Dense_Path_Generation(graph, object_locations)
@@ -73,19 +65,19 @@ class Experiments(object):
         DP_time = stop - start
 
         start = time.time()
-        DFS = DFS_DP(graph, object_locations)
+        # DFS = DFS_DP(graph, object_locations)
         stop = time.time()
         DFS_time = stop - start
-        DFS_trans = DFS.trans
-        print "DFS_time", DFS_time
+        # DFS_trans = DFS.trans
+        # print "DFS_time", DFS_time
 
-        print "DFS_object_ordering", DFS.object_ordering
+        # print "DFS_object_ordering", DFS.object_ordering
         
         start = time.time()
         DFS_rec = DFS_DP_Recursion(graph, object_locations)
         stop = time.time()
         DFS_rec_time = stop - start
-        DFS_rec_trans = DFS.trans
+        DFS_rec_trans = DFS_rec.trans
         print "DFS_time", DFS_rec_time
 
         print "DFS_rec_object_ordering", DFS_rec.object_ordering
@@ -94,7 +86,7 @@ class Experiments(object):
         # DFS_non = Non_Monotone_Solver(graph, object_locations, numObjs)
         stop = time.time()
         DFS_non_time = stop - start
-        print "DFS_time", DFS_non_time
+        # print "DFS_time", DFS_non_time
 
         # print "DFS_non_monotone_object_ordering", DFS_non.object_ordering
 
@@ -165,7 +157,7 @@ class Experiments(object):
 
         # print DPP_time, BDP_time, DFS_time, DFS_rec_time
 
-        return DPP_time, DFS_time, DFS_rec_time, BFS_time, DPP_trans, DFS_trans, DFS_rec_trans, BFS_trans
+        # return DPP_time, DFS_time, DFS_rec_time, BFS_time, DPP_trans, DFS_trans, DFS_rec_trans, BFS_trans
 
     def multi_instances(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
         numObjs_list = [9, 13, 17, 21, 25]
@@ -3333,5 +3325,5 @@ if __name__ == "__main__":
         EXP.load_instance(savefile, True, display, displayMore)
     else:
         # EXP.density_test(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        # EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        # EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
