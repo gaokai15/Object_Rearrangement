@@ -291,8 +291,9 @@ def drawMotions(HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, example_
         for i in range(len(polygons)):
             obj_idx = i // 2
             isGoal = i % 2
-            patch = createPolygonPatch_distinct(polygons[i], color_pool[obj_idx], isGoal)
-            ax.add_patch(patch)
+            for cont in polygons[i]:
+                patch = createPolygonPatch_distinct(cont, color_pool[obj_idx], isGoal)
+                ax.add_patch(patch)
         ### label these polygons
         for i in range(len(points)):
             obj_idx = i // 2
@@ -628,7 +629,10 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
     if display:
         drawConGraph(HEIGHT, WIDTH, paths, color_pool, objects)
 
-    return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths
+    if repath:
+        return graph, paths, objects, color_pool, points, polygon, obj2reg
+    return graph, paths, objects, obj2reg, regions, polygon
+    # return numObjs, RAD, HEIGHT, WIDTH, points, objects, graph, paths
 
 
 if __name__ == "__main__":
