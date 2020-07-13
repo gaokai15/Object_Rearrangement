@@ -2959,23 +2959,30 @@ class DFS_DP_Recursion(object):
         # print("Points: ", self.points)
         # print("Reg: ", self.mink_objs)
         # print("Space: ", self.space)
-        print(obj, obj+1 if obj % 2 == 0 else obj - 1)
-        freespace = self.space - sum([self.mink_objs[i] for i in occupied_poses], self.empty)
-        c = 0
-        for comp in freespace.get_components():
-            # print("Comp: ", c, comp.to_list())
-            c += 1
-            print(comp.contains(*self.points[obj]))
-            print(comp.contains(*self.points[obj+1 if obj % 2 == 0 else obj - 1]))
+        other = obj+1 if obj % 2 == 0 else obj - 1
+        occupied = set(occupied_poses)
+        if obj in occupied:
+            occupied.remove(obj)
+        if other in occupied:
+            occupied.remove(other)
+        if True:
+            print(obj, other)
+            freespace = self.space - sum([self.mink_objs[i] for i in occupied], self.empty)
+            c = 0
+            for comp in freespace.get_components():
+                # print("Comp: ", c, comp.to_list())
+                c += 1
+                print(comp.contains(*self.points[obj]))
+                print(comp.contains(*self.points[obj+1 if obj % 2 == 0 else obj - 1]))
 
-            first = comp.contains(*self.points[obj])
-            second = comp.contains(*self.points[obj+1 if obj % 2 == 0 else obj - 1])
-            if first and second:
-                # return 0
-                print 0
-            # return len(self.dependency_dict[obj]) - 1
-        # return -1
-        print -1
+                first = comp.contains(*self.points[obj])
+                second = comp.contains(*self.points[obj+1 if obj % 2 == 0 else obj - 1])
+                if first and second:
+                    # return 0
+                    print("Obj,Poses,Result", obj, occupied_poses, 0)
+                # return len(self.dependency_dict[obj]) - 1
+            # return -1
+            print("Obj,Poses,Result", obj, occupied_poses, -1)
 
         if obj not in self.dependency_dict:
             self.dependency_dict[obj] = []
@@ -2988,7 +2995,7 @@ class DFS_DP_Recursion(object):
                     OCCUPIED = True
                     break
             if not OCCUPIED:
-                print path_index
+                print path_index, path
                 return path_index
         Available_Regions = []
         for region in self.region_dict.keys():
