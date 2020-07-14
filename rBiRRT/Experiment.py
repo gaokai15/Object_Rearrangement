@@ -81,7 +81,7 @@ class Experiment(object):
         start_time = clock()
         self.plan_DP_local = BiDirDPPlanner(
             self.initial_arrangement, self.final_arrangement, self.instance, self.regionGraph.obj2reg, region_dict,
-            linked_list, self.visualTool
+            linked_list, self.visualTool, self.wall_mink
         )
         self.comTime_DP_local = clock() - start_time
         print "Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_local)

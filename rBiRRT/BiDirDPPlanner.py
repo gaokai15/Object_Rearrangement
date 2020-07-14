@@ -6,19 +6,25 @@ from util import *
 import copy
 import IPython
 import random
-from random import sample
+from random import sample, choice
 from collections import OrderedDict
+from itertools import chain
+from region import region
+from RegionGraphGenerator import RegionGraphGenerator
 
 class BiDirDPPlanner(object):
     ### Input:
     ### (1) initial_arrangement (a list of pose_ids, each of which indicating the initial pose for an object)
     ### (2) final_arrangement (a list of pose_ids, each of which indicating the final pose for an object)
-    ### instance 
+    ### instance
     ### (i) workspace, (ii) object centers/slots, (iii) buffer centers/slots
     ### visualTool: a visualization tool as a debugging purpose
     ### Output:
-    ### the whole plan 
-    def __init__(self, init_arr, final_arr, instance, Object_locations, region_dict, linked_list, visualTool):
+    ### the whole plan
+    def __init__(self, init_arr, final_arr, instance, Object_locations, region_dict, linked_list, visualTool, wall_mink):
+        self.visualTool = visualTool
+        self.instance = instance
+        self.wall_mink = wall_mink
         self.initial_arrangement = init_arr
         self.final_arrangement = final_arr
         self.points = instance.points + instance.buffer_points
@@ -121,8 +127,8 @@ class BiDirDPPlanner(object):
             return None
         ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
         subTree = DFS_Rec_for_Monotone(
-            mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict, \
-            self.Object_locations, self.linked_list, self.region_dict)
+                mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict, \
+                        self.Object_locations, self.linked_list, self.region_dict)
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
@@ -140,7 +146,7 @@ class BiDirDPPlanner(object):
             temp_object_idx = obj_idx
             temp_path_option = subTree.path_option[self.magicNumber]
             self.treeR["R"+str(self.right_idx)] = ArrNode(
-                        new_arrangement, "R"+str(self.right_idx), temp_transition, temp_object_idx, temp_path_option)
+                    new_arrangement, "R"+str(self.right_idx), temp_transition, temp_object_idx, temp_path_option)
             self.arrRightRegistr.append(new_arrangement)
             self.idRightRegistr.append("R"+str(self.right_idx))
             self.right_idx += 1
@@ -156,7 +162,46 @@ class BiDirDPPlanner(object):
         ### choose an object to move
         obj_idx = random.choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = random.choice(self.allPoses)
+
+
+        ### MAKE THIS INCREMENTAL LATER
+
+        ### BUFFER POINTS / BUFFERS
+        instance = self.instance.copy()
+        numBuffers = 2  ### we can decide the number of buffers based on numObjs later
+
+        polysum = region()
+        for obj in mutated_arrangement:
+            if obj != obj_idx:
+                polysum += self.instance.minkowski_objs[obj] & self.wall_mink
+        b_points = set()
+        for x in polysum.get_components():
+            b_points.update(chain(*x.to_list()))
+        print(b_points)
+
+        # numBuffers = len(b_points)
+        for i in range(numBuffers):
+            point = choice(list(b_points))
+            b_points.remove(point)
+            instance.buffer_points.append(point)
+            buff = instance.polygon + point
+            instance.buffers.append([buff.tolist()])
+            mink_obj = 2 * instance.polygon + point  ### grown_shape buffer
+            instance.minkowski_buffers.append(region(mink_obj.tolist(), True))
+        ### BUFFER POINTS / BUFFERS
+
+
+        ### Now let's generate the region graph and build its connection
+        regionGraph = RegionGraphGenerator(instance, self.visualTool, self.wall_mink)
+        ### get the region dict and LL from the graph
+        region_dict, linked_list = self.linked_list_conversion(regionGraph.graph)
+        Object_locations = regionGraph.obj2reg
+        points = instance.points + instance.buffer_points
+        objects = instance.objects + instance.buffers
+        nPoses = len(points)
+        allPoses = range(nPoses)
+
+        pose_idx = random.choice(allPoses[2*self.numObjs:])
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
@@ -171,8 +216,8 @@ class BiDirDPPlanner(object):
             return None
         ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
         subTree = DFS_Rec_for_Monotone(
-            mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict, \
-            self.Object_locations, self.linked_list, self.region_dict)
+                mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict,
+                Object_locations, linked_list, region_dict)
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
@@ -180,6 +225,15 @@ class BiDirDPPlanner(object):
             # print("the mutation node cannot be connected")
             return None
         else:
+            self.instance = instance
+            self.points = instance.points + instance.buffer_points
+            self.objects = instance.objects + instance.buffers
+            self.nPoses = len(self.points)
+            self.allPoses = range(self.nPoses)
+            self.Object_locations = Object_locations
+            self.region_dict = region_dict
+            self.linked_list = linked_list
+
             ### we reach here since it is a duplicate and it can be connected
             ### welcome this new arrangement
             print("the new arrangement after mutation has been accepted")
@@ -190,7 +244,7 @@ class BiDirDPPlanner(object):
             temp_object_idx = obj_idx
             temp_path_option = subTree.path_option[self.magicNumber]
             self.treeL["L"+str(self.left_idx)] = ArrNode(
-                        new_arrangement, "L"+str(self.left_idx), temp_transition, temp_object_idx, temp_path_option)
+                    new_arrangement, "L"+str(self.left_idx), temp_transition, temp_object_idx, temp_path_option)
             self.arrLeftRegistr.append(new_arrangement)
             self.idLeftRegistr.append("L"+str(self.left_idx))
             self.left_idx += 1
@@ -201,8 +255,8 @@ class BiDirDPPlanner(object):
 
     def growSubTree(self, initNode, goalNode, treeSide):
         subTree = DFS_Rec_for_Monotone(
-            initNode.arrangement, goalNode.arrangement, self.dependency_dict, self.path_dict, \
-            self.Object_locations, self.linked_list, self.region_dict)
+                initNode.arrangement, goalNode.arrangement, self.dependency_dict, self.path_dict, \
+                        self.Object_locations, self.linked_list, self.region_dict)
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
@@ -254,7 +308,7 @@ class BiDirDPPlanner(object):
                     IPython.embed()
                 ### this is a new arrangement
                 self.treeR["R"+str(self.right_idx)] = ArrNode(
-                            child_arrangement, "R"+str(self.right_idx), temp_transition, temp_object_idx, temp_path_option)
+                        child_arrangement, "R"+str(self.right_idx), temp_transition, temp_object_idx, temp_path_option)
                 self.arrRightRegistr.append(child_arrangement)
                 self.idRightRegistr.append("R"+str(self.right_idx))
                 self.right_idx += 1
@@ -310,7 +364,7 @@ class BiDirDPPlanner(object):
                     IPython.embed()
                 ### this is a new arrangement
                 self.treeL["L"+str(self.left_idx)] = ArrNode(
-                            child_arrangement, "L"+str(self.left_idx), temp_transition, temp_object_idx, temp_path_option)
+                        child_arrangement, "L"+str(self.left_idx), temp_transition, temp_object_idx, temp_path_option)
                 self.arrLeftRegistr.append(child_arrangement)
                 self.idLeftRegistr.append("L"+str(self.left_idx))
                 self.left_idx += 1
@@ -359,7 +413,7 @@ class BiDirDPPlanner(object):
         self.numNodesInLeftTree = len(self.treeL)
         self.numNodesInRightTree = len(self.treeR)
         self.simplePath = []
-        ### from leftKey, back track to left root via parent search 
+        ### from leftKey, back track to left root via parent search
         curr_waypoint_id = self.leftKey
         self.simplePath.insert(0, curr_waypoint_id)
         while curr_waypoint_id != "L0":
@@ -388,6 +442,23 @@ class BiDirDPPlanner(object):
 
         return int(temp_str, 2)
 
+    def linked_list_conversion(self, graph):
+        # print "graph"
+        # print graph
+        region_dict = {}  # (1,2,'a'): 0
+        LL = {}  # 0:[1,2,3]
+        for key in graph:
+            index = len(region_dict.keys())
+            region_dict[key] = index
+            LL[index] = []
+        for key in graph:
+            for v in graph[key]:
+                LL[region_dict[key]].append(region_dict[v])
+        # print "LL"
+        # print self.LL
+        # print "region dict"
+        # print self.region_dict
+        return region_dict, LL
 
 
 class ArrNode(object):
