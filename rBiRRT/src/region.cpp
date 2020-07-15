@@ -13,7 +13,7 @@
 #include <boost/unordered_map.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/python/iterator.hpp>
-#include <boost/container_hash/hash.hpp>
+#include <boost/functional/hash.hpp>
 #include <boost/pending/disjoint_sets.hpp>
 #include <boost/property_map/vector_property_map.hpp>
 
@@ -542,8 +542,9 @@ py::list Region::get_components()
 			NefPoly face(++fpoints.begin(), fpoints.end(), EXCLUDED);
 
 			if (DEBUG)
-				std::cerr << "Is Hole? " << poly2fis[face].size() << '\n';
-			if (poly2fis[face].size())
+				std::cerr << "Is Hole? " << poly2fis[face].size() << face.intersection(poly).is_empty() << '\n';
+			// if (poly2fis[face].size())
+			if (face.intersection(poly).is_empty())
 				continue;
 
 			NefPoly to_remove;

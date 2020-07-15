@@ -38,6 +38,41 @@ def regionsCollide(r1, r2):
     return not cr1.intersection(cr2).is_empty()
 
 
+def collisionCheck(objects):
+    for i in range(len(objects) - 1):
+        for poly in objects[i + 1:]:
+            if regionsCollide(poly[0], objects[i][0]):
+                return False
+    return True
+
+
+def isCollisionFree(robot, point, obstacles):
+    robotAt = np.add(point, robot).tolist()
+    for poly in obstacles:
+        if regionsCollide(poly[0], robotAt):
+            return False
+
+    return True
+
+
+def countNumOverlap(object_shape, center, obstacles, buffer_obs, numOverlapAllowed):
+    buffer_polygon = np.add(center, object_shape).tolist()
+    ### Now check if the new buffer collides with all other objects (as obstacles)
+    numOverlap = 0
+    for poly in obstacles:
+        if regionsCollide(poly[0], buffer_polygon):
+            numOverlap += 1
+        if (numOverlap > numOverlapAllowed):
+            return numOverlap
+    for poly in buffer_obs:
+        if regionsCollide(poly[0], buffer_polygon):
+            numOverlap += 3
+        if (numOverlap > numOverlapAllowed):
+            return numOverlap
+    ### reach here since numOverlap <= numOverlapAllowed
+    return numOverlap
+
+
 def poly_disk(center, radius, resolution=1):
     poly = []
     for i in range(0, 360, resolution):
