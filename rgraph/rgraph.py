@@ -122,7 +122,14 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
 
         # interR = set(chain(*r1.to_list())) & set(chain(*r2.to_list()))
         r1Ur2 = r1 + r2
-        maybe = r1Ur2.disconnected()
+        # t0 = time()
+        # maybe = r1Ur2.disconnected()
+        # print("Maybe0: ", time() - t0)
+
+        # t0 = time()
+        # print(len(s1 & s2), (s1 & s2 == s1 and s1 | s2 == s2) or (s1 & s2 == s2 and s1 | s2 == s1))
+        # print("Maybe1: ", time() - t0)
+
         # # print(rind1, rind2, r1 == r2)
         # if maybe != (len(interR) == 0):
         #     print(maybe, interR)
@@ -137,9 +144,21 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
         # print("maybe", r1Ur2.disconnected())
         # print(time() - t0)
 
-        if not maybe:
-            if len(r1Ur2.get_components()) == 1:
-                # if len(interR) > 1:
+        # if s1 < s2 or s2 < s1:
+        #     print(len(s1 ^ s2) - len(s1 & s2), s1, s2, s1 ^ s2, s1 & s2, s1 | s2)
+
+        ### Run this on dense case for testing
+        # if not ((not (r1.closure() & r2.closure()).is_empty() and not maybe) == (len(r1Ur2.get_components()) == 1)):
+        #     print((r1.closure() & r2.closure()).is_empty())
+        #     print(maybe)
+        #     print(len(r1Ur2.get_components()) == 1)
+        #     print(str(r1))
+        #     print(str(r2))
+        #     print(r1.to_list(), r2.to_list())
+
+        if not (r1.closure() & r2.closure()).is_empty():
+            # if len(r1Ur2.get_components()) == 1:
+            if not r1Ur2.disconnected():
                 paths.append((rind1, rind2))
 
     graph = {}

@@ -542,8 +542,9 @@ py::list Region::get_components()
 			NefPoly face(++fpoints.begin(), fpoints.end(), EXCLUDED);
 
 			if (DEBUG)
-				std::cerr << "Is Hole? " << poly2fis[face].size() << '\n';
-			if (poly2fis[face].size())
+				std::cerr << "Is Hole? " << poly2fis[face].size() << face.intersection(poly).is_empty() << '\n';
+			// if (poly2fis[face].size())
+			if (face.intersection(poly).is_empty())
 				continue;
 
 			NefPoly to_remove;

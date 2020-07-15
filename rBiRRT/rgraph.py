@@ -38,41 +38,6 @@ def regionsCollide(r1, r2):
     return not cr1.intersection(cr2).is_empty()
 
 
-def collisionCheck(objects):
-    for i in range(len(objects) - 1):
-        for poly in objects[i + 1:]:
-            if regionsCollide(poly[0], objects[i][0]):
-                return False
-    return True
-
-
-def isCollisionFree(robot, point, obstacles):
-    robotAt = np.add(point, robot).tolist()
-    for poly in obstacles:
-        if regionsCollide(poly[0], robotAt):
-            return False
-
-    return True
-
-
-def countNumOverlap(object_shape, center, obstacles, buffer_obs, numOverlapAllowed):
-    buffer_polygon = np.add(center, object_shape).tolist()
-    ### Now check if the new buffer collides with all other objects (as obstacles)
-    numOverlap = 0
-    for poly in obstacles:
-        if regionsCollide(poly[0], buffer_polygon):
-            numOverlap += 1
-        if (numOverlap > numOverlapAllowed):
-            return numOverlap
-    for poly in buffer_obs:
-        if regionsCollide(poly[0], buffer_polygon):
-            numOverlap += 3
-        if (numOverlap > numOverlapAllowed):
-            return numOverlap
-    ### reach here since numOverlap <= numOverlapAllowed
-    return numOverlap
-
-
 def poly_disk(center, radius, resolution=1):
     poly = []
     for i in range(0, 360, resolution):
@@ -157,7 +122,14 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
 
         # interR = set(chain(*r1.to_list())) & set(chain(*r2.to_list()))
         r1Ur2 = r1 + r2
-        maybe = r1Ur2.disconnected()
+        # t0 = time()
+        # maybe = r1Ur2.disconnected()
+        # print("Maybe0: ", time() - t0)
+
+        # t0 = time()
+        # print(len(s1 & s2), (s1 & s2 == s1 and s1 | s2 == s2) or (s1 & s2 == s2 and s1 | s2 == s1))
+        # print("Maybe1: ", time() - t0)
+
         # # print(rind1, rind2, r1 == r2)
         # if maybe != (len(interR) == 0):
         #     print(maybe, interR)
@@ -172,9 +144,21 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
         # print("maybe", r1Ur2.disconnected())
         # print(time() - t0)
 
-        if not maybe:
-            if len(r1Ur2.get_components()) == 1:
-                # if len(interR) > 1:
+        # if s1 < s2 or s2 < s1:
+        #     print(len(s1 ^ s2) - len(s1 & s2), s1, s2, s1 ^ s2, s1 & s2, s1 | s2)
+
+        ### Run this on dense case for testing
+        # if not ((not (r1.closure() & r2.closure()).is_empty() and not maybe) == (len(r1Ur2.get_components()) == 1)):
+        #     print((r1.closure() & r2.closure()).is_empty())
+        #     print(maybe)
+        #     print(len(r1Ur2.get_components()) == 1)
+        #     print(str(r1))
+        #     print(str(r2))
+        #     print(r1.to_list(), r2.to_list())
+
+        if not (r1.closure() & r2.closure()).is_empty():
+            # if len(r1Ur2.get_components()) == 1:
+            if not r1Ur2.disconnected():
                 paths.append((rind1, rind2))
 
     graph = {}
@@ -247,9 +231,9 @@ def regionPath(r1, r2, seed=o55, debug=None):
         start.snap_to_boundary_of(env, epsilon)
         start.snap_to_vertices_of(env, epsilon)
 
-        # t0 = time()
+        t0 = time()
         ppath = env.shortest_path(start, goal, epsilon)
-        # print(time() - t0)
+        print(time() - t0)
 
         path = [(p.x(), p.y()) for p in ppath.path()]
 
@@ -271,9 +255,9 @@ def regionPath(r1, r2, seed=o55, debug=None):
         start.snap_to_boundary_of(env, epsilon)
         start.snap_to_vertices_of(env, epsilon)
 
-        # t0 = time()
+        t0 = time()
         ppath = env.shortest_path(start, goal, epsilon)
-        # print(time() - t0)
+        print(time() - t0)
 
         path += [(p.x(), p.y()) for p in ppath.path()][1:]
     else:
