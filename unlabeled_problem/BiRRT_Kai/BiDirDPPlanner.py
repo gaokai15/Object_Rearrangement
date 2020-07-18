@@ -61,11 +61,6 @@ class BiDirDPPlanner(object):
         self.leftLeaves = ["L0"] ### keep track of leaves in the left tree
         self.rightLeaves = ["R0"] ### keep track of leaves in the right tree
 
-        ################# testing #################
-        self.num_mutation = 0
-        self.mutation_time_list = []
-        self.avg_time = 0.0
-        self.total_time = 0.0
 
         ################## results ################
         self.isConnected = False
@@ -87,26 +82,18 @@ class BiDirDPPlanner(object):
         if (self.isConnected != True):
             self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
-        totalTime_allowed = 900.0 ### allow 500s for the total search tree construction
+        totalTime_allowed = 500 ### allow 500s for the total search tree construction
         start_time = time.clock()        
 
         while (self.isConnected != True and time.clock() - start_time < totalTime_allowed):
             ### The problem is not monotone
-            start = time.time()
             newChild_nodeID = self.mutateLeftChild()
             if newChild_nodeID != None:
                 self.growSubTree(self.treeL[newChild_nodeID], self.treeR["R0"], "Left")
-            self.mutation_time_list.append(time.time()-start)
-            self.num_mutation += 1
-
-
-            start = time.time()
             if (self.isConnected != True):
                 newChild_nodeID = self.mutateRightChild()
                 if newChild_nodeID != None:
                     self.growSubTree(self.treeR[newChild_nodeID], self.treeL["L0"], "Right")
-            self.mutation_time_list.append(time.time()-start)
-            self.num_mutation += 1
 
 
         if self.isConnected:

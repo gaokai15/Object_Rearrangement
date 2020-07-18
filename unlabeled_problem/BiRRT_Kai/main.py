@@ -74,8 +74,8 @@ if __name__ == "__main__":
 
     radius = 80
     para_combinations = []
-    for D in [0.4, 0.5]:
-        for num in [27,29]:
+    for num in [13,15,17,19]:
+        for D in [ 0.4, 0.5, 0.6]:
             H = math.sqrt(2*num*math.pi*radius*radius/D)
             para_combinations.append([num, radius, H, H])
 
@@ -131,13 +131,6 @@ if __name__ == "__main__":
                 successSolTimes_DP_local += 1
                 comTime_DP_local += EXP.comTime_DP_local
                 numActions_DP_local += EXP.totalActions_DP_local
-            enablePrint()
-            for i in range(EXP.plan_DP_local.num_mutation):
-                EXP.plan_DP_local.total_time += EXP.plan_DP_local.mutation_time_list[i]
-            if EXP.plan_DP_local.num_mutation != 0:
-                EXP.plan_DP_local.avg_time = EXP.plan_DP_local.total_time/EXP.plan_DP_local.num_mutation
-            print EXP.genSolutionFailure_DP_local, EXP.plan_DP_local.num_mutation, EXP.plan_DP_local.avg_time, EXP.plan_DP_local.total_time
-            blockPrint()
 
             ### method 1.5: DP_BruteForce
             if EXP.genSolutionFailure_DP_BruteForce == True:
