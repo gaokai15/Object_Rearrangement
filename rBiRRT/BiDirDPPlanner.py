@@ -1,6 +1,5 @@
 from __future__ import division
 
-
 from DPLocalSolver import DFS_Rec_for_Monotone
 from util import *
 import copy
@@ -12,6 +11,7 @@ from itertools import chain
 from region import region
 from RegionGraphGenerator import RegionGraphGenerator
 
+
 class BiDirDPPlanner(object):
     ### Input:
     ### (1) initial_arrangement (a list of pose_ids, each of which indicating the initial pose for an object)
@@ -21,7 +21,9 @@ class BiDirDPPlanner(object):
     ### visualTool: a visualization tool as a debugging purpose
     ### Output:
     ### the whole plan
-    def __init__(self, init_arr, final_arr, instance, Object_locations, region_dict, linked_list, visualTool, wall_mink):
+    def __init__(
+        self, init_arr, final_arr, instance, Object_locations, region_dict, linked_list, visualTool, wall_mink
+    ):
         self.visualTool = visualTool
         self.instance = instance
         self.wall_mink = wall_mink
@@ -61,20 +63,20 @@ class BiDirDPPlanner(object):
         self.idRightRegistr.append("R0")
         self.leftKey = "L0"
         self.rightKey = "R0"
-        self.bridge = [] ### [leftKey, rightKey, object_transition, objectMoved, path_option]
-        self.leftLeaves = ["L0"] ### keep track of leaves in the left tree
-        self.rightLeaves = ["R0"] ### keep track of leaves in the right tree
-
+        self.bridge = []  ### [leftKey, rightKey, object_transition, objectMoved, path_option]
+        self.leftLeaves = ["L0"]  ### keep track of leaves in the left tree
+        self.rightLeaves = ["R0"]  ### keep track of leaves in the right tree
 
         ################## results ################
         self.isConnected = False
         ### the whole_path is a list of items and each item has the following format
         ### [("node1_id", node2_id), {2:path2, 1:path1, ...}]
-        self.totalActions = 0 ### record the total number of actions
-        self.numLeftBranches = 0 ### record the number of left branches in the solution
-        self.numRightBranches = 0 ### record the number of right branches in the solution
-        self.numNodesInLeftTree = 0 ### record the total number of nodes in the left tree
-        self.numNodesInRightTree = 0 ### record the total number of nodes in the right tree
+        self.whole_path = []
+        self.totalActions = 0  ### record the total number of actions
+        self.numLeftBranches = 0  ### record the number of left branches in the solution
+        self.numRightBranches = 0  ### record the number of right branches in the solution
+        self.numNodesInLeftTree = 0  ### record the total number of nodes in the left tree
+        self.numNodesInRightTree = 0  ### record the total number of nodes in the right tree
 
         ### start ruuning
         self.left_idx = 1
@@ -100,7 +102,6 @@ class BiDirDPPlanner(object):
                 if newChild_id != None:
                     self.growSubTree(self.treeR[newChild_id], self.treeL["L0"], "Right")
 
-
         if self.isConnected:
             self.getTheStat()
 
@@ -112,7 +113,97 @@ class BiDirDPPlanner(object):
         ### choose an object to move
         obj_idx = random.choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = random.choice(self.allPoses)
+
+        # print("Obj_idx: ", obj_idx)
+        # print("mutated_arrangement: " + str(mutated_arrangement))
+        ### choose a slot to put the object
+        numBuffers = 1
+        allPoses = self.allPoses
+        pose_idx_ind = random.choice(range(len(self.allPoses) + numBuffers))
+
+        if pose_idx_ind >= len(self.allPoses):
+            ### MAKE THIS INCREMENTAL LATER
+
+            ### BUFFER POINTS / BUFFERS
+            instance = self.instance.copy()
+            ppoints = instance.points + instance.buffer_points
+            minks = self.instance.minkowski_objs + self.instance.minkowski_buffers
+
+            candidates = self.wall_mink
+            end_pos = self.wall_mink
+            for ind, obj in enumerate(mutated_arrangement):
+                if ind != obj_idx:
+                    candidates -= minks[obj]
+                    end_pos -= minks[2 * ind]
+
+            if self.visualTool.display:
+                self.visualTool.drawRegionGraph(
+                    {0: [ppoints[mutated_arrangement[obj_idx]]]}, [x.to_list() for x in candidates.get_components()],
+                    label=False
+                )
+                self.visualTool.drawRegionGraph(
+                    {0: [ppoints[2 * ind]]}, [x.to_list() for x in end_pos.get_components()], label=False
+                )
+                self.visualTool.drawRegionGraph(
+                    {
+                        0: [ppoints[mutated_arrangement[obj_idx]]],
+                        1: [ppoints[2 * ind]]
+                    }, [x.to_list() for x in candidates.intersection(end_pos).get_components()],
+                    label=False
+                )
+
+            b_points = set()
+            reach_s = None
+            reach_g = None
+            for comp in candidates.get_components():
+                # check if buffer is reachable to start and goal
+                if comp.contains(*ppoints[mutated_arrangement[obj_idx]]):
+                    reach_s = comp
+                    print("region reachable from start")
+                    break
+
+            for comp in end_pos.get_components():
+                if comp.contains(*ppoints[2 * obj_idx]):
+                    reach_g = comp
+                    print("region reachable from goal")
+                    break
+
+            if reach_s is None:
+                return None
+            if reach_g is None:
+                b_points.update(chain(*reach_s.to_list()))
+            else:
+                reach = reach_s & reach_g
+                if reach.is_empty():
+                    # return None
+                    b_points.update(chain(*reach_s.to_list()))
+                else:
+                    b_points.update(chain(*reach.to_list()))
+
+            # numBuffers = len(b_points)
+            for i in range(numBuffers):
+                point = choice(list(b_points))
+                b_points.remove(point)
+                instance.buffer_points.append(point)
+                buff = instance.polygon + point
+                instance.buffers.append([buff.tolist()])
+                mink_obj = 2 * instance.polygon + point  ### grown_shape buffer
+                instance.minkowski_buffers.append(region(mink_obj.tolist(), True))
+            ### BUFFER POINTS / BUFFERS
+
+            ### Now let's generate the region graph and build its connection
+            regionGraph = RegionGraphGenerator(instance, self.visualTool, self.wall_mink)
+            ### get the region dict and LL from the graph
+            region_dict, linked_list = self.linked_list_conversion(regionGraph.graph)
+            Object_locations = regionGraph.obj2reg
+            points = instance.points + instance.buffer_points
+            objects = instance.objects + instance.buffers
+            nPoses = len(points)
+            allPoses = range(nPoses)
+            # print(points)
+
+        pose_idx = allPoses[pose_idx_ind]  #random.choice(list(set(allPoses) - set(mutated_arrangement)))
+        print(obj_idx, pose_idx, self.numObjs)
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
@@ -126,16 +217,38 @@ class BiDirDPPlanner(object):
             # print("The mutation makes a duplicate")
             return None
         ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
-        subTree = DFS_Rec_for_Monotone(
-                mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict, \
-                        self.Object_locations, self.linked_list, self.region_dict)
-        ### update dependency_dict and path_dict
-        self.dependency_dict = subTree.dependency_dict
-        self.path_dict = subTree.path_dict
+        if pose_idx_ind >= len(self.allPoses):
+            subTree = DFS_Rec_for_Monotone(
+                mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict, Object_locations,
+                linked_list, region_dict
+            )
+        else:
+            subTree = DFS_Rec_for_Monotone(
+                mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict, self.Object_locations,
+                self.linked_list, self.region_dict
+            )
+
         if subTree.isMonotone == False:
             # print("the mutation node cannot be connected")
+            if pose_idx_ind < len(self.allPoses):
+                ### update dependency_dict and path_dict
+                self.dependency_dict = subTree.dependency_dict
+                self.path_dict = subTree.path_dict
             return None
         else:
+            ### update dependency_dict and path_dict
+            self.dependency_dict = subTree.dependency_dict
+            self.path_dict = subTree.path_dict
+            if pose_idx_ind >= len(self.allPoses):
+                self.instance = instance
+                self.points = instance.points + instance.buffer_points
+                self.objects = instance.objects + instance.buffers
+                self.nPoses = len(self.points)
+                self.allPoses = range(self.nPoses)
+                self.Object_locations = Object_locations
+                self.region_dict = region_dict
+                self.linked_list = linked_list
+
             ### we reach here since it is a duplicate and it can be connected
             ### welcome this new arrangement
             print("the new arrangement after mutation has been accepted")
@@ -145,14 +258,13 @@ class BiDirDPPlanner(object):
                 IPython.embed()
             temp_object_idx = obj_idx
             temp_path_option = subTree.path_option[self.magicNumber]
-            self.treeR["R"+str(self.right_idx)] = ArrNode(
-                    new_arrangement, "R"+str(self.right_idx), temp_transition, temp_object_idx, temp_path_option)
+            self.treeR["R" + str(self.right_idx)] = ArrNode(
+                new_arrangement, "R" + str(self.right_idx), temp_transition, temp_object_idx, temp_path_option
+            )
             self.arrRightRegistr.append(new_arrangement)
-            self.idRightRegistr.append("R"+str(self.right_idx))
+            self.idRightRegistr.append("R" + str(self.right_idx))
             self.right_idx += 1
             return self.idRightRegistr[self.arrRightRegistr.index(new_arrangement)]
-
-
 
     def mutateLeftChild(self):
         ### first choose a node to mutate
@@ -161,47 +273,97 @@ class BiDirDPPlanner(object):
         mutated_arrangement = self.treeL[mutate_id].arrangement
         ### choose an object to move
         obj_idx = random.choice(range(self.numObjs))
+        # print("Obj_idx: ", obj_idx)
+        # print("mutated_arrangement: " + str(mutated_arrangement))
         ### choose a slot to put the object
+        numBuffers = 1
+        allPoses = self.allPoses
+        pose_idx_ind = random.choice(range(len(self.allPoses) + numBuffers))
+        # print("Pose_ind: ", pose_idx_ind)
 
+        if pose_idx_ind >= len(self.allPoses):
+            ### MAKE THIS INCREMENTAL LATER
 
-        ### MAKE THIS INCREMENTAL LATER
+            ### BUFFER POINTS / BUFFERS
+            instance = self.instance.copy()
+            ppoints = instance.points + instance.buffer_points
+            minks = self.instance.minkowski_objs + self.instance.minkowski_buffers
 
-        ### BUFFER POINTS / BUFFERS
-        instance = self.instance.copy()
-        numBuffers = 2  ### we can decide the number of buffers based on numObjs later
+            candidates = self.wall_mink
+            end_pos = self.wall_mink
+            for ind, obj in enumerate(mutated_arrangement):
+                if ind != obj_idx:
+                    candidates -= minks[obj]
+                    end_pos -= minks[2 * ind + 1]
 
-        polysum = region()
-        for obj in mutated_arrangement:
-            if obj != obj_idx:
-                polysum += self.instance.minkowski_objs[obj] & self.wall_mink
-        b_points = set()
-        for x in polysum.get_components():
-            b_points.update(chain(*x.to_list()))
-        print(b_points)
+            if self.visualTool.display:
+                self.visualTool.drawRegionGraph(
+                    {0: [ppoints[mutated_arrangement[obj_idx]]]}, [x.to_list() for x in candidates.get_components()],
+                    label=False
+                )
+                self.visualTool.drawRegionGraph(
+                    {0: [ppoints[2 * ind + 1]]}, [x.to_list() for x in end_pos.get_components()], label=False
+                )
+                self.visualTool.drawRegionGraph(
+                    {
+                        0: [ppoints[mutated_arrangement[obj_idx]]],
+                        1: [ppoints[2 * ind + 1]]
+                    }, [x.to_list() for x in candidates.intersection(end_pos).get_components()],
+                    label=False
+                )
 
-        # numBuffers = len(b_points)
-        for i in range(numBuffers):
-            point = choice(list(b_points))
-            b_points.remove(point)
-            instance.buffer_points.append(point)
-            buff = instance.polygon + point
-            instance.buffers.append([buff.tolist()])
-            mink_obj = 2 * instance.polygon + point  ### grown_shape buffer
-            instance.minkowski_buffers.append(region(mink_obj.tolist(), True))
-        ### BUFFER POINTS / BUFFERS
+            b_points = set()
+            reach_s = None
+            reach_g = None
+            for comp in candidates.get_components():
+                # check if buffer is reachable to start and goal
+                if comp.contains(*ppoints[mutated_arrangement[obj_idx]]):
+                    reach_s = comp
+                    print("region reachable from start")
+                    break
 
+            for comp in end_pos.get_components():
+                if comp.contains(*ppoints[2 * obj_idx + 1]):
+                    reach_g = comp
+                    print("region reachable from goal")
+                    break
 
-        ### Now let's generate the region graph and build its connection
-        regionGraph = RegionGraphGenerator(instance, self.visualTool, self.wall_mink)
-        ### get the region dict and LL from the graph
-        region_dict, linked_list = self.linked_list_conversion(regionGraph.graph)
-        Object_locations = regionGraph.obj2reg
-        points = instance.points + instance.buffer_points
-        objects = instance.objects + instance.buffers
-        nPoses = len(points)
-        allPoses = range(nPoses)
+            if reach_s is None:
+                return None
+            if reach_g is None:
+                b_points.update(chain(*reach_s.to_list()))
+            else:
+                reach = reach_s & reach_g
+                if reach.is_empty():
+                    # return None
+                    b_points.update(chain(*reach_s.to_list()))
+                else:
+                    b_points.update(chain(*reach.to_list()))
 
-        pose_idx = random.choice(allPoses[2*self.numObjs:])
+            # numBuffers = len(b_points)
+            for i in range(numBuffers):
+                point = choice(list(b_points))
+                b_points.remove(point)
+                instance.buffer_points.append(point)
+                buff = instance.polygon + point
+                instance.buffers.append([buff.tolist()])
+                mink_obj = 2 * instance.polygon + point  ### grown_shape buffer
+                instance.minkowski_buffers.append(region(mink_obj.tolist(), True))
+            ### BUFFER POINTS / BUFFERS
+
+            ### Now let's generate the region graph and build its connection
+            regionGraph = RegionGraphGenerator(instance, self.visualTool, self.wall_mink)
+            ### get the region dict and LL from the graph
+            region_dict, linked_list = self.linked_list_conversion(regionGraph.graph)
+            Object_locations = regionGraph.obj2reg
+            points = instance.points + instance.buffer_points
+            objects = instance.objects + instance.buffers
+            nPoses = len(points)
+            allPoses = range(nPoses)
+            # print(points)
+
+        pose_idx = allPoses[pose_idx_ind]  #random.choice(list(set(allPoses) - set(mutated_arrangement)))
+        print(obj_idx, pose_idx, self.numObjs)
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
@@ -215,24 +377,37 @@ class BiDirDPPlanner(object):
             # print("The mutation makes a duplicate")
             return None
         ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
-        subTree = DFS_Rec_for_Monotone(
-                mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict,
-                Object_locations, linked_list, region_dict)
-        ### update dependency_dict and path_dict
-        self.dependency_dict = subTree.dependency_dict
-        self.path_dict = subTree.path_dict
+        if pose_idx_ind >= len(self.allPoses):
+            subTree = DFS_Rec_for_Monotone(
+                mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict, Object_locations,
+                linked_list, region_dict
+            )
+        else:
+            subTree = DFS_Rec_for_Monotone(
+                mutated_arrangement, new_arrangement, self.dependency_dict, self.path_dict, self.Object_locations,
+                self.linked_list, self.region_dict
+            )
+
         if subTree.isMonotone == False:
             # print("the mutation node cannot be connected")
+            if pose_idx_ind < len(self.allPoses):
+                ### update dependency_dict and path_dict
+                self.dependency_dict = subTree.dependency_dict
+                self.path_dict = subTree.path_dict
             return None
         else:
-            self.instance = instance
-            self.points = instance.points + instance.buffer_points
-            self.objects = instance.objects + instance.buffers
-            self.nPoses = len(self.points)
-            self.allPoses = range(self.nPoses)
-            self.Object_locations = Object_locations
-            self.region_dict = region_dict
-            self.linked_list = linked_list
+            ### update dependency_dict and path_dict
+            self.dependency_dict = subTree.dependency_dict
+            self.path_dict = subTree.path_dict
+            if pose_idx_ind >= len(self.allPoses):
+                self.instance = instance
+                self.points = instance.points + instance.buffer_points
+                self.objects = instance.objects + instance.buffers
+                self.nPoses = len(self.points)
+                self.allPoses = range(self.nPoses)
+                self.Object_locations = Object_locations
+                self.region_dict = region_dict
+                self.linked_list = linked_list
 
             ### we reach here since it is a duplicate and it can be connected
             ### welcome this new arrangement
@@ -243,15 +418,13 @@ class BiDirDPPlanner(object):
                 IPython.embed()
             temp_object_idx = obj_idx
             temp_path_option = subTree.path_option[self.magicNumber]
-            self.treeL["L"+str(self.left_idx)] = ArrNode(
-                    new_arrangement, "L"+str(self.left_idx), temp_transition, temp_object_idx, temp_path_option)
+            self.treeL["L" + str(self.left_idx)] = ArrNode(
+                new_arrangement, "L" + str(self.left_idx), temp_transition, temp_object_idx, temp_path_option
+            )
             self.arrLeftRegistr.append(new_arrangement)
-            self.idLeftRegistr.append("L"+str(self.left_idx))
+            self.idLeftRegistr.append("L" + str(self.left_idx))
             self.left_idx += 1
             return self.idLeftRegistr[self.arrLeftRegistr.index(new_arrangement)]
-
-
-
 
     def growSubTree(self, initNode, goalNode, treeSide):
         subTree = DFS_Rec_for_Monotone(
@@ -265,7 +438,6 @@ class BiDirDPPlanner(object):
             self.engraftingLeftTree(subTree, initNode, goalNode)
         else:
             self.engraftingRightTree(subTree, initNode, goalNode)
-
 
     def engraftingRightTree(self, subTree, rootNode, goalNode):
         ### enumerate the parent info (family tree) of the subTree
@@ -307,10 +479,11 @@ class BiDirDPPlanner(object):
                     print("warning!! temp_transition check immediately")
                     IPython.embed()
                 ### this is a new arrangement
-                self.treeR["R"+str(self.right_idx)] = ArrNode(
-                        child_arrangement, "R"+str(self.right_idx), temp_transition, temp_object_idx, temp_path_option)
+                self.treeR["R" + str(self.right_idx)] = ArrNode(
+                    child_arrangement, "R" + str(self.right_idx), temp_transition, temp_object_idx, temp_path_option
+                )
                 self.arrRightRegistr.append(child_arrangement)
-                self.idRightRegistr.append("R"+str(self.right_idx))
+                self.idRightRegistr.append("R" + str(self.right_idx))
                 self.right_idx += 1
 
         ### You are reaching here since the subTree has been engrafted
@@ -319,9 +492,9 @@ class BiDirDPPlanner(object):
         ### [leftKey, rightKey, object_transition, objectMoved, path_option]
         if self.isConnected:
             self.rightKey = self.idRightRegistr[self.arrRightRegistr.index(self.rightKey_arr)]
-            self.bridge = [self.leftKey, self.rightKey, self.bridge_transition, self.bridge_objectMoved, self.bridge_path_option]
-
-
+            self.bridge = [
+                self.leftKey, self.rightKey, self.bridge_transition, self.bridge_objectMoved, self.bridge_path_option
+            ]
 
     def engraftingLeftTree(self, subTree, rootNode, goalNode):
         ### enumerate the parent info (family tree) of the subTree
@@ -363,10 +536,11 @@ class BiDirDPPlanner(object):
                     print("warning!! temp_transition check immediately")
                     IPython.embed()
                 ### this is a new arrangement
-                self.treeL["L"+str(self.left_idx)] = ArrNode(
-                        child_arrangement, "L"+str(self.left_idx), temp_transition, temp_object_idx, temp_path_option)
+                self.treeL["L" + str(self.left_idx)] = ArrNode(
+                    child_arrangement, "L" + str(self.left_idx), temp_transition, temp_object_idx, temp_path_option
+                )
                 self.arrLeftRegistr.append(child_arrangement)
-                self.idLeftRegistr.append("L"+str(self.left_idx))
+                self.idLeftRegistr.append("L" + str(self.left_idx))
                 self.left_idx += 1
 
         ### You are reaching here since the subTree has been engrafted
@@ -375,9 +549,9 @@ class BiDirDPPlanner(object):
         ### [leftKey, rightKey, object_transition, objectMoved, path_option]
         if self.isConnected:
             self.leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(self.leftKey_arr)]
-            self.bridge = [self.leftKey, self.rightKey, self.bridge_transition, self.bridge_objectMoved, self.bridge_path_option]
-
-
+            self.bridge = [
+                self.leftKey, self.rightKey, self.bridge_transition, self.bridge_objectMoved, self.bridge_path_option
+            ]
 
     def getTheObjectMoved(self, child_id, parent_id):
         for i in range(self.numObjs):
@@ -388,8 +562,6 @@ class BiDirDPPlanner(object):
                 return i
 
         return None
-
-
 
     def encodeArrangement(self, new_node_id, root_arrangement, goal_arrangement):
         ### This function, based on number of objects in the current problem
@@ -405,7 +577,6 @@ class BiDirDPPlanner(object):
                 new_arrangement.append(root_arrangement[i])
 
         return new_arrangement
-
 
     def getTheStat(self):
         print("Let's get stats!!")
@@ -433,7 +604,6 @@ class BiDirDPPlanner(object):
         print("path: " + str(self.simplePath))
         self.totalActions = len(self.simplePath) - 1
         print("total action: " + str(self.totalActions))
-
 
     def getMagicNumber(self, numObjs):
         temp_str = ''
@@ -474,9 +644,8 @@ class ArrNode(object):
     def getParentArr(self):
         parent_arr = copy.deepcopy(self.arrangement)
         if self.node_id[0] == 'L':
-            parent_arr[self.objectMoved] = self.object_transition[0] ### move to a pose before transition
+            parent_arr[self.objectMoved] = self.object_transition[0]  ### move to a pose before transition
         else:
-            parent_arr[self.objectMoved] = self.object_transition[1] ### move to a pose after transition
+            parent_arr[self.objectMoved] = self.object_transition[1]  ### move to a pose after transition
 
         return parent_arr
-

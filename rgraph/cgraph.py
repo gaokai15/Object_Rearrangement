@@ -464,7 +464,9 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
         if displayMore:
             drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
 
+    t0 = time()
     graph, regions, obj2reg = regions2graph(less_regions, wall_mink, polysum, points, 0)
+    print("R2G Time: ", time() - t0)
 
     regLists = []
     for i, x in regions.items():
@@ -580,7 +582,9 @@ def loadDenseCGraph(savefile, repath, display, displayMore):
             if displayMore:
                 drawConGraph(HEIGHT, WIDTH, {}, color_pool, [x.to_list()], False)
 
+        t0 = time()
         graph, regions, obj2reg = regions2graph(less_regions, wall_mink, polysum, points, 0)
+        print("R2G Time: ", time() - t0)
 
         regLists = []
         for i, x in regions.items():

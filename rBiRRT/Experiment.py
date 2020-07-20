@@ -94,6 +94,11 @@ class Experiment(object):
 
         self.genSolutionFailure_biRRT = True
         self.genSolutionFailure_biRRTstar = True
+
+        # if self.saveimage or self.display:
+        #     self.visualTool.displayLocalPaths(self.plan_DP_local, self.instance, self.final_arrangement)
+        # if self.display:
+        #     self.visualTool.drawEntireAnimation(self.plan_DP_local, self.instance, self.final_arrangement)
         return
 
         ### Now let's generate the region graph and build its connection

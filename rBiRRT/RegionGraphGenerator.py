@@ -13,14 +13,14 @@ class RegionGraphGenerator(object):
             self.paths = {}
 
         ### After cgraph generation, let's see if we want to display or save it
-        # if visualTool.display:
-        #     regLists = []
-        #     for i, x in self.regions.items():
-        #         regLists.append(x.to_list())
-        #     ### region graph without connections
-        #     visualTool.drawRegionGraph({}, self.regions.values(), label=False)
+        if visualTool.display:
+            #     regLists = []
+            #     for i, x in self.regions.items():
+            #         regLists.append(x.to_list())
+            #     ### region graph without connections
+            visualTool.drawRegionGraph({}, [x.to_list() for x in self.regions.values()], label=False)
         #     ### region graph with connections
-        #     visualTool.drawRegionGraph(self.paths, regLists, label=False)
+        # visualTool.drawRegionGraph(self.paths, regLists, label=False)
         #     ### connectivity graph
         #     visualTool.drawConGraph(self.paths, instance.points, instance.objects, instance.buffers)
 
