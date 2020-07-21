@@ -84,6 +84,7 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
                 <0 will prune using absolute value as the hamming
                    distance but always connect to the free space
     """
+    t0 = time()
     regions = ref_regions.copy()
     point2regs = {}
     for rind, r in regions.items():
@@ -103,12 +104,15 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
     cfree = mink_boundary - polysum
     for i, rfree in enumerate(cfree.get_components(), 1):
         regions[(-i, )] = rfree
+    print("Comps Time: ", time() - t0)
 
+    t0 = time()
     paths = []
     for rkv1, rkv2 in combinations(regions.items(), 2):
         rind1, r1 = rkv1
         rind2, r2 = rkv2
 
+        # t1 = time()
         s1 = set(rind1[:-1])
         s2 = set(rind2[:-1])
         s1vs2 = s1.intersection(s2)
@@ -119,9 +123,10 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
             if len(s1 ^ s2) > abs(prune_dist):
                 if s1 and s2 or prune_dist > 0:
                     continue
+        # print("Prune Time: ", time() - t1)
 
         # interR = set(chain(*r1.to_list())) & set(chain(*r2.to_list()))
-        r1Ur2 = r1 + r2
+        # r1Ur2 = r1 + r2
         # t0 = time()
         # maybe = r1Ur2.disconnected()
         # print("Maybe0: ", time() - t0)
@@ -156,10 +161,15 @@ def regions2graph(ref_regions, mink_boundary, polysum, points=[], prune_dist=0):
         #     print(str(r2))
         #     print(r1.to_list(), r2.to_list())
 
+        # t1 = time()
         if not (r1.closure() & r2.closure()).is_empty():
             # if len(r1Ur2.get_components()) == 1:
-            if not r1Ur2.disconnected():
+            if not (r1 + r2).disconnected():
                 paths.append((rind1, rind2))
+        # print("Connect Time: ", time() - t1)
+
+    print("Connect Edges Time: ", time() - t0)
+    t0 = time()
 
     graph = {}
     for u, v in paths:

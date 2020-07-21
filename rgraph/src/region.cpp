@@ -2,6 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <iterator>
+#include <sys/time.h>
 #include <CGAL/circulator.h>
 #include <CGAL/Exact_integer.h>
 #include <CGAL/Nef_polyhedron_2.h>
@@ -18,6 +19,14 @@
 #include <boost/property_map/vector_property_map.hpp>
 
 const bool DEBUG = false;
+long long currentTimeStamp()
+{
+	struct timeval te;
+	gettimeofday(&te, NULL); // get current time
+	long long milliseconds =
+	        te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
+	return milliseconds;
+}
 
 namespace py = boost::python;
 
@@ -465,6 +474,8 @@ bool Region::disconnected()
 py::list Region::get_components()
 {
 	// const bool DEBUG = true;
+	long long t0 = currentTimeStamp();
+
 	py::list pypoly = py::list();
 	if (poly.is_empty())
 		return pypoly;
@@ -478,6 +489,11 @@ py::list Region::get_components()
 	Explorer expl = poly.explorer();
 	Face_it fit = ++expl.faces_begin(), fend = expl.faces_end();
 	Face_it oface = fit;
+
+	if (DEBUG) {
+		std::cerr << "Init Time: " << (currentTimeStamp() - t0) << '\n';
+		t0 = currentTimeStamp();
+	}
 
 	if (DEBUG)
 		std::cerr << "--- Faces ---\n";
@@ -607,6 +623,11 @@ py::list Region::get_components()
 		}
 	}
 
+	if (DEBUG) {
+		std::cerr << "Faces Time: " << (currentTimeStamp() - t0) << '\n';
+		t0 = currentTimeStamp();
+	}
+
 	// fit = ++expl.faces_begin();
 
 	if (DEBUG)
@@ -617,6 +638,11 @@ py::list Region::get_components()
 			std::cerr << "Vert " << i << ": " << expl.point(ivit) << ", " << ivit->mark() << '\n';
 		Point point[1] = {expl.point(ivit)};
 		pypoly.append(Region(NefPoly(point, point + 1)));
+	}
+
+	if (DEBUG) {
+		std::cerr << "IsoVert Time: " << (currentTimeStamp() - t0) << '\n';
+		t0 = currentTimeStamp();
 	}
 
 	if (DEBUG)
@@ -676,6 +702,11 @@ py::list Region::get_components()
 		// poly2fis[outer].size();
 	}
 
+	if (DEBUG) {
+		std::cerr << "IsoEdge Time: " << (currentTimeStamp() - t0) << '\n';
+		t0 = currentTimeStamp();
+	}
+
 	// Consolidate Faces / Edges
 	for (auto fip = fi2poly.begin(); fip != fi2poly.end(); fip++) {
 		size_t fi = fip->first;
@@ -690,6 +721,11 @@ py::list Region::get_components()
 		size_t pi = ds.find_set(fi);
 		if (fi == pi)
 			pypoly.append(Region(fip->second));
+	}
+
+	if (DEBUG) {
+		std::cerr << "ListGen Time: " << (currentTimeStamp() - t0) << '\n';
+		t0 = currentTimeStamp();
 	}
 
 	return pypoly;
