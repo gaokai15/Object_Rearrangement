@@ -171,11 +171,12 @@ class BiDirDPPlanner(object):
             if reach_s is None:
                 return None
             if reach_g is None:
+                return None
                 b_points.update(chain(*reach_s.to_list()))
             else:
                 reach = reach_s & reach_g
                 if reach.is_empty():
-                    # return None
+                    return None
                     b_points.update(chain(*reach_s.to_list()))
                 else:
                     b_points.update(chain(*reach.to_list()))
@@ -331,11 +332,12 @@ class BiDirDPPlanner(object):
             if reach_s is None:
                 return None
             if reach_g is None:
+                return None
                 b_points.update(chain(*reach_s.to_list()))
             else:
                 reach = reach_s & reach_g
                 if reach.is_empty():
-                    # return None
+                    return None
                     b_points.update(chain(*reach_s.to_list()))
                 else:
                     b_points.update(chain(*reach.to_list()))

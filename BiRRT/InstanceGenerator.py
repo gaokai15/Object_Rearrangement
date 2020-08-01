@@ -2,7 +2,8 @@ from __future__ import division
 
 from util import *
 import Polygon as pn
-from random import uniform, random
+from random import uniform, random, choice
+from itertools import chain
 
 
 class InstanceGenerator(object):
@@ -12,23 +13,21 @@ class InstanceGenerator(object):
         ### need to check if the instance has been successfully generated
         if (self.points == False): return
 
-
     def generateInstance(self, numObjs, HEIGHT, WIDTH):
         ### this function tries to generate a instance with the allowed amount of trials
         points, objects, minkowski_objs = self.genSingleInstance(numObjs, HEIGHT, WIDTH)
-        timeout = 20 ### allow 20 trials to generate a single instance
+        timeout = 20  ### allow 20 trials to generate a single instance
         while (points == False) and (timeout > 0):
             timeout -= 1
             points, objects, minkowski_objs = self.genSingleInstance(numObjs, HEIGHT, WIDTH)
         ### reach here either (1) success generation (points != False) or (2) timeout
         return points, objects, minkowski_objs
 
-
     def genSingleInstance(self, numObjs, HEIGHT, WIDTH):
         ### this function makes a single attempt of generating instances
-        points = [] ### center of the objects
-        objects = [] ### polygons of the objects
-        minkowski_objs = [] ### minkowski sum of the objects
+        points = []  ### center of the objects
+        objects = []  ### polygons of the objects
+        minkowski_objs = []  ### minkowski sum of the objects
 
         for i in range(numObjs):
             ### need to generate both start and goal
@@ -54,9 +53,8 @@ class InstanceGenerator(object):
                 ### Congrats the object's goal/start is accepted
                 points.append(point)
                 objects.append(pn.Polygon(self.polygon + point))
-                mink_obj = 2 * self.polygon + point ### grown_shape object
+                mink_obj = 2 * self.polygon + point  ### grown_shape object
                 minkowski_objs.append(pn.Polygon(mink_obj))
-
 
         return points, objects, minkowski_objs
 
@@ -65,13 +63,13 @@ class InstanceGenerator(object):
         ### The idea is that we randomly generate a buffer in the space, hoping it will overlap with nothing
         ### if it could not achieve after several trials, we increment the number of object poses it can overlap
         ### we keep incrementing until we find enough buffers
-        
-        ### initialization
-        self.buffer_points = [] ### center of the buffers 
-        self.buffers = [] ### polygons of the buffers
-        self.minkowski_buffers = [] ### minkowski sum of the buffers
 
-        numBuffers = 2 ### we can decide the number of buffers based on numObjs later
+        ### initialization
+        self.buffer_points = []  ### center of the buffers
+        self.buffers = []  ### polygons of the buffers
+        self.minkowski_buffers = []  ### minkowski sum of the buffers
+
+        numBuffers = 5  ### we can decide the number of buffers based on numObjs later
         maximumOverlap = numObjs
 
         for i in range(numBuffers):
@@ -95,7 +93,7 @@ class InstanceGenerator(object):
                     ### Otherwise the buffer is accepted
                     self.buffer_points.append(point)
                     self.buffers.append(pn.Polygon(self.polygon + point))
-                    mink_obj = 2 * self.polygon + point ### grown_shape buffer
+                    mink_obj = 2 * self.polygon + point  ### grown_shape buffer
                     self.minkowski_buffers.append(pn.Polygon(mink_obj))
                     # print "successfully generating buffer " + str(i) + " overlapping with " + str(numOverlap) + " poses"
                     break
@@ -108,6 +106,39 @@ class InstanceGenerator(object):
         ### reach here if all the buffers have been generated
         return
 
+    def genBuffers2(self, wall_mink, numObjs):
+        ### This function generate buffers for the instance already generated.
+        ### Here we use the heuristic that buffers should be on the boundary of the free space.
+
+        ### initialization
+        self.buffer_points = []  ### center of the buffers
+        self.buffers = []  ### polygons of the buffers
+        self.minkowski_buffers = []  ### minkowski sum of the buffers
+
+        numBuffers = 2  ### we can decide the number of buffers based on numObjs later
+
+        polysum = wall_mink - sum(self.minkowski_objs, pn.Polygon())
+        # b_points = set()
+        # for x in polysum:
+        #     print(x)
+        #     b_points.update(x)
+        # print(b_points)
+        print("Poly: ", polysum)
+        if not polysum:
+            return False
+        b_points = set(pu.pointList(polysum))
+
+        # numBuffers = len(b_points)
+        for i in range(numBuffers):
+            # point = choice(list(b_points))
+            # b_points.remove(point)
+            point = polysum.sample(random)
+            self.buffer_points.append(point)
+            self.buffers.append(pn.Polygon(self.polygon + point))
+            mink_obj = 2 * self.polygon + point  ### grown_shape buffer
+            self.minkowski_buffers.append(pn.Polygon(mink_obj))
+
+        return True
 
 
 if __name__ == "__main__":

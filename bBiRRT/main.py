@@ -82,15 +82,22 @@ if __name__ == "__main__":
         successSolTimes_biRRTstar = 0  ### record the number of times you successfully find a solution
         comTime_biRRTstar = 0
         numActions_biRRTstar = 0
+        freq = {}
 
         for exp_id in range(1, nExperiments + 1):
             print(
                 "\nstart experiment " + str(exp_id) + ": " + str(numObjs) + " " + str(int(RAD)) + " " + str(HEIGHT) +
                 " " + str(WIDTH)
             )
+
             EXP = Experiment(
                 numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, savestat, exp_id, data_path
             )
+            while EXP.totalActions_DP_local == numObjs:
+                EXP = Experiment(
+                    numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, savestat, exp_id, data_path
+                )
+
             if EXP.genInstanceFailure == True:
                 continue
             else:
@@ -104,6 +111,7 @@ if __name__ == "__main__":
                 successSolTimes_DP_local += 1
                 comTime_DP_local += EXP.comTime_DP_local
                 numActions_DP_local += EXP.totalActions_DP_local
+                freq[EXP.totalActions_DP_local] = freq.get(EXP.totalActions_DP_local, 0) + 1
 
             continue
             ### method 2: biRRT (arc ILP)
@@ -161,7 +169,7 @@ if __name__ == "__main__":
             str(numActions_biRRTstar / successSolTimes_biRRTstar) + " " +
             str(numActions_DP_local / successSolTimes_DP_local) + " " + str(comTime_biRRT / successSolTimes_biRRT) +
             " " + str(comTime_biRRTstar / successSolTimes_biRRTstar) + " " +
-            str(comTime_DP_local / successSolTimes_DP_local) + "\n"
+            str(comTime_DP_local / successSolTimes_DP_local) + " " + str(sorted(freq.items())) + "\n"
         )
 
     f_stat.close()

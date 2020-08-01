@@ -30,10 +30,10 @@ class InstanceGenerator(object):
         new_instance = InstanceGenerator(0, 0, 0, 0)
         new_instance.polygon = copy.copy(self.polygon)
         new_instance.points = copy.copy(self.points)
-        print(new_instance.points)
+        # print(new_instance.points)
         new_instance.objects = copy.copy(self.objects)
         new_instance.buffer_points = copy.copy(self.buffer_points)
-        print(new_instance.buffer_points)
+        # print(new_instance.buffer_points)
         new_instance.buffers = copy.copy(self.buffers)
 
         for point in self.points:
@@ -102,7 +102,7 @@ class InstanceGenerator(object):
         self.buffers = []  ### polygons of the buffers
         self.minkowski_buffers = []  ### minkowski sum of the buffers
 
-        numBuffers = 0  ### we can decide the number of buffers based on numObjs later
+        numBuffers = 5  ### we can decide the number of buffers based on numObjs later
         maximumOverlap = numObjs
 
         for i in range(numBuffers):
