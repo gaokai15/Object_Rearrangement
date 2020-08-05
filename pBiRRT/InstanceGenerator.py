@@ -1,50 +1,17 @@
 from __future__ import division
 
-import copy
 from util import *
 import Polygon as pn
-from random import uniform, random
+from random import uniform, random, choice
+from itertools import chain
 
 
 class InstanceGenerator(object):
     def __init__(self, numObjs, HEIGHT, WIDTH, polygon):
-        if numObjs == 0:
-            self.polygon = None
-            self.points = None
-            self.objects = None
-            self.minkowski_objs = []
-            self.buffer_points = None
-            self.buffers = None
-            self.minkowski_buffers = []
-            return
         self.polygon = polygon
         self.points, self.objects, self.minkowski_objs = self.generateInstance(numObjs, HEIGHT, WIDTH)
-        self.buffer_points = []  ### center of the buffers
-        self.buffers = []  ### polygons of the buffers
-        self.minkowski_buffers = []  ### minkowski sum of the buffers
-
         ### need to check if the instance has been successfully generated
         if (self.points == False): return
-
-    def copy(self):
-        new_instance = InstanceGenerator(0, 0, 0, 0)
-        new_instance.polygon = copy.copy(self.polygon)
-        new_instance.points = copy.copy(self.points)
-        # print(new_instance.points)
-        new_instance.objects = copy.copy(self.objects)
-        new_instance.buffer_points = copy.copy(self.buffer_points)
-        # print(new_instance.buffer_points)
-        new_instance.buffers = copy.copy(self.buffers)
-
-        for point in self.points:
-            mink_obj = 2 * self.polygon + point  ### grown_shape object
-            new_instance.minkowski_objs.append(pn.Polygon(mink_obj))
-
-        for point in self.buffer_points:
-            mink_obj = 2 * self.polygon + point  ### grown_shape object
-            new_instance.minkowski_buffers.append(pn.Polygon(mink_obj))
-
-        return new_instance
 
     def generateInstance(self, numObjs, HEIGHT, WIDTH):
         ### this function tries to generate a instance with the allowed amount of trials
@@ -102,7 +69,7 @@ class InstanceGenerator(object):
         self.buffers = []  ### polygons of the buffers
         self.minkowski_buffers = []  ### minkowski sum of the buffers
 
-        numBuffers = 0  ### we can decide the number of buffers based on numObjs later
+        numBuffers = 5  ### we can decide the number of buffers based on numObjs later
         maximumOverlap = numObjs
 
         for i in range(numBuffers):
@@ -138,6 +105,40 @@ class InstanceGenerator(object):
 
         ### reach here if all the buffers have been generated
         return
+
+    def genBuffers2(self, wall_mink, numObjs):
+        ### This function generate buffers for the instance already generated.
+        ### Here we use the heuristic that buffers should be on the boundary of the free space.
+
+        ### initialization
+        self.buffer_points = []  ### center of the buffers
+        self.buffers = []  ### polygons of the buffers
+        self.minkowski_buffers = []  ### minkowski sum of the buffers
+
+        numBuffers = 2  ### we can decide the number of buffers based on numObjs later
+
+        polysum = wall_mink - sum(self.minkowski_objs, pn.Polygon())
+        # b_points = set()
+        # for x in polysum:
+        #     print(x)
+        #     b_points.update(x)
+        # print(b_points)
+        print("Poly: ", polysum)
+        if not polysum:
+            return False
+        b_points = set(pu.pointList(polysum))
+
+        # numBuffers = len(b_points)
+        for i in range(numBuffers):
+            # point = choice(list(b_points))
+            # b_points.remove(point)
+            point = polysum.sample(random)
+            self.buffer_points.append(point)
+            self.buffers.append(pn.Polygon(self.polygon + point))
+            mink_obj = 2 * self.polygon + point  ### grown_shape buffer
+            self.minkowski_buffers.append(pn.Polygon(mink_obj))
+
+        return True
 
 
 if __name__ == "__main__":

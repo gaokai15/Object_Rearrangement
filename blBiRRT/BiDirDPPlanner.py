@@ -120,7 +120,7 @@ class BiDirDPPlanner(object):
         ### choose an object to move
         obj_idx = random.choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = random.choice(self.allPoses)
+        pose_idx = random.choice(self.allPoses[self.numObjs * 2:] + [2 * obj_idx])
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
@@ -325,7 +325,7 @@ class BiDirDPPlanner(object):
         ### choose an object to move
         obj_idx = random.choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = random.choice(self.allPoses)
+        pose_idx = random.choice(self.allPoses[self.numObjs * 2:] + [2 * obj_idx + 1])
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))

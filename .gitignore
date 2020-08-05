@@ -9,6 +9,7 @@ boost_1_73_0/
 *.json
 *.png
 *.o
+*.txt
 .clangd
 .ccargs
 
