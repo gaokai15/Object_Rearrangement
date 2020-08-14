@@ -111,9 +111,94 @@ class BiDirDPPlanner(object):
         obj_idx = random.choice(range(self.numObjs))
         ### choose a slot to put the object
         pose_idx = random.choice(self.allPoses[self.numObjs * 2:] + [2 * obj_idx])
+        # pose_idx = random.choice([-1] + [2 * obj_idx])
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
+
+        if False:
+            ### BUFFER POINTS / BUFFERS
+            instance = self.instance.copy()
+            ppoints = instance.points + instance.buffer_points
+            minks = self.instance.minkowski_objs + self.instance.minkowski_buffers
+
+            candidates = self.wall_mink
+            end_pos = self.wall_mink
+            for ind, obj in enumerate(mutated_arrangement):
+                if ind != obj_idx:
+                    candidates -= minks[obj]
+                    end_pos -= minks[2 * ind]
+
+            if self.visualTool.display:
+                self.visualTool.drawRegionGraph({0: [ppoints[mutated_arrangement[obj_idx]]]}, [candidates], label=False)
+                self.visualTool.drawRegionGraph({0: [ppoints[2 * ind]]}, [end_pos], label=False)
+                self.visualTool.drawRegionGraph(
+                    {
+                        0: [ppoints[mutated_arrangement[obj_idx]]],
+                        1: [ppoints[2 * ind]]
+                    }, [candidates & end_pos],
+                    label=False
+                )
+
+            # b_points = set()
+            reach_s = None
+            reach_g = None
+            for i, comp in enumerate(candidates):
+                # check if buffer is reachable to start and goal
+                x, y = ppoints[mutated_arrangement[obj_idx]]
+                if not candidates.isHole(i) and candidates.isInside(x, y, i):
+                    reach_s = comp
+                    print("region reachable from start")
+                    break
+            # print(reach_s)
+
+            for i, comp in enumerate(end_pos):
+                x, y = ppoints[2 * obj_idx]
+                if not end_pos.isHole(i) and end_pos.isInside(x, y, i):
+                    reach_g = comp
+                    print("region reachable from goal")
+                    break
+            # print(reach_g)
+
+            if reach_s is None:
+                return None
+            if reach_g is None:
+                return None
+                # b_points.update(reach_s)
+                reach = pn.Polygon(reach)
+            else:
+                reach = pn.Polygon(reach_s) & pn.Polygon(reach_g)
+                if not reach:
+                    return None
+                    reach = pn.Polygon(reach_s)
+                    return None
+                #     print(pu.pointList(reach))
+                #     return None
+                #     b_points.update(reach_s)
+                # else:
+                #     b_points.update(pu.pointList(reach))
+
+            # print(b_points)
+            # numBuffers = len(b_points)
+            for i in range(numBuffers):
+                # point = choice(list(b_points))
+                # b_points.remove(point)
+                point = reach.sample(random.random)
+                instance.buffer_points.append(point)
+                buff = instance.polygon + point
+                instance.buffers.append([buff.tolist()])
+                mink_obj = 2 * instance.polygon + point  ### grown_shape buffer
+                instance.minkowski_buffers.append(pn.Polygon(mink_obj))
+            ### BUFFER POINTS / BUFFERS
+            # print("Before: ", instance.buffer_points)
+
+            ### Now let's generate the region graph and build its connection
+            regionGraph = RegionGraphGenerator(instance, self.visualTool, self.wall_mink)
+            ### get the region dict and LL from the graph
+            region_dict, linked_list = self.linked_list_conversion(regionGraph.graph)
+            # print(region_dict)
+            Object_locations = regionGraph.obj2reg
+            ### END BUFFER ###
 
         ### get new arrangement
         new_arrangement = copy.deepcopy(mutated_arrangement)
