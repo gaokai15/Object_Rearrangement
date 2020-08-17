@@ -16,12 +16,12 @@ from BiRRTPlanner import BiRRTPlanner
 from BiRRTStarPlanner import BiRRTStarPlanner
 from BiRRT_tester import BiRRT_tester
 from BiRRTstar_tester import BiRRTstar_tester
-from BiDirDPPlanner import BiDirDPPlanner, BiDirDPPlanner_Random_Range, BiDirDPPlanner_Random_Nearest, BiDirDPPlanner_Leaf_Root, BiDirDPPlanner_Leaf_Small_Range,  BiDirDPPlanner_Leaf_Large_Range, BiDirDPPlanner_Leaf_Nearest
+from BiDirDPPlanner import BiDirDPPlanner, BiDirDPPlanner_A_star_furthest, BiDirDPPlanner_A_star_nearest, BiDirDPPlanner_suboptimal_furthest, BiDirDPPlanner_Random_Range, BiDirDPPlanner_Random_Nearest, BiDirDPPlanner_Leaf_Root, BiDirDPPlanner_Leaf_Root_Improved_Mutation, BiDirDPPlanner_Leaf_Small_Range,  BiDirDPPlanner_Leaf_Large_Range, BiDirDPPlanner_Leaf_Nearest
 from DPBruteForce import Non_Monotone_Solver_General
 from FVS import feekback_vertex_ILP
 
 # timeout version function
-from Timeout_Functions import timeout_BiDirDPPlanner, timeout_BiDirDPPlanner_Random_Range, timeout_BiDirDPPlanner_Random_Nearest, timeout_BiDirDPPlanner_Leaf_Root, timeout_BiDirDPPlanner_Leaf_Small_Range, timeout_BiDirDPPlanner_Leaf_Large_Range, timeout_BiDirDPPlanner_Leaf_Nearest, timeout_BiRRTPlanner, timeout_BiRRTStarPlanner, timeout_DensePathGenerator, timeout_Non_Monotone_Solver_General
+from Timeout_Functions import timeout_BiDirDPPlanner, timeout_BiDirDPPlanner_A_star_furthest, timeout_BiDirDPPlanner_A_star_nearest, timeout_BiDirDPPlanner_suboptimal_furthest, timeout_BiDirDPPlanner_Random_Range, timeout_BiDirDPPlanner_Random_Nearest, timeout_BiDirDPPlanner_Leaf_Root, timeout_BiDirDPPlanner_Leaf_Root_Improved_Mutation, timeout_BiDirDPPlanner_Leaf_Small_Range, timeout_BiDirDPPlanner_Leaf_Large_Range, timeout_BiDirDPPlanner_Leaf_Nearest, timeout_BiRRTPlanner, timeout_BiRRTStarPlanner, timeout_DensePathGenerator, timeout_Non_Monotone_Solver_General
 
 # Disable
 def blockPrint():
@@ -99,6 +99,79 @@ class Experiment(object):
         self.comTime_DP_local = time.clock() - start_time
         print "Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_local)
         
+
+
+        ##############################################
+        self.genSolutionFailure_DP_local_A_star_furthest = False
+        start_time = time.clock()
+        try:
+            print Intentional_Error
+            self.plan_DP_local_A_star_furthest = timeout_BiDirDPPlanner_A_star_furthest(
+                self.initial_arrangement, self.final_arrangement, self.instance,  
+                self.regionGraph.obj2reg, region_dict, linked_list, self.instance.points+self.instance.buffer_points, RAD,
+                self.visualTool)
+            if self.plan_DP_local_A_star_furthest.isConnected == False:
+                ### the solution is not found
+                self.genSolutionFailure_DP_local_A_star_furthest = True
+            else:
+                self.totalActions_DP_local_A_star_furthest = self.plan_DP_local_A_star_furthest.totalActions
+            enablePrint()
+            print "# nodes: ", len(self.plan_DP_local_A_star_furthest.treeL)+len(self.plan_DP_local_A_star_furthest.treeR)
+            blockPrint()
+        except Exception:
+            self.genSolutionFailure_DP_local_A_star_furthest = True
+        self.comTime_DP_local_A_star_furthest = time.clock() - start_time
+        print "Time to perform BiDirectional search with DP local A_star_furthest solver: " + str(self.comTime_DP_local_A_star_furthest)
+
+
+
+        ##############################################
+        self.genSolutionFailure_DP_local_A_star_nearest = False
+        start_time = time.clock()
+        try:
+            print Intentional_Error
+            self.plan_DP_local_A_star_nearest = timeout_BiDirDPPlanner_A_star_nearest(
+                self.initial_arrangement, self.final_arrangement, self.instance,  
+                self.regionGraph.obj2reg, region_dict, linked_list, self.instance.points+self.instance.buffer_points, RAD,
+                self.visualTool)
+            if self.plan_DP_local_A_star_nearest.isConnected == False:
+                ### the solution is not found
+                self.genSolutionFailure_DP_local_A_star_nearest = True
+            else:
+                self.totalActions_DP_local_A_star_nearest = self.plan_DP_local_A_star_nearest.totalActions
+            enablePrint()
+            print "# nodes: ", len(self.plan_DP_local_A_star_nearest.treeL)+len(self.plan_DP_local_A_star_nearest.treeR)
+            blockPrint()
+        except Exception:
+            self.genSolutionFailure_DP_local_A_star_nearest = True
+        self.comTime_DP_local_A_star_nearest = time.clock() - start_time
+        print "Time to perform BiDirectional search with DP local A_star_nearest solver: " + str(self.comTime_DP_local_A_star_nearest)
+
+
+        ##############################################
+        self.genSolutionFailure_DP_local_suboptimal_furthest = False
+        start_time = time.clock()
+        try:
+            print Intentional_Error
+            self.plan_DP_local_suboptimal_furthest = timeout_BiDirDPPlanner_suboptimal_furthest(
+                self.initial_arrangement, self.final_arrangement, self.instance,  
+                self.regionGraph.obj2reg, region_dict, linked_list, self.instance.points+self.instance.buffer_points, RAD,
+                self.visualTool)
+            if self.plan_DP_local_suboptimal_furthest.isConnected == False:
+                ### the solution is not found
+                self.genSolutionFailure_DP_local_suboptimal_furthest = True
+            else:
+                self.totalActions_DP_local_suboptimal_furthest = self.plan_DP_local_suboptimal_furthest.totalActions
+            enablePrint()
+            print "# nodes: ", len(self.plan_DP_local_suboptimal_furthest.treeL)+len(self.plan_DP_local_suboptimal_furthest.treeR)
+            blockPrint()
+        except Exception:
+            self.genSolutionFailure_DP_local_suboptimal_furthest = True
+        self.comTime_DP_local_suboptimal_furthest = time.clock() - start_time
+        print "Time to perform BiDirectional search with DP local suboptimal_furthest solver: " + str(self.comTime_DP_local_suboptimal_furthest)
+
+
+
         ##############################################
         self.genSolutionFailure_DP_local_random_range = False
         start_time = time.clock()
@@ -150,15 +223,44 @@ class Experiment(object):
                 self.genSolutionFailure_DP_local_leaf_root = True
             else:
                 self.totalActions_DP_local_leaf_root = self.plan_DP_local_leaf_root.totalActions
+            enablePrint()
+            print "# nodes: ", len(self.plan_DP_local_leaf_root.treeL)+len(self.plan_DP_local_leaf_root.treeR)
+            blockPrint()
         except Exception:
             self.genSolutionFailure_DP_local_leaf_root = True
         self.comTime_DP_local_leaf_root = time.clock() - start_time
         print "Time to perform BiDirectional search with DP local_leaf_root solver: " + str(self.comTime_DP_local_leaf_root)
 
+
+
+        ########################################################
+        self.genSolutionFailure_DP_local_leaf_root_Improved_Mutation = False
+        start_time = time.clock()
+        try:
+            self.plan_DP_local_leaf_root_Improved_Mutation = timeout_BiDirDPPlanner_Leaf_Root_Improved_Mutation(
+                self.initial_arrangement, self.final_arrangement, self.instance,  
+                self.regionGraph.obj2reg, region_dict, linked_list, self.instance.points+self.instance.buffer_points, RAD,
+                self.visualTool)
+            if self.plan_DP_local_leaf_root_Improved_Mutation.isConnected == False:
+                ### the solution is not found
+                self.genSolutionFailure_DP_local_leaf_root_Improved_Mutation = True
+            else:
+                self.totalActions_DP_local_leaf_root_Improved_Mutation = self.plan_DP_local_leaf_root_Improved_Mutation.totalActions
+            enablePrint()
+            print "# nodes: ", len(self.plan_DP_local_leaf_root_Improved_Mutation.treeL)+len(self.plan_DP_local_leaf_root_Improved_Mutation.treeR)
+            blockPrint()
+        except Exception:
+            self.genSolutionFailure_DP_local_leaf_root_Improved_Mutation = True
+        self.comTime_DP_local_leaf_root_Improved_Mutation = time.clock() - start_time
+        print "Time to perform BiDirectional search with DP local_leaf_root_Improved_Mutation solver: " + str(self.comTime_DP_local_leaf_root_Improved_Mutation)
+
+
+
         ######################################################
         self.genSolutionFailure_DP_local_leaf_small_range = False
         start_time = time.clock()
         try:
+            print Intentional_Error
             self.plan_DP_local_leaf_small_range = timeout_BiDirDPPlanner_Leaf_Small_Range(
                 self.initial_arrangement, self.final_arrangement, self.instance,  
                 self.regionGraph.obj2reg, region_dict, linked_list, 
@@ -178,6 +280,7 @@ class Experiment(object):
         self.genSolutionFailure_DP_local_leaf_large_range = False
         start_time = time.clock()
         try:
+            print Intentional_Error
             self.plan_DP_local_leaf_large_range = timeout_BiDirDPPlanner_Leaf_Large_Range(
                 self.initial_arrangement, self.final_arrangement, self.instance,  
                 self.regionGraph.obj2reg, region_dict, linked_list, 
@@ -216,6 +319,7 @@ class Experiment(object):
         self.genSolutionFailure_DP_BruteForce = False
         start_time = time.clock()
         try:
+            print Intentional_Error
             start_poses = {}
             goal_poses = {}
             for i in range(len(self.initial_arrangement)):
@@ -282,6 +386,7 @@ class Experiment(object):
         self.genSolutionFailure_biRRT = False
         start_time = time.clock()
         try:
+            print Intentional_Error
             self.plan_biRRT = timeout_BiRRTPlanner(self.initial_arrangement, self.final_arrangement, \
                                         self.gpd, self.instance, self.new_paths, self.visualTool)
             if self.plan_biRRT.isConnected == False: 
@@ -300,6 +405,7 @@ class Experiment(object):
         self.genSolutionFailure_biRRTstar = False
         start_time = time.clock()
         try:
+            print Intentional_Error
             self.plan_biRRTstar = BiRRTStarPlanner(self.initial_arrangement, self.final_arrangement, \
                                         self.gpd, self.instance, self.new_paths, self.visualTool)
             if self.plan_biRRTstar.isConnected == False: 
