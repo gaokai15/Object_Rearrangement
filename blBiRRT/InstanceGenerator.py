@@ -1,8 +1,9 @@
 from __future__ import division
 
 import copy
-from random import uniform, random, choice
-from rgraph import *
+from util import *
+import Polygon as pn
+from random import uniform, random
 
 
 class InstanceGenerator(object):
@@ -26,20 +27,22 @@ class InstanceGenerator(object):
         if (self.points == False): return
 
     def copy(self):
-        new_instance = InstanceGenerator(0,0,0,0)
+        new_instance = InstanceGenerator(0, 0, 0, 0)
         new_instance.polygon = copy.copy(self.polygon)
         new_instance.points = copy.copy(self.points)
+        # print(new_instance.points)
         new_instance.objects = copy.copy(self.objects)
         new_instance.buffer_points = copy.copy(self.buffer_points)
+        # print(new_instance.buffer_points)
         new_instance.buffers = copy.copy(self.buffers)
 
         for point in self.points:
             mink_obj = 2 * self.polygon + point  ### grown_shape object
-            new_instance.minkowski_objs.append(region(mink_obj.tolist(), True))
+            new_instance.minkowski_objs.append(pn.Polygon(mink_obj))
 
         for point in self.buffer_points:
             mink_obj = 2 * self.polygon + point  ### grown_shape object
-            new_instance.minkowski_buffers.append(region(mink_obj.tolist(), True))
+            new_instance.minkowski_buffers.append(pn.Polygon(mink_obj))
 
         return new_instance
 
@@ -68,11 +71,9 @@ class InstanceGenerator(object):
                     timeout -= 1
                     ### generate the center of an object with uniform distribution
                     point = (
-                            int(uniform(0 - min(self.polygon[:, 0]), WIDTH - max(self.polygon[:, 0]))),
-                            int(uniform(0 - min(self.polygon[:, 1]), HEIGHT - max(self.polygon[:, 1]))),
-                            # uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
-                            # uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1])),
-                            )
+                        uniform(0 - min(self.polygon[:, 0]), WIDTH - max(self.polygon[:, 0])),
+                        uniform(0 - min(self.polygon[:, 1]), HEIGHT - max(self.polygon[:, 1]))
+                    )
                     ### For dense case,
                     ### start only checks with starts
                     ### goal only checks with goals
@@ -84,10 +85,9 @@ class InstanceGenerator(object):
 
                 ### Congrats the object's goal/start is accepted
                 points.append(point)
-                obj = self.polygon + point
-                objects.append([obj.tolist()])
+                objects.append(pn.Polygon(self.polygon + point))
                 mink_obj = 2 * self.polygon + point  ### grown_shape object
-                minkowski_objs.append(region(mink_obj.tolist(), True))
+                minkowski_objs.append(pn.Polygon(mink_obj))
 
         return points, objects, minkowski_objs
 
@@ -98,9 +98,9 @@ class InstanceGenerator(object):
         ### we keep incrementing until we find enough buffers
 
         ### initialization
-        # self.buffer_points = []  ### center of the buffers
-        # self.buffers = []  ### polygons of the buffers
-        # self.minkowski_buffers = []  ### minkowski sum of the buffers
+        self.buffer_points = []  ### center of the buffers
+        self.buffers = []  ### polygons of the buffers
+        self.minkowski_buffers = []  ### minkowski sum of the buffers
 
         numBuffers = 1  ### we can decide the number of buffers based on numObjs later
         maximumOverlap = numObjs
@@ -115,9 +115,9 @@ class InstanceGenerator(object):
                     timeout -= 1
                     ### generate the center of an object with uniform distribution
                     point = (
-                            uniform(0 - min(self.polygon[:, 0]), WIDTH - max(self.polygon[:, 0])),
-                            uniform(0 - min(self.polygon[:, 1]), HEIGHT - max(self.polygon[:, 1]))
-                            )
+                        uniform(0 - min(self.polygon[:, 0]), WIDTH - max(self.polygon[:, 0])),
+                        uniform(0 - min(self.polygon[:, 1]), HEIGHT - max(self.polygon[:, 1]))
+                    )
                     numOverlap = countNumOverlap(self.polygon, point, self.objects, self.buffers, numOverlapAllowed)
                     if numOverlap <= numOverlapAllowed:
                         isValid = True
@@ -125,10 +125,9 @@ class InstanceGenerator(object):
                 if isValid == True:
                     ### Otherwise the buffer is accepted
                     self.buffer_points.append(point)
-                    buff = self.polygon + point
-                    self.buffers.append([buff.tolist()])
+                    self.buffers.append(pn.Polygon(self.polygon + point))
                     mink_obj = 2 * self.polygon + point  ### grown_shape buffer
-                    self.minkowski_buffers.append(region(mink_obj.tolist(), True))
+                    self.minkowski_buffers.append(pn.Polygon(mink_obj))
                     # print "successfully generating buffer " + str(i) + " overlapping with " + str(numOverlap) + " poses"
                     break
                 else:
@@ -138,35 +137,6 @@ class InstanceGenerator(object):
                     numOverlapAllowed += 1
 
         ### reach here if all the buffers have been generated
-        return
-
-    def genBuffers2(self, wall_mink, numObjs):
-        ### This function generate buffers for the instance already generated.
-        ### Here we use the heuristic that buffers should be on the boundary of the free space.
-
-        ### initialization
-        self.buffer_points = []  ### center of the buffers
-        self.buffers = []  ### polygons of the buffers
-        self.minkowski_buffers = []  ### minkowski sum of the buffers
-
-        numBuffers = 0  ### we can decide the number of buffers based on numObjs later
-
-        polysum = sum(self.minkowski_objs, region()) & wall_mink
-        b_points = set()
-        for x in polysum.get_components():
-            b_points.update(chain(*x.to_list()))
-        # print(b_points)
-
-        # numBuffers = len(b_points)
-        for i in range(numBuffers):
-            point = choice(list(b_points))
-            b_points.remove(point)
-            self.buffer_points.append(point)
-            buff = self.polygon + point
-            self.buffers.append([buff.tolist()])
-            mink_obj = 2 * self.polygon + point  ### grown_shape buffer
-            self.minkowski_buffers.append(region(mink_obj.tolist(), True))
-
         return
 
 

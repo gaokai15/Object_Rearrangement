@@ -127,15 +127,15 @@ class Experiments(object):
         # for r1, r2 in paths.keys():
         #     new_paths[(gpd.region_dict[r1], gpd.region_dict[r2])] = copy.deepcopy(paths[(r1, r2)])
 
-        if display:
-            rpaths = self.drawSolution(
-                HEIGHT, WIDTH, numObjs, RAD, new_paths, path_opts, path_selection, buffer_selection, objects, color_pool, points,
-                example_index, saveimage
-            )
+        # if display:
+        #     rpaths = self.drawSolution(
+        #         HEIGHT, WIDTH, numObjs, RAD, new_paths, path_opts, path_selection, buffer_selection, objects, color_pool, points,
+        #         example_index, saveimage
+        #     )
 
-            animatedMotions(
-                HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, object_ordering, example_index, objectShape
-            )
+        #     animatedMotions(
+        #         HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, object_ordering, example_index, objectShape
+        #     )
 
         return DFS_non.object_ordering
 
@@ -2585,11 +2585,6 @@ class DFS_for_Non_Monotone_General(object):
 # DFS_rec non monotone where the start/goal poses are not necessarily 2*i/2*i+1
 class DFS_Rec_for_Non_Monotone_General(object):
     def __init__(self, start_poses, goal_poses, dependency_dict, path_dict, object_locations, linked_list, region_dict, obj_buffer_dict):
-        ###### output   ############
-        self.parent = {}
-        self.path_option = {}
-        self.mutation_nodes = []
-        ###### 
         self.object_ordering = []
         self.path_selection_dict = {}
         self.obstacle_lst = []
@@ -2621,6 +2616,8 @@ class DFS_Rec_for_Non_Monotone_General(object):
             complete_index += (1<<i)
         for value in self.obj_buffer_dict.values():
             complete_index += (1<<value[0])
+        self.parent = {}
+        self.path_option = {}
         self.explored = {}
         self.explored[0] = True
         # Recursion
@@ -2649,14 +2646,6 @@ class DFS_Rec_for_Non_Monotone_General(object):
             self.object_ordering = list(reversed(object_ordering))
             return True
         else:
-            if (len(self.obj_buffer_dict)>0):
-                ###### pick out nodes with mutations ######
-                mutation_obj = self.obj_buffer_dict.keys()[0]
-                for node in self.parent.keys():
-                    if(((node>>mutation_obj)%2) and (not((node>>self.obj_buffer_dict[mutation_obj][0])%2))):
-                        self.mutation_nodes.append(node)
-                # print "mutation"
-                # print self.mutation_nodes
             # print "Non-monotone"
             # exit(0)
             return False
@@ -2826,7 +2815,6 @@ class DFS_Rec_for_Non_Monotone_General(object):
                 dependency_set = dependency_set.union({value})
         return dependency_set
 
-
 # non monotone solver where the start/goal poses are not necessarily 2*i/2*i+1
 class Non_Monotone_Solver_General(object):
     def __init__(self, graph, obj_locations, start_poses, goal_poses):
@@ -2860,8 +2848,8 @@ class Non_Monotone_Solver_General(object):
                     if Degrade:
                         continue
                     # monotone solver input path_dict, dependency_dict, obj_locations, LL, region_dict, obj_buffer_dict
-                    # DFS = DFS_for_Non_Monotone_General(self.start_poses, self.goal_poses, self.dependency_dict, self.path_dict, self.obj_locations, self.LL, self.region_dict, obj_buffer_dict)
-                    DFS = DFS_Rec_for_Non_Monotone_General(self.start_poses, self.goal_poses, self.dependency_dict, self.path_dict, self.obj_locations, self.LL, self.region_dict, obj_buffer_dict)
+                    DFS = DFS_for_Non_Monotone_General(self.start_poses, self.goal_poses, self.dependency_dict, self.path_dict, self.obj_locations, self.LL, self.region_dict, obj_buffer_dict)
+                    # DFS = DFS_Rec_for_Non_Monotone_General(self.start_poses, self.goal_poses, self.dependency_dict, self.path_dict, self.obj_locations, self.LL, self.region_dict, obj_buffer_dict)
                     self.dependency_dict = copy.deepcopy(DFS.dependency_dict)
                     self.path_dict = copy.deepcopy(DFS.path_dict)
                     if len(DFS.object_ordering)>0:
