@@ -2,7 +2,7 @@ from __future__ import division
 import sys
 import json
 from time import time
-from random import uniform, random
+from random import uniform, random, choice
 from collections import deque
 from itertools import combinations
 
@@ -25,13 +25,14 @@ import matplotlib.cm as cmx
 import IPython
 import os
 
-
 EPSILON = 2**-8
 
+
 def setupPlot(HEIGHT, WIDTH):
-    fig = plt.figure(num=None, figsize=(int(5*WIDTH/HEIGHT), 5), dpi=120, facecolor='w', edgecolor='k')
+    fig = plt.figure(num=None, figsize=(int(5 * WIDTH / HEIGHT), 5), dpi=120, facecolor='w', edgecolor='k')
     ax = fig.subplots()
     return fig, ax
+
 
 def createPolygonPatch(polygon, color, zorder=1):
     verts = []
@@ -48,6 +49,7 @@ def createPolygonPatch(polygon, color, zorder=1):
     patch = patches.PathPatch(path, facecolor=color, lw=0.5, zorder=zorder)
     return patch
 
+
 def createPolygonPatch_distinct(polygon, color, isGoal, buffers=None, zorder=1):
     verts = []
     codes = []
@@ -63,7 +65,7 @@ def createPolygonPatch_distinct(polygon, color, isGoal, buffers=None, zorder=1):
     path = Path(verts, codes)
     if isGoal:
         patch = patches.PathPatch(path, linestyle='--', edgecolor=color, facecolor="white", lw=1, zorder=2)
-    else:    
+    else:
         patch = patches.PathPatch(path, facecolor=color, lw=0.5, zorder=3)
 
     if buffers == "buffers":
@@ -71,18 +73,19 @@ def createPolygonPatch_distinct(polygon, color, isGoal, buffers=None, zorder=1):
 
     return patch
 
+
 def drawConGraph(
-    HEIGHT, 
-    WIDTH, 
-    numObjs, 
-    RAD, 
-    example_index, 
-    paths, 
-    color_pool, 
-    points, 
-    polygons, 
-    buffers=None, 
-    saveimage=False, 
+    HEIGHT,
+    WIDTH,
+    numObjs,
+    RAD,
+    example_index,
+    paths,
+    color_pool,
+    points,
+    polygons,
+    buffers=None,
+    saveimage=False,
 ):
     _, ax = setupPlot(HEIGHT, WIDTH)
     scale = max(HEIGHT, WIDTH)
@@ -90,7 +93,6 @@ def drawConGraph(
     wallx = [0, WIDTH, WIDTH, 0, 0]
     wally = [0, 0, HEIGHT, HEIGHT, 0]
     plt.plot(wallx, wally, 'blue')
-
 
     for i in range(len(polygons)):
         obj_idx = i // 2
@@ -112,7 +114,7 @@ def drawConGraph(
                 poly, _ = poly
             for cont in poly:
                 patch = createPolygonPatch_distinct(cont, color_pool[obj_idx], False, "buffers")
-                ax.add_patch(patch)  
+                ax.add_patch(patch)
 
     for path in paths.values():
         color = 'black'
@@ -129,7 +131,6 @@ def drawConGraph(
         circ = patches.Circle(path[-1], scale / 200.0, color=color, zorder=3)
         ax.add_patch(circ)
 
-
     if saveimage:
         path = os.getcwd() + "/figures/"
         plt.savefig(
@@ -138,6 +139,7 @@ def drawConGraph(
         )
     plt.show()
     return
+
 
 def drawArrangement(
     HEIGHT,
@@ -201,20 +203,21 @@ def drawArrangement(
     plt.show()
     return
 
+
 def drawProblem(
-    HEIGHT, 
+    HEIGHT,
     WIDTH,
     numObjs,
-    RAD, 
-    wall, 
+    RAD,
+    wall,
     polygons,
-    points, 
+    points,
     color_pool,
     example_index,
     buffers=None,
     saveimage=False,
-    path=None, 
-    robotStart=None, 
+    path=None,
+    robotStart=None,
     robotGoal=None
 ):
     _, ax = setupPlot(HEIGHT, WIDTH)
@@ -255,7 +258,6 @@ def drawProblem(
             if not isGoal:
                 ax.text(points[i][0], points[i][1], str(obj_idx), fontweight='bold', fontsize=10, zorder=3)
 
-
     if buffers is not None:
         ### visualize buffers as black dotted circle
         for i in range(len(buffers)):
@@ -284,10 +286,11 @@ def drawProblem(
         plt.savefig(
             path + str(numObjs) + "_" + str(int(RAD)) + "_" + str(HEIGHT) + "_" + str(WIDTH) + "_" +
             str(example_index) + "_original_problem_with_buffers.png"
-        )        
+        )
 
     plt.show()
     return
+
 
 def drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, paths, polygons, saveimage=False, mode="0", label=True):
     _, ax = setupPlot(HEIGHT, WIDTH)
@@ -330,7 +333,6 @@ def drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, paths, polygons,
         circ = patches.Circle(path[-1], scale / 200.0, color=color, zorder=3)
         ax.add_patch(circ)
 
-    
     if saveimage and (paths == {}) and (mode == "0"):
         path = os.getcwd() + "/figures/"
         plt.savefig(
@@ -345,7 +347,6 @@ def drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, paths, polygons,
             str(example_index) + "_region_graph_without_buffer.png"
         )
 
-
     if saveimage and (paths is not {}):
         path = os.getcwd() + "/figures/"
         plt.savefig(
@@ -356,8 +357,22 @@ def drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, paths, polygons,
     plt.show()
     return
 
+
 def drawLocalMotions(
-    HEIGHT, WIDTH, numObjs, RAD, arr_pair, paths, color_pool, points, curr_arrangement, final_arrangement, example_index, polygons, saveimage=True):
+    HEIGHT,
+    WIDTH,
+    numObjs,
+    RAD,
+    arr_pair,
+    paths,
+    color_pool,
+    points,
+    curr_arrangement,
+    final_arrangement,
+    example_index,
+    polygons,
+    saveimage=True
+):
     _, ax = setupPlot(HEIGHT, WIDTH)
     scale = max(HEIGHT, WIDTH)
 
@@ -380,7 +395,6 @@ def drawLocalMotions(
                 ### This is a buffer
                 patch = createPolygonPatch_distinct(pu.pointList(polygons[i]), "black", False, "buffers")
                 ax.add_patch(patch)
-
 
     rads = {}
     # cc = 0.0
@@ -431,7 +445,19 @@ def drawLocalMotions(
 
 
 def drawMotions(
-    HEIGHT, WIDTH, numObjs, RAD, paths, color_pool, points, curr_arrangement, final_arrangement, example_index, polygons, saveimage):
+    HEIGHT,
+    WIDTH,
+    numObjs,
+    RAD,
+    paths,
+    color_pool,
+    points,
+    curr_arrangement,
+    final_arrangement,
+    example_index,
+    polygons,
+    saveimage,
+):
     _, ax = setupPlot(HEIGHT, WIDTH)
     scale = max(HEIGHT, WIDTH)
 
@@ -454,7 +480,6 @@ def drawMotions(
                 ### This is a buffer
                 patch = createPolygonPatch_distinct(pu.pointList(polygons[i]), "black", False, "buffers")
                 ax.add_patch(patch)
-
 
     rads = {}
     # cc = 0.0
@@ -504,8 +529,9 @@ def drawMotions(
 
 
 def drawEntireAnimation(
-    HEIGHT, WIDTH, numObjs, RAD, plan, final_arrangement, color_pool, points, example_index, objectShape=None):
-    
+    HEIGHT, WIDTH, numObjs, RAD, plan, final_arrangement, color_pool, points, example_index, objectShape=None
+):
+
     # n_steps = 5
 
     if objectShape is None:
@@ -534,9 +560,9 @@ def drawEntireAnimation(
             current_pts.append(rpaths[obj][0])
         ### work on current path of the current object
         for obj_idx, path in rpaths.items():
-            for wpt_idx in range(len(path)-1):
+            for wpt_idx in range(len(path) - 1):
                 pt1 = path[wpt_idx]
-                pt2 = path[wpt_idx+1]
+                pt2 = path[wpt_idx + 1]
                 step1 = int(abs(pt1[0] - pt2[0]) / 50.0)
                 step2 = int(abs(pt1[1] - pt2[1]) / 50.0)
                 if step1 == 0 and step2 == 0:
@@ -555,9 +581,13 @@ def drawEntireAnimation(
                     ### plot the objects
                     for nn in range(len(current_pts)):
                         polygon = pn.Polygon(objectShape + current_pts[nn])
-                        patch = createPolygonPatch_distinct(pu.pointList(polygon), color_pool[nn], isGoal=False, zorder=3)
+                        patch = createPolygonPatch_distinct(
+                            pu.pointList(polygon), color_pool[nn], isGoal=False, zorder=3
+                        )
                         ax.add_patch(patch)
-                        ax.text(current_pts[nn][0], current_pts[nn][1], str(nn), fontweight='bold', fontsize=10, zorder=3)
+                        ax.text(
+                            current_pts[nn][0], current_pts[nn][1], str(nn), fontweight='bold', fontsize=10, zorder=3
+                        )
                     ### plot goal poses and buffers
                     for pose_idx in range(len(points)):
                         if pose_idx in final_arrangement:
@@ -565,13 +595,13 @@ def drawEntireAnimation(
                             nn = final_arrangement.index(pose_idx)
                             polygon = pn.Polygon(objectShape + final_pts[nn])
                             patch = createPolygonPatch_distinct(
-                                pu.pointList(polygon), color_pool[nn], isGoal=True, zorder=2)
+                                pu.pointList(polygon), color_pool[nn], isGoal=True, zorder=2
+                            )
                             ax.add_patch(patch)
                         else:
                             ### It's a buffer
                             polygon = pn.Polygon(objectShape + points[pose_idx])
-                            patch = createPolygonPatch_distinct(
-                                pu.pointList(polygon), "black", False, "buffers")
+                            patch = createPolygonPatch_distinct(pu.pointList(polygon), "black", False, "buffers")
                             ax.add_patch(patch)
 
                     plt.pause(0.0000005)
@@ -581,15 +611,13 @@ def drawEntireAnimation(
 
 
 def animatedMotions(
-        HEIGHT, WIDTH, numObjs, RAD,
-        rpaths, color_pool, points,
-        object_ordering, example_index, objectShape=None
+    HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, object_ordering, example_index, objectShape=None
 ):
     # n_steps = 5
 
     if objectShape is None:
         print("Fail to create the instances. Not to mention to animate... Try it again")
-        return    
+        return
 
     ### set the canvas
     fig, ax = setupPlot(HEIGHT, WIDTH)
@@ -649,6 +677,7 @@ def animatedMotions(
     plt.show()
     return
 
+
 def getColorMap(numObjs):
     ### set colormap
     gist_ncar = plt.get_cmap('gist_ncar')
@@ -659,53 +688,90 @@ def getColorMap(numObjs):
 
     return color_pool
 
-def genBuffers(numBuffs, HEIGHT, WIDTH, polygon, objects, trials, maximumOverlap):
+
+def genBuffers(numBuffs, wall_mink, polygon, objects, mink_objs, trials, maximumOverlap):
     ### The idea is we randomly generate a buffer in the space, hoping it will overlap with nothing
     ### if it could not achieve after several trials, we increment the number of object poses it can overlap
     ### we keep incrementing until we find enough buffers
-    buffer_points = [] ### center of the buffers 
-    buffers = [] ### polygons of the buffers
-    minkowski_buffers = [] ### minkowski sum of the buffers
+    buffer_points = []  ### center of the buffers
+    buffers = []  ### polygons of the buffers
+    minkowski_buffers = []  ### minkowski sum of the buffers
 
-    numOverlapAllowed = 0
-    for i in range(numBuffs):
-        isValid = False
-        timeout = 500
-        while not isValid and timeout > 0:
-            timeout -= 1
-            ### generate the center of an object with uniform distribution
-            point = (
-                uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
-                uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
-            )
-            numOverlap = countNumOverlap(polygon, point, objects, buffers, numOverlapAllowed)
-            if numOverlap <= numOverlapAllowed:
-                isValid = True
-        ### reach here either (1) isValid == True (2) timeout <= 0
-        if timeout <= 0:
-            ### keep failing generating a buffer allowed to overlap with maximum number of objects
-            ### increase the numOverlapAllowed
-            numOverlapAllowed += 1
-            if (numOverlapAllowed > maximumOverlap):
-                print "Exceed the maximum limit of numOverlap for buffer generation"
-                return buffer_points, buffers, minkowski_buffers
+    ### Random Generation ###
+    if True:
+        numOverlapAllowed = 0
+        for i in range(numBuffs):
+            isValid = False
+            timeout = 500
+            while not isValid and timeout > 0:
+                timeout -= 1
+                ### generate the center of an object with uniform distribution
+                # point = (
+                #     uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
+                #     uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1])),
+                # )
+                point = wall_mink.sample(random)
+                numOverlap = countNumOverlap(polygon, point, objects, buffers, numOverlapAllowed)
+                if numOverlap <= numOverlapAllowed:
+                    isValid = True
+            ### reach here either (1) isValid == True (2) timeout <= 0
+            if timeout <= 0:
+                ### keep failing generating a buffer allowed to overlap with maximum number of objects
+                ### increase the numOverlapAllowed
+                numOverlapAllowed += 1
+                if (numOverlapAllowed > maximumOverlap):
+                    print "Exceed the maximum limit of numOverlap for buffer generation"
+                    return buffer_points, buffers, minkowski_buffers
 
-        ### Otherwise the buffer is accepted
-        buffer_points.append(point)
-        buffers.append(pn.Polygon(polygon + point))
-        mink_obj = 2 * polygon + point ### grown_shape buffer
-        minkowski_buffers.append(pn.Polygon(mink_obj))
-        # print "successfully generating buffer " + str(i) + " overlapping with " + str(numOverlap) + " poses"
+            ### Otherwise the buffer is accepted
+            buffer_points.append(point)
+            buffers.append(pn.Polygon(polygon + point))
+            mink_obj = 2 * polygon + point  ### grown_shape buffer
+            minkowski_buffers.append(pn.Polygon(mink_obj))
+            # print "successfully generating buffer " + str(i) + " overlapping with " + str(numOverlap) + " poses"
+
+        return buffer_points, buffers, minkowski_buffers
+
+    ### Hueristic Generation ###
+    if False:
+        polysum = wall_mink - sum(mink_objs, pn.Polygon())
+        b_points = set()
+        for x in polysum:
+            b_points.update(x)
+        # print(b_points)
+
+        # numBuffers = len(b_points)
+        for i in range(numBuffs):
+            # point = choice(list(b_points))
+            # b_points.remove(point)
+            point = polysum.sample(random)
+            buffer_points.append(point)
+            buffers.append(pn.Polygon(polygon + point))
+            mink_obj = 2 * polygon + point  ### grown_shape buffer
+            minkowski_buffers.append(pn.Polygon(mink_obj))
+
+    ### Better Hueristic Generation ###
+    if False:
+        numBuffPerObj = 1
+        obj_ind = range(len(mink_objs))
+        for si, gi in zip(obj_ind[::2], obj_ind[1::2]):
+            ind_obs = set(obj_ind) - set([si, gi])
+            polysum = wall_mink - sum([mink_objs[x] for x in ind_obs], pn.Polygon())
+            for i in range(numBuffPerObj):
+                point = polysum.sample(random)
+                buffer_points.append(point)
+                buffers.append(pn.Polygon(polygon + point))
+                mink_obj = 2 * polygon + point  ### grown_shape buffer
+                minkowski_buffers.append(pn.Polygon(mink_obj))
 
     return buffer_points, buffers, minkowski_buffers
 
 
-
 def genInstance(numObjs, HEIGHT, WIDTH, polygon):
 
-    points = [] ### center of the objects
-    objects = [] ### polygons of the objects
-    minkowski_objs = [] ### minkowski sum of the objects
+    points = []  ### center of the objects
+    objects = []  ### polygons of the objects
+    minkowski_objs = []  ### minkowski sum of the objects
 
     for i in range(numObjs):
         ### need to generate both start and goal
@@ -717,7 +783,7 @@ def genInstance(numObjs, HEIGHT, WIDTH, polygon):
                 ### generate the center of an object with uniform distribution
                 point = (
                     uniform(0 - min(polygon[:, 0]), WIDTH - max(polygon[:, 0])),
-                    uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1]))
+                    uniform(0 - min(polygon[:, 1]), HEIGHT - max(polygon[:, 1])),
                 )
                 ### For dense case,
                 ### start only checks with starts
@@ -725,7 +791,7 @@ def genInstance(numObjs, HEIGHT, WIDTH, polygon):
                 isfree = isCollisionFree(polygon, point, objects[j % 2::2])
 
             if timeout <= 0:
-                if j==0:
+                if j == 0:
                     print "failed to generate the start of object " + str(i)
                 else:
                     print "failed to generate the goal of object " + str(i)
@@ -735,16 +801,25 @@ def genInstance(numObjs, HEIGHT, WIDTH, polygon):
             ### Congrats the object's goal/start is accepted
             points.append(point)
             objects.append(pn.Polygon(polygon + point))
-            mink_obj = 2 * polygon + point ### grown_shape object
+            mink_obj = 2 * polygon + point  ### grown_shape object
             minkowski_objs.append(pn.Polygon(mink_obj))
-
-
 
     return points, objects, minkowski_objs
 
 
 def genRegionGraph(
-    HEIGHT, WIDTH, numObjs, RAD, example_index, wall_mink, points, minkowski_objs, buffer_points, minkowski_buffers, displayMore=False):
+    HEIGHT,
+    WIDTH,
+    numObjs,
+    RAD,
+    example_index,
+    wall_mink,
+    points,
+    minkowski_objs,
+    buffer_points,
+    minkowski_buffers,
+    displayMore=False
+):
 
     all_points = points + buffer_points
     all_minkowskis = minkowski_objs + minkowski_buffers
@@ -770,7 +845,9 @@ def genRegionGraph(
 
         ### displayMore: for checking purpose (a long iteration)###
         if displayMore:
-            drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, {}, regions.values(), saveimage=False, label=True)
+            drawRegionGraph(
+                HEIGHT, WIDTH, numObjs, RAD, example_index, {}, regions.values(), saveimage=False, label=True
+            )
 
     obj2reg = {}
     for rind, r in regions.items():
@@ -804,8 +881,21 @@ def genRegionGraph(
 
     return regions, obj2reg
 
+
 def connectRegionGraph(
-    HEIGHT, WIDTH, numObjs, RAD, example_index, epsilon, regions, polygon, points, display=False, displayMore=False, savefile=False):
+    HEIGHT,
+    WIDTH,
+    numObjs,
+    RAD,
+    example_index,
+    epsilon,
+    regions,
+    polygon,
+    points,
+    display=False,
+    displayMore=False,
+    savefile=False
+):
     paths = {}
 
     for rkv1, rkv2 in combinations(regions.items(), 2):
@@ -834,13 +924,16 @@ def connectRegionGraph(
 
             if displayMore:
                 drawConGraph(
-                    HEIGHT, WIDTH, numObjs, RAD, example_index, 
-                    {
+                    HEIGHT,
+                    WIDTH,
+                    numObjs,
+                    RAD,
+                    example_index, {
                         0: pu.pointList(pu.fillHoles(r1)),
                         1: pu.pointList(pu.fillHoles(r2)),
                         2: pu.pointList(rect)
-                    }, 
-                    regions.values(), 
+                    },
+                    regions.values(),
                     saveimage=False,
                     label=False
                 )
@@ -915,20 +1008,27 @@ def connectRegionGraph(
             #     color = 'red'
 
             if display and displayMore:
-                drawConGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, 
-                    {0: path}, regions.values(), saveimage=False, label=False)
-
+                drawConGraph(
+                    HEIGHT,
+                    WIDTH,
+                    numObjs,
+                    RAD,
+                    example_index, {0: path},
+                    regions.values(),
+                    saveimage=False,
+                    label=False
+                )
 
     return paths
- 
+
 
 def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index, debug=False):
-    
+
     ### get all preliminary information ###
     color_pool = getColorMap(numObjs)
     epsilon = EPSILON
-    polygon = np.array(poly_disk([0, 0], RAD, 30)) ### object shape
-    wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)]) ### workspace
+    polygon = np.array(poly_disk([0, 0], RAD, 30))  ### object shape
+    wall_pts = pn.Polygon([(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)])  ### workspace
     ### inner boundary to limit the center the object
     wall_mink = pn.Polygon([(RAD, RAD), (WIDTH - RAD, RAD), (WIDTH - RAD, HEIGHT - RAD), (RAD, HEIGHT - RAD)])
 
@@ -943,10 +1043,11 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
 
     ## Now let's generate some buffers
     # numBuffs = numObjs
-    numBuffs = 2
+    numBuffs = 5
     buffer_points, buffers, minkowski_buffers = genBuffers(
-                    numBuffs, HEIGHT, WIDTH, polygon, objects, trials=5, maximumOverlap=numObjs)
-    
+        numBuffs, wall_mink, polygon, objects, minkowski_objs, trials=5, maximumOverlap=numObjs
+    )
+
     ### finish generating the buffers
     print "Finish generating " + str(len(buffer_points)) + " buffers"
     print "Display the original problem with extra buffers"
@@ -955,10 +1056,10 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
             HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, points, color_pool, example_index, buffers, saveimage=True
         )
 
-
     ############ Decomposition of the workspace into different regions ################
     regions, obj2reg = genRegionGraph(
-        HEIGHT, WIDTH, numObjs, RAD, example_index, wall_mink, points, minkowski_objs, buffer_points, minkowski_buffers)
+        HEIGHT, WIDTH, numObjs, RAD, example_index, wall_mink, points, minkowski_objs, buffer_points, minkowski_buffers
+    )
 
     ## this is a complete decomposition graph with no paths ###
     # print "display space decomposition"
@@ -973,12 +1074,12 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
     # if display:
     #     # display decomposition with paths
     #     print "display space decomposition with paths"
-    #     drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, 
+    #     drawRegionGraph(HEIGHT, WIDTH, numObjs, RAD, example_index,
     #         paths, regions.values(), saveimage=True, label=True)
     #     ### display decomposition with original object
     #     print "display connectivity graph with original objects"
-    #     drawConGraph(HEIGHT, WIDTH, numObjs, RAD, example_index, 
-    #         paths, color_pool, points, objects, buffers, 
+    #     drawConGraph(HEIGHT, WIDTH, numObjs, RAD, example_index,
+    #         paths, color_pool, points, objects, buffers,
     #             saveimage=True
     #     )
 
@@ -1012,5 +1113,4 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
     if debug:
         return graph, paths, objects, wall_pts, color_pool, points, polygon, obj2reg
         # return graph, paths, objects, obj2reg, regions, polygon
-    return graph, paths, objects+buffers, wall_pts, color_pool, points+buffer_points, polygon, obj2reg
-    
+    return graph, paths, objects + buffers, wall_pts, color_pool, points + buffer_points, polygon, obj2reg
