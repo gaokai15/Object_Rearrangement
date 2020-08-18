@@ -2654,9 +2654,10 @@ class DFS_Rec_for_Non_Monotone_General(object):
                 mutation_obj = self.obj_buffer_dict.keys()[0]
                 for node in self.parent.keys():
                     if(((node>>mutation_obj)%2) and (not((node>>self.obj_buffer_dict[mutation_obj][0])%2))):
-                        self.mutation_nodes.append(node)
-                # print "mutation"
-                # print self.mutation_nodes
+                        if(not ((self.parent[node]>>mutation_obj)%2)): # first mutation node in the branch
+                            self.mutation_nodes.append(node)
+                print "mutation"
+                print self.mutation_nodes
             # print "Non-monotone"
             # exit(0)
             return False
