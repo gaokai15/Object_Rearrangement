@@ -21,29 +21,39 @@ def interpolate(a, b, u):
 
 
 class Circle:
-    def __init__(self, x=0, y=0, radius=1):
+    def __init__(self, x=0, y=0, radius=1, ind=-1):
         self.center = (x, y)
         self.radius = radius
         self.type = 'Circle'
+        self.id = ind
 
     def contains(self, point):
         return (vectorops.distance(point, self.center) <= self.radius)
 
-    def poly(self, res=20):
+    def poly(self, res=20, toint=True):
         pnts = []
         numdivs = int(math.ceil(self.radius * math.pi * 2 / res))
         for i in xrange(numdivs + 1):
             u = float(i) / float(numdivs) * math.pi * 2
-            pnts.append((self.center[0] + self.radius * math.cos(u), self.center[1] + self.radius * math.sin(u)))
+            if toint:
+                pnts.append(
+                    (
+                        int(self.center[0] + self.radius * math.cos(u)),
+                        int(self.center[1] + self.radius * math.sin(u)),
+                    )
+                )
+            else:
+                pnts.append((
+                    self.center[0] + self.radius * math.cos(u),
+                    self.center[1] + self.radius * math.sin(u),
+                ))
         return pnts
 
     def drawGL(self, res=20):
-        numdivs = int(math.ceil(self.radius * math.pi * 2 / res))
         glBegin(GL_TRIANGLE_FAN)
         glVertex2f(*self.center)
-        for i in xrange(numdivs + 1):
-            u = float(i) / float(numdivs) * math.pi * 2
-            glVertex2f(self.center[0] + self.radius * math.cos(u), self.center[1] + self.radius * math.sin(u))
+        for p in self.poly(res, False):
+            glVertex2f(*p)
         glEnd()
 
 
@@ -68,14 +78,8 @@ class Rectangle:
 
     def drawGL(self):
         glBegin(GL_QUADS)
-        # glVertex2f(self.center[0] - self.width / 2.0, self.center[1] - self.height / 2.0)
-        # glVertex2f(self.center[0] - self.width / 2.0, self.center[1] + self.height / 2.0)
-        # glVertex2f(self.center[0] + self.width / 2.0, self.center[1] + self.height / 2.0)
-        # glVertex2f(self.center[0] + self.width / 2.0, self.center[1] - self.height / 2.0)
-        glVertex2f(self.center[0], self.center[1])
-        glVertex2f(self.center[0], self.center[1] + self.height)
-        glVertex2f(self.center[0] + self.width, self.center[1] + self.height)
-        glVertex2f(self.center[0] + self.width, self.center[1])
+        for p in self.poly():
+            glVertex2f(*p)
         glEnd()
 
 
@@ -84,23 +88,34 @@ class Poly:
         self.points = list(sorted(points, key=lambda x: abs(pc.Area(x))))
         self.type = 'Poly'
 
+    def contains(self, point):
+        c = 0
+        for cont in self.points:
+            if pc.PointInPolygon(point, cont):
+                if pc.Orientation(cont):
+                    c += 1
+                else:
+                    c -= 1
+        return c > 0
+
     def drawGL(self):
         for cont in self.points:
             if pc.Orientation(cont):
                 glColor3f(0.1, 0.5, 0.1)
             else:
                 glColor3f(0.5, 0.1, 0.1)
-            glBegin(GL_POLYGON)
+            # glBegin(GL_POLYGON)
+            glBegin(GL_LINE_LOOP)
             for p in cont:
                 glVertex2f(*p)
             glEnd()
 
 
 class DiskCSpace(CSpace):
-    def __init__(self):
+    def __init__(self, rad=10, height=1000, width=1000):
         CSpace.__init__(self)
         #set bounds
-        self.bound = [(0, 1000), (0, 1000)]
+        self.bound = [(0, width), (0, height)]
         self.wall = [
             (self.bound[0][0], self.bound[1][0]),
             (self.bound[0][1], self.bound[1][0]),
@@ -110,7 +125,7 @@ class DiskCSpace(CSpace):
         #set collision checking resolution
         self.eps = 1
         #setup a robot with radius 10
-        self.robot = Circle(0, 0, 10)
+        self.robot = Circle(0, 0, rad)
         #set obstacles here
         self.obstacles = []
         self.occupied = []
@@ -127,21 +142,11 @@ class DiskCSpace(CSpace):
         print(self.robot.radius)
         shape = self.robot.poly()
         clip = pc.Pyclipper()
-        clipM = pc.Pyclipper()
-        for o in self.obstacles:
-            # clip.AddPaths(pc.MinkowskiSum(shape, o.poly(), True), pc.PT_CLIP, True)
-            for cont in pc.MinkowskiSum(shape, o.poly(), True):
-                if pc.Orientation(cont):
-                    clipM.AddPath(cont, pc.PT_SUBJECT, True)
-                else:
-                    clipM.AddPath(cont, pc.PT_CLIP, True)
-            clip.AddPaths(clipM.Execute(pc.CT_DIFFERENCE, pc.PFT_POSITIVE, pc.PFT_POSITIVE), pc.PT_CLIP, True)
-
-        all_obs = clip.Execute(pc.CT_UNION, pc.PFT_POSITIVE, pc.PFT_POSITIVE)
-        clip.Clear()
-        clip.AddPaths(all_obs, pc.PT_CLIP, True)
+        for o in self.obstacles + self.occupied:
+            clip.AddPaths(pc.MinkowskiSum(shape, o.poly(), True), pc.PT_CLIP, True)
+        clip.AddPaths(pc.MinkowskiSum(shape, self.wall, True), pc.PT_CLIP, True)
         clip.AddPath(self.wall, pc.PT_SUBJECT, True)
-        mink_obs = clip.Execute(pc.CT_DIFFERENCE, pc.PFT_POSITIVE, pc.PFT_POSITIVE)
+        mink_obs = clip.Execute(pc.CT_DIFFERENCE, pc.PFT_NONZERO, pc.PFT_NONZERO)
         self.mink_obs = Poly(mink_obs)
 
     def addOccupied(self, obj):
@@ -154,30 +159,9 @@ class DiskCSpace(CSpace):
         self.occupied = []
 
     def feasible(self, q):
-        #bounds test
-        for wp in self.wall:
-            qo = vectorops.add(q, vectorops.mul(vectorops.unit(vectorops.sub(wp, q)), self.robot.radius))
-            if not CSpace.feasible(self, qo): return False
-
-        for o in self.obstacles + self.occupied:
-            if o.type == 'Circle':
-                qo = vectorops.add(q, vectorops.mul(vectorops.unit(vectorops.sub(o.center, q)), self.robot.radius))
-                if o.contains(qo): return False
-            elif o.type == 'Rectangle':
-                qo = vectorops.add(q, vectorops.mul(vectorops.unit(vectorops.sub(o.center, q)), self.robot.radius))
-                if o.contains(qo): return False
-                ocenter = (o.center[0], o.center[1] + o.height)
-                qo = vectorops.add(q, vectorops.mul(vectorops.unit(vectorops.sub(ocenter, q)), self.robot.radius))
-                if o.contains(qo): return False
-                ocenter = (o.center[0] + o.width, o.center[1] + o.height)
-                qo = vectorops.add(q, vectorops.mul(vectorops.unit(vectorops.sub(ocenter, q)), self.robot.radius))
-                if o.contains(qo): return False
-                ocenter = (o.center[0] + o.width, o.center[1])
-                qo = vectorops.add(q, vectorops.mul(vectorops.unit(vectorops.sub(ocenter, q)), self.robot.radius))
-            else:
-                print("Error! Invalid Obstacle Type")
-                sys.exit(-1)
-        return True
+        if self.mink_obs is None:
+            self.computeMinkObs()
+        return self.mink_obs.contains(q)
 
     def drawObstaclesGL(self):
         glColor3f(0.2, 0.2, 0.2)
@@ -199,11 +183,16 @@ class DiskCSpace(CSpace):
         c = Circle(newc[0], newc[1], self.robot.radius)
         c.drawGL()
 
-    def regions(self):
+    def regionGraph(self, poseMap):  # poseMap = {id: Circle,...}
         regions = {}
-        polysum = pn.Polygon()
-        for i, obj in enumerate(all_minkowskis):
-            for rind, r in regions.items():
+        shape = self.robot.poly()
+        clip = pc.Pyclipper()
+        clipS = pc.Pyclipper()
+        for i, o in poseMap.items():
+            obj = pc.MinkowskiSum(shape, o.poly(), True)
+            clipS.AddPaths(obj, pc.PT_CLIP, True)
+            for rid, r in regions.items():
+                clip.cl
                 rANDobj = r & obj
                 if rANDobj:
                     regions[rind + (i, )] = rANDobj
@@ -275,7 +264,7 @@ class DiskCSpaceObstacleProgram(GLProgram):
         #random-restart RRT planner
         MotionPlan.setOptions(
             type="rrt",
-            perturbationRadius=25,
+            perturbationRadius=10,
             bidirectional=True,
             shortcut=True,
             restart=True,
@@ -362,14 +351,12 @@ if __name__ == '__main__':
     space = None
     start = None
     goal = None
-    space = DiskCSpace()
-    space.setRobotRad(50)
-    space.addObstacle(Circle(500, 500, 100))
+    space = DiskCSpace(50)
+    space.addObstacle(Circle(700, 500, 120))
     space.addObstacle(Rectangle(295, 400, 5, 300))
     space.addObstacle(Rectangle(295, 400, 300, 5))
     space.addObstacle(Rectangle(595, 700, -300, -5))
     space.addObstacle(Rectangle(595, 700, -5, -300))
-    space.computeMinkObs()
     start = (150, 150)
     goal = (850, 850)
     program = DiskCSpaceObstacleProgram(space, start, goal)
