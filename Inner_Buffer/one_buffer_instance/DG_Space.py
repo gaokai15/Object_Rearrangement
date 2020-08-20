@@ -30,8 +30,8 @@ def set_max_memory(MAX):
 
 class Experiments(object):
     def single_instance(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
-        # D = 0.4
-        # RAD = math.sqrt((D*HEIGHT*WIDTH)/(2*math.pi*numObjs))
+        D = 0.4
+        RAD = math.sqrt((D*HEIGHT*WIDTH)/(2*math.pi*numObjs))
         
         
         
@@ -54,9 +54,9 @@ class Experiments(object):
             print "Quit."
             return -1
 
-        # with open(os.path.join(my_path, "settings/instance00.pkl"),
-        #             'wb') as output:
-        #     pickle.dump((graph, paths, objects, wall_pts, color_pool, points, objectShape, object_locations), output, pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(my_path, "settings/instance00.pkl"),
+                    'wb') as output:
+            pickle.dump((graph, paths, objects, wall_pts, color_pool, points, objectShape, object_locations), output, pickle.HIGHEST_PROTOCOL)
 
 
         # initial_arrangement = [i for i in range(0, 2*numObjs, 2)]
@@ -2856,7 +2856,7 @@ class Non_Monotone_Solver_General(object):
     def enumerate_cases(self):
         # enumerate possible cases
         FOUND = False
-        for obj_num in range(self.n+1): # num of objects that need buffers
+        for obj_num in range(2): # num of objects that need buffers
             print "number of objects that use buffers", obj_num
             for obj_set in combinations(self.start_poses.keys(), obj_num): # which objs need buffers
                 for buffer_set in product(sorted(self.obj_locations.keys(), reverse=True), repeat=obj_num): # which poses are buffers
@@ -2882,11 +2882,9 @@ class Non_Monotone_Solver_General(object):
                         print "obj_buffer_dict", obj_buffer_dict
                         print "DFS.object_ordering", DFS.object_ordering
                         self.object_ordering = DFS.object_ordering
-                        break
-                if FOUND:
-                    break
-            if FOUND:
-                break
+                        # break
+                # if FOUND:
+                #     break
             
         
         
