@@ -237,6 +237,7 @@ class Experiment(object):
         self.genSolutionFailure_DP_local_leaf_root_Improved_Mutation = False
         start_time = time.clock()
         try:
+            print Intentional_Error
             self.plan_DP_local_leaf_root_Improved_Mutation = timeout_BiDirDPPlanner_Leaf_Root_Improved_Mutation(
                 self.initial_arrangement, self.final_arrangement, self.instance,  
                 self.regionGraph.obj2reg, region_dict, linked_list, self.instance.points+self.instance.buffer_points, RAD,

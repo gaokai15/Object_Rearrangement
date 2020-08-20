@@ -2,7 +2,7 @@ import os
 import sys
 import copy
 from collections import OrderedDict
-from cgraph import genDenseCGraph, drawMotions, animatedMotions
+from cgraph import genDenseCGraph, drawMotions, animatedMotions, drawProblem
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import gurobipy as gp
@@ -30,6 +30,12 @@ def set_max_memory(MAX):
 
 class Experiments(object):
     def single_instance(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
+        D = 0.4
+        RAD = math.sqrt((D*HEIGHT*WIDTH)/(2*math.pi*numObjs))
+        
+        
+        
+        
         # OBJ_NUM = numObjs
         # RECORD is False when I'm debugging and don't want to rewrite the data
         # RECORD = False
@@ -48,14 +54,19 @@ class Experiments(object):
             print "Quit."
             return -1
 
+        with open(os.path.join(my_path, "settings/instance00.pkl"),
+                    'wb') as output:
+            pickle.dump((graph, paths, objects, wall_pts, color_pool, points, objectShape, object_locations), output, pickle.HIGHEST_PROTOCOL)
+
+
         # initial_arrangement = [i for i in range(0, 2*numObjs, 2)]
         # final_arrangement = [i for i in range(1, 2*numObjs, 2)]
         # print "initial_arrangement: " + str(initial_arrangement)
         # print "final_arrangement: " + str(final_arrangement)
 
-        DFS_non = Non_Monotone_Solver(graph, object_locations, numObjs)
+        # DFS_non = Non_Monotone_Solver(graph, object_locations, numObjs)
 
-        print "DFS_non.object_ordering", DFS_non.object_ordering
+        # print "DFS_non.object_ordering", DFS_non.object_ordering
 
         start_poses = {}
         goal_poses = {}
@@ -137,7 +148,7 @@ class Experiments(object):
         #         HEIGHT, WIDTH, numObjs, RAD, rpaths, color_pool, points, object_ordering, example_index, objectShape
         #     )
 
-        return DFS_non.object_ordering
+        # return DFS_non.object_ordering
 
     def multi_instances(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
         numObjs_list = [5, 9, 13]
@@ -2656,8 +2667,8 @@ class DFS_Rec_for_Non_Monotone_General(object):
                     if(((node>>mutation_obj)%2) and (not((node>>self.obj_buffer_dict[mutation_obj][0])%2))):
                         if(not ((self.parent[node]>>mutation_obj)%2)): # first mutation node in the branch
                             self.mutation_nodes.append(node)
-                print "mutation"
-                print self.mutation_nodes
+                # print "mutation"
+                # print self.mutation_nodes
             # print "Non-monotone"
             # exit(0)
             return False
@@ -2845,7 +2856,7 @@ class Non_Monotone_Solver_General(object):
     def enumerate_cases(self):
         # enumerate possible cases
         FOUND = False
-        for obj_num in range(self.n+1): # num of objects that need buffers
+        for obj_num in range(2): # num of objects that need buffers
             print "number of objects that use buffers", obj_num
             for obj_set in combinations(self.start_poses.keys(), obj_num): # which objs need buffers
                 for buffer_set in product(sorted(self.obj_locations.keys(), reverse=True), repeat=obj_num): # which poses are buffers
@@ -2871,11 +2882,10 @@ class Non_Monotone_Solver_General(object):
                         print "obj_buffer_dict", obj_buffer_dict
                         print "DFS.object_ordering", DFS.object_ordering
                         self.object_ordering = DFS.object_ordering
-                        break
-                if FOUND:
-                    break
-            if FOUND:
-                break
+                        # break
+                # if FOUND:
+                #     break
+            
         
         
 

@@ -212,6 +212,7 @@ def drawProblem(
     color_pool,
     example_index,
     buffers=None,
+    buffer_points=None,
     saveimage=False,
     path=None, 
     robotStart=None, 
@@ -252,8 +253,8 @@ def drawProblem(
         for cont in poly:
             patch = createPolygonPatch_distinct(cont, color_pool[obj_idx], isGoal)
             ax.add_patch(patch)
-            if not isGoal:
-                ax.text(points[i][0], points[i][1], str(obj_idx), fontweight='bold', fontsize=10, zorder=3)
+            # if not isGoal:
+            ax.text(points[i][0], points[i][1], str(obj_idx), fontweight='bold', fontsize=10, zorder=3)
 
 
     if buffers is not None:
@@ -265,6 +266,7 @@ def drawProblem(
             for cont in poly:
                 patch = createPolygonPatch_distinct(cont, "black", False, "buffers")
                 ax.add_patch(patch)
+                ax.text(buffer_points[i][0], buffer_points[i][1], str(len(polygons)+i), fontweight='bold', fontsize=10, zorder=3)
 
     if path is not None:
         pts, color = path
@@ -950,10 +952,10 @@ def genDenseCGraph(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, 
     ### finish generating the buffers
     print "Finish generating " + str(len(buffer_points)) + " buffers"
     print "Display the original problem with extra buffers"
-    if display:
-        drawProblem(
-            HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, points, color_pool, example_index, buffers, saveimage=True
-        )
+    # if display:
+    drawProblem(
+        HEIGHT, WIDTH, numObjs, RAD, wall_pts, objects, points, color_pool, example_index, buffers, buffer_points, saveimage=True
+    )
 
 
     ############ Decomposition of the workspace into different regions ################

@@ -4214,6 +4214,10 @@ class BiDirDPPlanner_Leaf_Root(object):
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
+        if subTree.result == True:
+            enablePrint()
+            print "#################### hit destination ##################"
+            blockPrint()
 
         if treeSide == "Left":
             self.engraftingLeftTree(subTree, initNode, goalNode)
@@ -4273,6 +4277,14 @@ class BiDirDPPlanner_Leaf_Root(object):
                     if parent_arrangement not in self.arrLeftRegistr:
                         print("a bridge is found")
                         self.isConnected = True
+                        enablePrint()
+                        if child_arrangement == self.treeL["L0"].arrangement:
+                            print "################################ hit L0 ##########################"
+                        else:
+                            print "################################ hit subset ###################"
+                            print child_arrangement
+                            print self.treeL['L0'].arrangement
+                        blockPrint()
                         ### check if it leads to a better solution
                         temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(child_arrangement)]
                         temp_rightKey = self.idRightRegistr[self.arrRightRegistr.index(parent_arrangement)]
@@ -4360,6 +4372,14 @@ class BiDirDPPlanner_Leaf_Root(object):
                     if parent_arrangement not in self.arrRightRegistr:
                         print("a bridge is found")
                         self.isConnected = True
+                        enablePrint()
+                        if child_arrangement == self.treeR["R0"].arrangement:
+                            print "################################ hit R0 ##########################"
+                        else:
+                            print "################################ hit subset ###################"
+                            print child_arrangement
+                            print self.treeR['R0'].arrangement
+                        blockPrint()
                         ### check if it leads to a better solution
                         temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(parent_arrangement)]
                         temp_rightKey = self.idRightRegistr[self.arrRightRegistr.index(child_arrangement)]
@@ -4431,20 +4451,26 @@ class BiDirDPPlanner_Leaf_Root(object):
         self.numLeftBranches = self.numNodesInLeftTree - 1
         self.numRightBranches = self.numNodesInRightTree - 1
         self.simplePath = []
+        enablePrint()
         ### from leftKey, back track to left root via parent search 
         curr_waypoint_id = self.leftKey
         self.simplePath.insert(0, curr_waypoint_id)
+        print curr_waypoint_id, self.treeL[curr_waypoint_id].arrangement
         while curr_waypoint_id != "L0":
             curr_waypoint_id = self.treeL[curr_waypoint_id].parent_id
             self.simplePath.insert(0, curr_waypoint_id)
+            print curr_waypoint_id, self.treeL[curr_waypoint_id].arrangement
         ### from rightKey, back track to right root via parent search
         curr_waypoint_id = self.rightKey
         self.simplePath.append(curr_waypoint_id)
+        print curr_waypoint_id, self.treeR[curr_waypoint_id].arrangement
         while curr_waypoint_id != "R0":
             curr_waypoint_id = self.treeR[curr_waypoint_id].parent_id
             self.simplePath.append(curr_waypoint_id)
+            print curr_waypoint_id, self.treeR[curr_waypoint_id].arrangement
 
         print("path: " + str(self.simplePath))
+        blockPrint()
         self.totalActions = len(self.simplePath) - 1
         print("total action: " + str(self.totalActions))
         print("solution cost: " + str(self.best_solution_cost)) 

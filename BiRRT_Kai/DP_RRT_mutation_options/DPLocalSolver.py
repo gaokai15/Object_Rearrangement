@@ -26,7 +26,7 @@ class DFS_Rec_for_Monotone_General(object):
         self.obj_locations = copy.deepcopy(object_locations)
         self.linked_list = copy.deepcopy(linked_list)
         self.region_dict = copy.deepcopy(region_dict)
-        self.dynamic_programming()
+        self.result = self.dynamic_programming()
         
     def dynamic_programming(self):
         self.parent = {}

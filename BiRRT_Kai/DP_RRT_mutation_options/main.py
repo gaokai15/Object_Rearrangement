@@ -74,8 +74,8 @@ if __name__ == "__main__":
 
     radius = 80
     para_combinations = []
-    for D in [0.5 for i in range(10)]:
-        for num in [25]:
+    for D in [0.5 for i in range(50)]:
+        for num in [10]:
             H = math.sqrt(2*num*math.pi*radius*radius/D)
             para_combinations.append([num, radius, H, H])
 
