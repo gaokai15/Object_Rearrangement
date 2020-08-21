@@ -1,17 +1,116 @@
 # import Polygon as pn
 # import Polygon.Utils as pu
-import pyclipper as pc
+import colorsys
 from math import *
+import pyclipper as pc
 
 
-def polysCollide(poly1, poly2):
-    # cpoly1 = pn.Polygon(poly1)
-    # cpoly2 = pn.Polygon(poly2)
-    # return cpoly1.overlaps(cpoly2)
-    collide = True
+def getColors(N):
+    HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
+    RGB_tuples = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)
+    return RGB_tuples
+
+
+def getColor(x):
+    return colorsys.hsv_to_rgb(x, 0.8, 0.8)
+
+
+def polyINTER(poly1, poly2, tree=False):
+    if not (poly1 and poly2):
+        return []
+
+    clip = pc.Pyclipper()
+    if type(poly1[0][0]) == list:
+        clip.AddPaths(poly1, pc.PT_SUBJECT, True)
+    else:
+        clip.AddPath(poly1, pc.PT_SUBJECT, True)
+    if type(poly2[0][0]) == list:
+        clip.AddPaths(poly2, pc.PT_CLIP, True)
+    else:
+        clip.AddPath(poly2, pc.PT_CLIP, True)
+
+    if tree:
+        return clip.Execute2(pc.CT_INTERSECTION, pc.PFT_NONZERO, pc.PFT_NONZERO)
+    return clip.Execute(pc.CT_INTERSECTION, pc.PFT_NONZERO, pc.PFT_NONZERO)
+
+
+def polyUNION(poly1, poly2, tree=False):
+    if not poly1:
+        return poly2
+    if not poly2:
+        return poly1
+
+    clip = pc.Pyclipper()
+    if type(poly1[0][0]) == list:
+        clip.AddPaths(poly1, pc.PT_SUBJECT, True)
+    else:
+        clip.AddPath(poly1, pc.PT_SUBJECT, True)
+    if type(poly2[0][0]) == list:
+        clip.AddPaths(poly2, pc.PT_CLIP, True)
+    else:
+        clip.AddPath(poly2, pc.PT_CLIP, True)
+
+    if tree:
+        return clip.Execute2(pc.CT_UNION, pc.PFT_NONZERO, pc.PFT_NONZERO)
+    return clip.Execute(pc.CT_UNION, pc.PFT_NONZERO, pc.PFT_NONZERO)
+
+
+def polyDIFF(poly1, poly2, tree=False):
+    if not poly1:
+        return list(reversed(poly2))
+    if not poly2:
+        return poly1
+
+    clip = pc.Pyclipper()
+    if type(poly1[0][0]) == list:
+        clip.AddPaths(poly1, pc.PT_SUBJECT, True)
+    else:
+        clip.AddPath(poly1, pc.PT_SUBJECT, True)
+    if type(poly2[0][0]) == list:
+        clip.AddPaths(poly2, pc.PT_CLIP, True)
+    else:
+        clip.AddPath(poly2, pc.PT_CLIP, True)
+
+    if tree:
+        return clip.Execute2(pc.CT_DIFFERENCE, pc.PFT_NONZERO, pc.PFT_NONZERO)
+    return clip.Execute(pc.CT_DIFFERENCE, pc.PFT_NONZERO, pc.PFT_NONZERO)
+
+
+def polyXOR(poly1, poly2, tree=False):
+    if not poly1:
+        return poly2
+    if not poly2:
+        return poly1
+
+    clip = pc.Pyclipper()
+    if type(poly1[0][0]) == list:
+        clip.AddPaths(poly1, pc.PT_SUBJECT, True)
+    else:
+        clip.AddPath(poly1, pc.PT_SUBJECT, True)
+    if type(poly2[0][0]) == list:
+        clip.AddPaths(poly2, pc.PT_CLIP, True)
+    else:
+        clip.AddPath(poly2, pc.PT_CLIP, True)
+
+    if tree:
+        return clip.Execute2(pc.CT_XOR, pc.PFT_NONZERO, pc.PFT_NONZERO)
+    return clip.Execute(pc.CT_XOR, pc.PFT_NONZERO, pc.PFT_NONZERO)
+
+
+def polyTOUCH(poly1, poly2):
+    # return True
+    c = 0
     for cont in pc.MinkowskiDiff(poly1, poly2):
-        collide &= pc.Orientation(collide) == pc.PointInPolygon((0, 0), cont)
-    return collide
+        if pc.PointInPolygon((0, 0), cont):
+            if pc.Orientation(cont):
+                c += 1
+            else:
+                c -= 1
+    return c > 0
+
+
+def o55():
+    return 0.55
 
 
 def circle_intersections(x0, y0, r0, x1, y1, r1):
