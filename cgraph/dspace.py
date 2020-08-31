@@ -33,7 +33,7 @@ class Circle:
     def contains(self, point):
         return (vectorops.distance(point, self.center) <= self.radius)
 
-    def poly(self, res=20, toint=True):
+    def poly(self, res=55, toint=True):
         pnts = []
         numdivs = int(math.ceil(self.radius * math.pi * 2 / res))
         for i in xrange(numdivs + 1):
@@ -52,7 +52,7 @@ class Circle:
                 ))
         return pnts
 
-    def drawGL(self, res=20):
+    def drawGL(self, res=55):
         glBegin(GL_TRIANGLE_FAN)
         glVertex2f(*self.center)
         for p in self.poly(res, False):
@@ -276,12 +276,20 @@ class DiskCSpace(CSpace):
             glDisable(GL_BLEND)
 
         for rid, r in sorted(self.regions.items(), reverse=True):
-            seed(rid[:-1])
+            colors = []
+            for d in rid:
+                dd = str(d).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
+                if dd:
+                    # seed(dd)
+                    colors.append(getColor(int(dd) * 2.0 / len(self.poseMap)))
+            r.drawGL(avgColor(colors))
+
+            # seed(rid[:-1])
             # r.drawGL()
             # r.drawGL(getColor(sum(rid))
             # r.drawGL(choice(getColors(100)))
-            r.drawGL((random(), random(), random()))
-            seed()
+            # r.drawGL((random(), random(), random()))
+            # seed()
 
     def regionGraph(self, prune_dist=0):
         """
@@ -408,8 +416,8 @@ class DiskCSpace(CSpace):
 
         self.RG = (graph.keys(), paths)
         self.RGAdj = graph
-        print(self.RG)
-        print(self.RGAdj)
+        # print(self.RG)
+        # print(self.RGAdj)
 
 
 class DiskCSpaceProgram(GLProgram):
@@ -467,13 +475,16 @@ class DiskCSpaceProgram(GLProgram):
                     self.planner.planMore(1)
                     self.path = self.planner.getPath()
                     self.G = self.planner.getRoadmap()
+                    self.refresh()
             elif key == 'p':
                 if self.optimizingPlanner or not self.path:
                     print("Planning 100...")
                     self.planner.planMore(100)
                     self.path = self.planner.getPath()
                     self.G = self.planner.getRoadmap()
-        self.refresh()
+                    self.refresh()
+            # elif key == 'q':
+            #     self.
 
     def display(self):
         glMatrixMode(GL_PROJECTION)
@@ -532,13 +543,15 @@ def genPoses(n, space=DiskCSpace()):
     for i in range(n):
         ### need to generate both start and goal
         for j in range(2):
+            sorg = 'G' if j else 'S'
             ### reset obstacles
             space.obstacles = staticObstacles[:]
             for pid, pose in space.poseMap.items():
                 ### For dense case,
                 ### start only checks with starts
                 ### goal only checks with goals
-                if j % 2 == pid % 2:
+                # if j % 2 == pid % 2:
+                if pid[-1] == sorg:
                     space.addObstacle(pose)
             ### compute cspace
             space.computeMinkObs()
@@ -554,7 +567,7 @@ def genPoses(n, space=DiskCSpace()):
                 return
 
             ### Congrats the object's goal/start is accepted
-            space.poseMap[i + j] = Circle(point[0], point[1], space.robot.radius)
+            space.poseMap[str(i) + sorg] = Circle(point[0], point[1], space.robot.radius)
 
     ### reset obstacles
     space.obstacles = staticObstacles[:]
@@ -605,3 +618,10 @@ if __name__ == '__main__':
     program.view.w = program.view.h = 1080
     program.name = "Motion planning test"
     program.run()
+
+    # program = DiskCSpaceProgram(space)
+    # program.view.w = program.view.h = 1080
+    # program.name = "Motion planning test2"
+    # program.run()
+
+    print("TEST")

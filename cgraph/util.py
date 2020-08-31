@@ -5,14 +5,16 @@ from math import *
 import pyclipper as pc
 
 
-def getColors(N):
-    HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
-    RGB_tuples = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)
-    return RGB_tuples
-
-
 def getColor(x):
-    return colorsys.hsv_to_rgb(x, 0.8, 0.8)
+    return colorsys.hsv_to_rgb(x, 0.9, 0.9)
+
+
+def avgColor(cs):
+    return (
+        sqrt(sum([c[0]**2 for c in cs]) / len(cs)),
+        sqrt(sum([c[1]**2 for c in cs]) / len(cs)),
+        sqrt(sum([c[2]**2 for c in cs]) / len(cs)),
+    )
 
 
 def polyINTER(poly1, poly2, tree=False):
