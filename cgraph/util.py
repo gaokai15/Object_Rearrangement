@@ -98,7 +98,6 @@ def polyXOR(poly1, poly2, tree=False):
 
 
 def polyTOUCH(poly1, poly2):
-    # return True
     c = 0
     for cont in pc.MinkowskiDiff(poly1, poly2):
         if pc.PointInPolygon((0, 0), cont):

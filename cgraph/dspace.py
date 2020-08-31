@@ -9,6 +9,7 @@ from klampt.math import vectorops
 import sys
 import math
 from time import time
+from copy import deepcopy
 from itertools import combinations
 from random import random, seed, choice
 
@@ -126,6 +127,20 @@ class Poly:
             else:
                 return poly.sample(o55)
 
+    def sample(self):
+        if self.type == 'C_Poly':
+            poly = pn.Polygon()
+            for cont in self.points:
+                if pc.Orientation(cont):
+                    poly += pn.Polygon(cont)
+                else:
+                    poly -= pn.Polygon(cont)
+            else:
+                return poly.sample(random)
+        elif self.type == 'S_Poly':
+            poly = pn.Polygon(self.points)
+            return poly.sample(random)
+
     def drawGL(self, color=(0.5, 0.5, 0.5)):
         if self.type == 'C_Poly':
             # glColor3f(*color)
@@ -159,7 +174,7 @@ class Poly:
 
 
 class DiskCSpace(CSpace):
-    def __init__(self, rad=10, poseMap={}, height=1000, width=1000):
+    def __init__(self, rad=10, poseMap={}, obstacles=[], height=1000, width=1000):
         CSpace.__init__(self)
         #set bounds
         self.bound = [(0, width), (0, height)]
@@ -173,7 +188,7 @@ class DiskCSpace(CSpace):
         self.eps = 1
 
         self.robot = Circle(0, 0, rad)
-        self.obstacles = []
+        self.obstacles = obstacles
 
         self.mink_obs = None
 
@@ -189,7 +204,7 @@ class DiskCSpace(CSpace):
         self.obstacles.append(obs)
 
     def computeMinkObs(self):
-        print(self.robot.radius)
+        # print(self.robot.radius)
         shape = self.robot.poly()
         clip = pc.Pyclipper()
         for o in self.obstacles:
@@ -276,11 +291,18 @@ class DiskCSpace(CSpace):
             <0 will prune using absolute value as the hamming
                distance but always connect to the free space
         """
+        if self.mink_obs is None:
+            self.computeMinkObs()
+
         shape = self.robot.poly()
         polysum = []
         regions = {}
+        # clip = pc.Pyclipper()
         for i, o in self.poseMap.items():
-            obj = pc.MinkowskiSum(shape, o.poly(), True)
+            # clip.AddPaths(pc.MinkowskiSum(shape, o.poly(), True), pc.PT_CLIP, True)
+            # obj = clip.Execute(pc.CT_UNION, pc.PFT_NONZERO, pc.PFT_NONZERO)
+            # obj = pc.MinkowskiSum(shape, o.poly(), True)
+            obj = Circle(o.center[0], o.center[1], o.radius + self.robot.radius).poly()
             for rid, r in regions.items():
                 rANDobj = polyINTER(r, obj)
                 if rANDobj:
@@ -349,17 +371,32 @@ class DiskCSpace(CSpace):
                 print(rid1, rid2)
                 continue
             elif r1.type == 'C_Poly':
+                c = 0
                 for cont in r1.points:
-                    # if polyTOUCH(cont, r2.points):
+                    #     if polyTOUCH(cont, r2.points):
+                    #         if not pc.Orientation(cont):
+                    #             c += 1
+                    #         else:
+                    #             c -= 1
+                    # if c > 0:
+                    #     paths.append((rid1, rid2))
+
                     if set([(x, y) for x, y in cont]).intersection(set([(x, y) for x, y in r2.points])):
                         paths.append((rid1, rid2))
-                    #     break
+                        break
             elif r2.type == 'C_Poly':
+                c = 0
                 for cont in r2.points:
-                    # if polyTOUCH(cont, r1.points):
+                    #     if polyTOUCH(cont, r1.points):
+                    #         if not pc.Orientation(cont):
+                    #             c += 1
+                    #         else:
+                    #             c -= 1
+                    # if c > 0:
+                    #     paths.append((rid1, rid2))
                     if set([(x, y) for x, y in cont]).intersection(set([(x, y) for x, y in r1.points])):
                         paths.append((rid1, rid2))
-                    #     break
+                        break
             else:
                 if polyTOUCH(r1.points, r2.points):
                     paths.append((rid1, rid2))
@@ -371,10 +408,12 @@ class DiskCSpace(CSpace):
 
         self.RG = (graph.keys(), paths)
         self.RGAdj = graph
+        print(self.RG)
+        print(self.RGAdj)
 
 
 class DiskCSpaceProgram(GLProgram):
-    def __init__(self, space, start, goal):
+    def __init__(self, space, start=None, goal=None):
         GLProgram.__init__(self)
         self.space = space
         #PRM planner
@@ -411,28 +450,30 @@ class DiskCSpaceProgram(GLProgram):
         #MotionPlan.setOptions(type="ompl:rrt",suboptimalityFactor=0.1,knn=10,connectionThreshold=0.1)
         #self.optimizingPlanner = True
 
-        self.planner = MotionPlan(space)
         self.start = start
         self.goal = goal
-        self.planner.setEndpoints(start, goal)
+        self.planner = None
+        if start is not None and goal is not None:
+            self.planner = MotionPlan(space)
+            self.planner.setEndpoints(start, goal)
         self.path = []
         self.G = None
 
     def keyboardfunc(self, key, x, y):
-        if key == ' ':
-            if self.optimizingPlanner or not self.path:
-                print("Planning 1...")
-                self.planner.planMore(1)
-                self.path = self.planner.getPath()
-                self.G = self.planner.getRoadmap()
-                self.refresh()
-        elif key == 'p':
-            if self.optimizingPlanner or not self.path:
-                print("Planning 100...")
-                self.planner.planMore(100)
-                self.path = self.planner.getPath()
-                self.G = self.planner.getRoadmap()
-                self.refresh()
+        if self.planner is not None:
+            if key == ' ':
+                if self.optimizingPlanner or not self.path:
+                    print("Planning 1...")
+                    self.planner.planMore(1)
+                    self.path = self.planner.getPath()
+                    self.G = self.planner.getRoadmap()
+            elif key == 'p':
+                if self.optimizingPlanner or not self.path:
+                    print("Planning 100...")
+                    self.planner.planMore(100)
+                    self.path = self.planner.getPath()
+                    self.G = self.planner.getRoadmap()
+        self.refresh()
 
     def display(self):
         glMatrixMode(GL_PROJECTION)
@@ -453,8 +494,9 @@ class DiskCSpaceProgram(GLProgram):
             for q in self.path:
                 self.space.drawRobotGL(q)
         else:
-            self.space.drawRobotGL(self.start)
-            self.space.drawRobotGL(self.goal)
+            if self.planner:
+                self.space.drawRobotGL(self.start)
+                self.space.drawRobotGL(self.goal)
 
         if self.G:
             #draw graph
@@ -477,39 +519,89 @@ class DiskCSpaceProgram(GLProgram):
 
         self.space.drawObstaclesGL()
         self.space.drawRegionGraphGL()
-        # self.space.drawMinkGL()
+        self.space.drawMinkGL()
+
+
+def loadEnv(filename):
+    with open(filename) as f:
+        return eval(f.read())
+
+
+def genPoses(n, space=DiskCSpace()):
+    staticObstacles = space.obstacles[:]
+    for i in range(n):
+        ### need to generate both start and goal
+        for j in range(2):
+            ### reset obstacles
+            space.obstacles = staticObstacles[:]
+            for pid, pose in space.poseMap.items():
+                ### For dense case,
+                ### start only checks with starts
+                ### goal only checks with goals
+                if j % 2 == pid % 2:
+                    space.addObstacle(pose)
+            ### compute cspace
+            space.computeMinkObs()
+            try:
+                ### try to sample point
+                point = space.mink_obs.sample()
+            except:
+                if j == 0:
+                    print("failed to generate the start of object " + str(i))
+                else:
+                    print("failed to generate the goal of object " + str(i))
+                print("FAIL TO GENERATE THE INITIAL INSTANCE")
+                return
+
+            ### Congrats the object's goal/start is accepted
+            space.poseMap[i + j] = Circle(point[0], point[1], space.robot.radius)
+
+    ### reset obstacles
+    space.obstacles = staticObstacles[:]
+    space.computeMinkObs()
 
 
 if __name__ == '__main__':
     space = None
-    start = None
-    goal = None
-    poseMap = {
-        1: Circle(820, 180, 50),
-        2: Circle(180, 820, 50),
-        3: Circle(180, 800, 50),
-        4: Circle(180, 780, 50),
-        5: Circle(180, 760, 50),
-        6: Circle(180, 740, 50),
-        7: Circle(180, 720, 50),
-        8: Circle(180, 700, 50),
-        9: Circle(180, 680, 50),
-        10: Circle(180, 660, 50),
-        11: Circle(180, 640, 50),
-        12: Circle(180, 620, 50),
-        13: Circle(180, 600, 50),
-        14: Circle(180, 560, 50),
-        15: Circle(180, 520, 50),
-    }
-    space = DiskCSpace(rad=50, poseMap=poseMap)
-    space.addObstacle(Circle(700, 500, 120))
-    space.addObstacle(Rectangle(295, 400, 5, 300))
-    space.addObstacle(Rectangle(295, 400, 300, 5))
-    space.addObstacle(Rectangle(595, 700, -300, -5))
-    space.addObstacle(Rectangle(595, 700, -5, -300))
-    start = (150, 150)
-    goal = (850, 850)
-    program = DiskCSpaceProgram(space, start, goal)
+    numObjs = 5
+    rad = 50
+    height = 1000
+    width = 1000
+    if len(sys.argv) > 1:
+        if sys.argv[1].isdigit():
+            numObjs = int(sys.argv[1])
+        else:
+            space = loadEnv(sys.argv[1])
+
+    if len(sys.argv) > 2:
+        if space is None:
+            rad = int(sys.argv[2])
+        else:
+            numObjs = int(sys.argv[2])
+
+    if len(sys.argv) > 3:
+        height = int(sys.argv[3])
+
+    if len(sys.argv) > 4:
+        width = int(sys.argv[4])
+
+    if space is None:
+        space = DiskCSpace(rad, {}, [], height, width)
+
+    if len(space.poseMap) == 0:
+        genPoses(numObjs, space)
+
+    # space = DiskCSpace(rad=50, poseMap=poseMap)
+    # space.addObstacle(Circle(700, 500, 120))
+    # space.addObstacle(Rectangle(295, 400, 5, 300))
+    # space.addObstacle(Rectangle(295, 400, 300, 5))
+    # space.addObstacle(Rectangle(595, 700, -300, -5))
+    # space.addObstacle(Rectangle(595, 700, -5, -300))
+    # space.computeMinkObs()
+    # print(space.mink_obs.points, space.mink_obs.type, space.mink_obs.sample())
+    # start = (150, 150)
+    # goal = (850, 850)
+    program = DiskCSpaceProgram(space)
     program.view.w = program.view.h = 1080
     program.name = "Motion planning test"
     program.run()
