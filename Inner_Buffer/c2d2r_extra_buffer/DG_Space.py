@@ -2244,7 +2244,10 @@ class DFS_Rec_for_Monotone_General(object):
                 self.parent[new_node] = old_node
                 self.queue.append(new_node)
                 self.explored[new_node] = True
-                if new_node == 1<<(self.n) - 1:
+                complete_node = 0
+                for i in self.start_poses.keys():
+                    complete_node += (1<<i)
+                if new_node == complete_node:
                     return True
                 FLAG = self.DFS_rec(new_node)
                 if FLAG:
@@ -2706,7 +2709,10 @@ class DFS_Rec_for_Non_Monotone_General(object):
                 self.path_option[new_node] = path_index
                 self.parent[new_node] = old_node
                 self.explored[new_node] = True
-                if new_node == 2**(self.n+self.b) - 1:
+                complete_node = 0
+                for i in self.start_poses.keys():
+                    complete_node += (1<<i)
+                if new_node == complete_node:
                     return True
                 FLAG = self.DFS_rec(new_node)
                 if FLAG:
