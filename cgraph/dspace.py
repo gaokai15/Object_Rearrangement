@@ -33,9 +33,9 @@ class Circle:
     def contains(self, point):
         return (vectorops.distance(point, self.center) <= self.radius)
 
-    def poly(self, res=55, toint=True):
+    def poly(self, numdivs=12, toint=True):
         pnts = []
-        numdivs = int(math.ceil(self.radius * math.pi * 2 / res))
+        # numdivs = int(math.ceil(self.radius * math.pi * 2 / res))
         for i in xrange(numdivs + 1):
             u = float(i) / float(numdivs) * math.pi * 2
             if toint:
@@ -52,10 +52,10 @@ class Circle:
                 ))
         return pnts
 
-    def drawGL(self, res=55):
+    def drawGL(self, numdivs=12):
         glBegin(GL_TRIANGLE_FAN)
         glVertex2f(*self.center)
-        for p in self.poly(res, False):
+        for p in self.poly(numdivs, False):
             glVertex2f(*p)
         glEnd()
 
@@ -99,16 +99,20 @@ class Poly:
         self.points = points
 
     def contains(self, point):
-        c = 0
-        for cont in self.points:
-            if pc.PointInPolygon(point, cont):
-                if pc.Orientation(cont):
-                    c += 1
-                else:
-                    c -= 1
-        return c > 0
+        if self.type == 'C_Poly':
+            c = 0
+            for cont in self.points:
+                if pc.PointInPolygon(point, cont):
+                    if pc.Orientation(cont):
+                        c += 1
+                    else:
+                        c -= 1
+            return c > 0
+        elif self.type == 'S_Poly':
+            return pc.PointInPolygon(point, self.points)
 
     def quasiCenter(self):
+        center = (0, 0)
         if self.type == 'C_Poly':
             poly = pn.Polygon()
             for cont in self.points:
@@ -117,17 +121,19 @@ class Poly:
                 else:
                     poly -= pn.Polygon(cont)
             if poly.isInside(*poly.center()) > 0:
-                return poly.center()
+                center = poly.center()
             else:
-                return poly.sample(o55)
+                center = poly.sample(o55)
         elif self.type == 'S_Poly':
             poly = pn.Polygon(self.points)
             if pc.PointInPolygon(poly.center(), self.points) > 0:
-                return poly.center()
+                center = poly.center()
             else:
-                return poly.sample(o55)
+                center = poly.sample(o55)
+        return (int(center[0]), int(center[1]))
 
     def sample(self):
+        sampled = (0, 0)
         if self.type == 'C_Poly':
             poly = pn.Polygon()
             for cont in self.points:
@@ -136,10 +142,11 @@ class Poly:
                 else:
                     poly -= pn.Polygon(cont)
             else:
-                return poly.sample(random)
+                sampled = poly.sample(random)
         elif self.type == 'S_Poly':
             poly = pn.Polygon(self.points)
-            return poly.sample(random)
+            sampled = poly.sample(random)
+        return (int(sampled[0]), int(sampled[1]))
 
     def drawGL(self, color=(0.5, 0.5, 0.5)):
         if self.type == 'C_Poly':
@@ -200,9 +207,6 @@ class DiskCSpace(CSpace):
     def setRobotRad(self, rad):
         self.robot.radius = rad
 
-    def addObstacle(self, obs):
-        self.obstacles.append(obs)
-
     def computeMinkObs(self):
         # print(self.robot.radius)
         shape = self.robot.poly()
@@ -225,6 +229,15 @@ class DiskCSpace(CSpace):
 
     def clearPoses(self, obj):
         self.poseMap.clear()
+
+    def addObstacle(self, obs):
+        self.obstacles.append(obs)
+
+    def restoreObstacles(self, obs):
+        self.obstacles = obs[:]
+
+    def saveObstacles(self):
+        return self.obstacles[:]
 
     def feasible(self, q):
         if self.mink_obs is None:
@@ -279,9 +292,13 @@ class DiskCSpace(CSpace):
             colors = []
             for d in rid:
                 dd = str(d).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
+                sd = str(d).strip('0123456789')
                 if dd:
                     # seed(dd)
-                    colors.append(getColor(int(dd) * 2.0 / len(self.poseMap)))
+                    if 'B' in sd:
+                        colors.append((0, 0, 0))
+                    else:
+                        colors.append(getColor(int(dd) * 2.0 / len(self.poseMap)))
             r.drawGL(avgColor(colors))
 
             # seed(rid[:-1])
@@ -538,14 +555,16 @@ def loadEnv(filename):
         return eval(f.read())
 
 
-def genPoses(n, space=DiskCSpace()):
-    staticObstacles = space.obstacles[:]
+def genPoses(n, space):
+    ### save current obstacles
+    staticObstacles = space.saveObstacles()
+
     for i in range(n):
         ### need to generate both start and goal
         for j in range(2):
             sorg = 'G' if j else 'S'
             ### reset obstacles
-            space.obstacles = staticObstacles[:]
+            space.restoreObstacles(staticObstacles)
             for pid, pose in space.poseMap.items():
                 ### For dense case,
                 ### start only checks with starts
@@ -567,7 +586,86 @@ def genPoses(n, space=DiskCSpace()):
                 return
 
             ### Congrats the object's goal/start is accepted
-            space.poseMap[str(i) + sorg] = Circle(point[0], point[1], space.robot.radius)
+            space.addPose(str(i) + sorg, Circle(point[0], point[1], space.robot.radius))
+
+    ### restore obstacles
+    space.restoreObstacles(staticObstacles)
+    space.computeMinkObs()
+
+
+# def genBuffers(n, space=DiskCSpace(), maxOverlap, method='random'):
+def genBuffers(n, space, maxOverlap, method='random'):
+    staticObstacles = space.saveObstacles()
+
+    ### Random Generation ###
+    ### The idea is we randomly generate a buffer in the space, hoping it will
+    ### overlap with nothing.  If it could not achieve after several trials, we
+    ### increment the number of object poses it can overlap.  We keep incrementing
+    ### until we find enough buffers.
+    if method == 'random':
+        V, E = space.RG
+        numOverlapAllowed = 0
+        for i in range(n):
+            isValid = False
+            timeout = 500
+            while not isValid and timeout > 0:
+                timeout -= 1
+                ### try to sample point
+                numOverlap = 0
+                point = space.mink_obs.sample()
+                for v in V:
+                    # print(space.regions[v].points, point)
+                    if space.regions[v].contains(point):
+                        print(v)
+
+                if numOverlap <= numOverlapAllowed:
+                    isValid = True
+
+            ### reach here either (1) isValid == True (2) timeout <= 0
+            if timeout <= 0:
+                ### keep failing generating a buffer allowed to overlap with maximum number of objects
+                ### increase the numOverlapAllowed
+                numOverlapAllowed += 1
+                if (numOverlapAllowed > maximumOverlap):
+                    print("Exceed the maximum limit of numOverlap for buffer generation")
+                    return
+
+            ### Otherwise the buffer is accepted
+            space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
+
+    ### Hueristic Generation ###
+    elif method == 'simple_heuristic':
+        polysum = wall_mink - sum(mink_objs, pn.Polygon())
+        b_points = set()
+        for x in polysum:
+            b_points.update(x)
+        # print(b_points)
+
+        # numBuffers = len(b_points)
+        for i in range(numBuffs):
+            # point = choice(list(b_points))
+            # b_points.remove(point)
+            point = polysum.sample(random)
+            buffer_points.append(point)
+            buffers.append(pn.Polygon(polygon + point))
+            mink_obj = 2 * polygon + point  ### grown_shape buffer
+            minkowski_buffers.append(pn.Polygon(mink_obj))
+
+    ### Better Hueristic Generation ###
+    elif method == 'better_heuristic':
+        numBuffPerObj = 1
+        obj_ind = range(len(mink_objs))
+        for si, gi in zip(obj_ind[::2], obj_ind[1::2]):
+            ind_obs = set(obj_ind) - set([si, gi])
+            polysum = wall_mink - sum([mink_objs[x] for x in ind_obs], pn.Polygon())
+            for i in range(numBuffPerObj):
+                point = polysum.sample(random)
+                buffer_points.append(point)
+                buffers.append(pn.Polygon(polygon + point))
+                mink_obj = 2 * polygon + point  ### grown_shape buffer
+                minkowski_buffers.append(pn.Polygon(mink_obj))
+
+        return buffer_points, buffers, minkowski_buffers
 
     ### reset obstacles
     space.obstacles = staticObstacles[:]
@@ -604,6 +702,12 @@ if __name__ == '__main__':
     if len(space.poseMap) == 0:
         genPoses(numObjs, space)
 
+    # space.setRobotRad(100)
+    # space.regionGraph()
+    # genBuffers(2, space, 4)
+    # space.setRobotRad(50)
+    # space.regionGraph()
+
     # space = DiskCSpace(rad=50, poseMap=poseMap)
     # space.addObstacle(Circle(700, 500, 120))
     # space.addObstacle(Rectangle(295, 400, 5, 300))
@@ -614,6 +718,7 @@ if __name__ == '__main__':
     # print(space.mink_obs.points, space.mink_obs.type, space.mink_obs.sample())
     # start = (150, 150)
     # goal = (850, 850)
+
     program = DiskCSpaceProgram(space)
     program.view.w = program.view.h = 1080
     program.name = "Motion planning test"
