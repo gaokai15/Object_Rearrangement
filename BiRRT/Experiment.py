@@ -71,7 +71,9 @@ class Experiment(object):
         print "final_arrangement: " + str(self.final_arrangement)
 
         ### Now let's generate the region graph and build its connection
+        t0 = time.time()
         self.regionGraph = RegionGraphGenerator(self.instance, self.visualTool, self.wall_mink)
+        print("RG Time: ", time.time() - t0)
         ### get the region dict and LL from the graph
         region_dict, linked_list = self.linked_list_conversion(self.regionGraph.graph)
 

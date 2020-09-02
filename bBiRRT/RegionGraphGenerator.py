@@ -31,9 +31,7 @@ class RegionGraphGenerator(object):
     def genRegionGraph(self, instance, visualTool):
         ### This function generates a graph with different regions, specifying neighboring regions
         all_points = instance.points + instance.buffer_points
-        print(len(all_points))
         all_minkowskis = instance.minkowski_objs + instance.minkowski_buffers
-        print(len(all_minkowskis))
 
         regions = {}
         polysum = pn.Polygon()
@@ -101,11 +99,22 @@ class RegionGraphGenerator(object):
             rind1, r1 = rkv1
             rind2, r2 = rkv2
             # print(rind1, r1, rind2, r2)
-            if rind1[0] > 0 and rind2[0] > 0:
-                s1 = set(rind1[:-1])
-                s2 = set(rind2[:-1])
-                if len(s1 - s2) + len(s2 - s1) > 1:
-                    continue
+            # if rind1[0] > 0 and rind2[0] > 0:
+            #     s1 = set(rind1[:-1])
+            #     s2 = set(rind2[:-1])
+            #     if len(s1 - s2) + len(s2 - s1) > 1:
+            #         continue
+            prune_dist=1
+            s1 = set(rind1[:-1])
+            s2 = set(rind2[:-1])
+            s1vs2 = s1.intersection(s2)
+
+            if s1 and s2 and not s1vs2:
+                continue
+            if prune_dist != 0:
+                if len(s1 ^ s2) > abs(prune_dist):
+                    if s1 and s2 or prune_dist > 0:
+                        continue
 
             r1, pstart = r1
             r2, pgoal = r2

@@ -289,6 +289,9 @@ class DiskCSpace(CSpace):
             glDisable(GL_BLEND)
 
         for rid, r in sorted(self.regions.items(), reverse=True):
+            if len(rid) == 1:
+                r.drawGL((0.1, 0.5, 0.1))
+                continue
             colors = []
             for d in rid:
                 dd = str(d).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
@@ -308,7 +311,7 @@ class DiskCSpace(CSpace):
             # r.drawGL((random(), random(), random()))
             # seed()
 
-    def regionGraph(self, prune_dist=0):
+    def regionGraph(self, prune_dist=1):
         """
         prune_dist =
             0 if you don't want to prune edges
@@ -385,12 +388,12 @@ class DiskCSpace(CSpace):
             s2 = set(rid2[:-1])
             s1vs2 = s1.intersection(s2)
 
-            # if s1 and s2 and not s1vs2:
-            #     continue
-            # if prune_dist != 0:
-            #     if len(s1 ^ s2) > abs(prune_dist):
-            #         if s1 and s2 or prune_dist > 0:
-            #             continue
+            if s1 and s2 and not s1vs2:
+                continue
+            if prune_dist != 0:
+                if len(s1 ^ s2) > abs(prune_dist):
+                    if s1 and s2 or prune_dist > 0:
+                        continue
 
             if r1.type == 'C_Poly' and r2.type == 'C_Poly':
                 print(rid1, rid2)
@@ -435,6 +438,7 @@ class DiskCSpace(CSpace):
         self.RGAdj = graph
         # print(self.RG)
         # print(self.RGAdj)
+        print(self.pose2reg)
 
 
 class DiskCSpaceProgram(GLProgram):

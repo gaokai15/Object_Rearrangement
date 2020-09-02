@@ -5,6 +5,7 @@ import sys
 import IPython
 import shutil
 from Experiment import Experiment
+from random import seed
 
 if __name__ == "__main__":
     ### make sure it loads in the essential parameters (numObjs, RAD, HEIGHT, WIDTH)
@@ -59,10 +60,11 @@ if __name__ == "__main__":
         [18, 80, 1350, 1350],
         [18, 80, 1200, 1200],
     ]
-    para_combinations = [[5, 80, 700, 700], [5, 80, 650, 650]]
+    # para_combinations = [[5, 80, 700, 700], [5, 80, 650, 650]]
 
     f_stat = open("stat.txt", "w")
 
+    seed(314)
     for para_comb in para_combinations:
 
         numObjs = para_comb[0]
