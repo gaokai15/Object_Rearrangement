@@ -41,30 +41,18 @@ class Experiments(object):
         start_poses = {}
         goal_poses = {}
         for pid in space.poseMap:
-            # dd = str(pid).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
-            # sd = str(pid).strip('0123456789')
-            # if 'S' in sd:
-            #     start_poses[int(dd)] = pid
-            # elif 'G' in sd:
-            #     goal_poses[int(dd)] = pid
-            if type(pid) == str:
-                continue
-            if pid % 2 == 0:
-                start_poses[pid / 2] = pid
-            else:
-                goal_poses[pid // 2] = pid
-
-        start_poses, goal_poses = {0: 0, 1: 2}, {0: 1, 1: 3}
+            dd = str(pid).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
+            sd = str(pid).strip('0123456789')
+            if 'S' in sd:
+                start_poses[int(dd)] = pid
+            elif 'G' in sd:
+                goal_poses[int(dd)] = pid
 
         region_dict, LL = linked_list_conversion(graph)
         DFS_Rec_for_Monotone_General(start_poses, goal_poses, {}, {}, object_locations, LL, region_dict)
 
         print(start_poses, goal_poses)
-        # start_poses = {}
-        # goal_poses = {}
-        # for i in range(numObjs):
-        #     start_poses[i] = 2 * i
-        #     goal_poses[i] = 2 * i + 1
+        print(object_locations)
 
         start = time.time()
         DFS_non_gen = Non_Monotone_Solver_General(graph, object_locations, start_poses, goal_poses)
@@ -2643,19 +2631,23 @@ class DFS_Rec_for_Non_Monotone_General(object):
 
     def transformation(self, occupied_poses, obj):
 
+        # print(self.obj_buffer_dict)
         if obj < self.n:
-            start = 2 * obj
+            # start = 2 * obj
+            start = 'S' + str(obj)
             if obj in self.obj_buffer_dict:
                 goal = self.obj_buffer_dict[obj][1]
             else:
-                goal = 2 * obj + 1
+                # goal = 2 * obj + 1
+                goal = 'G' + str(obj)
         else:
             for key in self.obj_buffer_dict.keys():
                 if self.obj_buffer_dict[key][0] == obj:
                     real_object = key
                     break
             start = self.obj_buffer_dict[real_object][1]
-            goal = 2 * real_object + 1
+            # goal = 2 * real_object + 1
+            goal = 'G' + str(real_object)
         dependency_dict_key = (min(start, goal), max(start, goal))
         if dependency_dict_key not in self.dependency_dict:
             self.dependency_dict[dependency_dict_key] = []
@@ -2773,8 +2765,10 @@ class Non_Monotone_Solver_General(object):
         for obj_num in range(self.n + 1):  # num of objects that need buffers
             print "number of objects that use buffers", obj_num
             for obj_set in combinations(self.start_poses.keys(), obj_num):  # which objs need buffers
-                for buffer_set in product(sorted(self.obj_locations.keys(), reverse=True),
-                                          repeat=obj_num):  # which poses are buffers
+                print(list(product(sorted(self.obj_locations.keys()), repeat=obj_num)))
+                print(obj_set)
+                for buffer_set in product(sorted(self.obj_locations.keys()), repeat=obj_num):  # which poses are buffers
+                    # print(buffer_set)
                     obj_buffer_dict = {}
                     Degrade = False  # when an object uses its own start or goal pose as a buffer, Degrade = True.
                     for index in xrange(len(obj_set)):
@@ -2910,7 +2904,7 @@ if __name__ == "__main__":
 
     # space.setRobotRad(100)
     space.regionGraph()
-    genBuffers(3, space, 4)
+    genBuffers(4, space, 4)
     # space.setRobotRad(50)
     space.regionGraph()
     print(space.RGAdj.keys())

@@ -81,10 +81,14 @@ class Rectangle:
 
     def poly(self):
         return [
+            # (self.center[0], self.center[1]),
+            # (self.center[0], self.center[1] + self.height),
+            # (self.center[0] + self.width, self.center[1] + self.height),
+            # (self.center[0] + self.width, self.center[1]),
             (self.center[0], self.center[1]),
-            (self.center[0], self.center[1] + self.height),
-            (self.center[0] + self.width, self.center[1] + self.height),
             (self.center[0] + self.width, self.center[1]),
+            (self.center[0] + self.width, self.center[1] + self.height),
+            (self.center[0], self.center[1] + self.height),
         ]
 
     def drawGL(self):
@@ -161,17 +165,11 @@ class Poly:
 
     def drawGL(self, color=(0.5, 0.5, 0.5)):
         if self.type == 'C_Poly':
-            # glColor3f(*color)
-            # for cont in self.points:
             for cont in reversed(self.points):
                 if pc.Orientation(cont):
                     glColor3f(0.1, 0.5, 0.1)
                 else:
                     glColor3f(0.5, 0.1, 0.1)
-                # glBegin(GL_LINE_LOOP)
-                # for p in cont:
-                #     glVertex2f(*p)
-                # glEnd()
                 for tristrip in pn.Polygon(cont).triStrip():
                     glBegin(GL_TRIANGLE_STRIP)
                     for p in tristrip:
@@ -229,7 +227,9 @@ class DiskCSpace(CSpace):
         shape = self.robot.poly()
         clip = pc.Pyclipper()
         for o in self.obstacles:
-            clip.AddPaths(pc.MinkowskiSum(shape, o.poly(), True), pc.PT_CLIP, True)
+            opoly = o.poly()
+            clip.AddPath(opoly, pc.PT_CLIP, True)
+            clip.AddPaths(pc.MinkowskiSum(shape, opoly, True), pc.PT_CLIP, True)
         clip.AddPaths(pc.MinkowskiSum(shape, self.wall, True), pc.PT_CLIP, True)
         clip.AddPath(self.wall, pc.PT_SUBJECT, True)
         mink_obs = clip.Execute(pc.CT_DIFFERENCE, pc.PFT_NONZERO, pc.PFT_NONZERO)
@@ -380,6 +380,7 @@ class DiskCSpace(CSpace):
                 regions[rid_n] = poly
 
                 for i, p in self.poseMap.items():
+                    # print(i, p)
                     if pc.PointInPolygon(p.center, cont):
                         obj2reg[i] = rid_n
 
@@ -585,7 +586,8 @@ class DiskCSpaceProgram(GLProgram):
 
         self.space.drawObstaclesGL()
         self.space.drawRegionGraphGL(self.drawRegions)
-        self.space.drawPoses()
+        if not self.drawRegions:
+            self.space.drawPoses()
         self.space.drawMinkGL()
 
 
@@ -608,8 +610,8 @@ def genPoses(n, space):
                 ### For dense case,
                 ### start only checks with starts
                 ### goal only checks with goals
-                if j % 2 == pid % 2:
-                    # if pid[-1] == sorg:
+                # if j % 2 == pid % 2:
+                if pid[-1] == sorg:
                     space.addObstacle(pose)
             ### compute cspace
             space.computeMinkObs()
@@ -625,8 +627,8 @@ def genPoses(n, space):
                 return False
 
             ### Congrats the object's goal/start is accepted
-            # space.addPose(str(i) + sorg, Circle(point[0], point[1], space.robot.radius))
-            space.addPose(2 * i + j, Circle(point[0], point[1], space.robot.radius))
+            space.addPose(str(i) + sorg, Circle(point[0], point[1], space.robot.radius))
+            # space.addPose(2 * i + j, Circle(point[0], point[1], space.robot.radius))
 
     ### restore obstacles
     space.restoreObstacles(staticObstacles)
@@ -653,6 +655,8 @@ def genBuffers(n, space, maxOverlap, method='random'):
                 timeout -= 1
                 ### try to sample point
                 numOverlap = 0
+                print(space.obstacles)
+                print(space.mink_obs.points)
                 point = space.mink_obs.sample()
                 for p in space.poseMap.values():
                     if Circle(p.center[0], p.center[1], p.radius * 2).contains(point):
@@ -672,8 +676,9 @@ def genBuffers(n, space, maxOverlap, method='random'):
                     return
 
             ### Otherwise the buffer is accepted
-            # space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
-            space.addPose(len(space.poseMap), Circle(point[0], point[1], space.robot.radius))
+            space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
+            # space.addPose(len(space.poseMap) + 1, Circle(point[0], point[1], space.robot.radius))
+            # print(space.poseMap)
 
     ### Hueristic Generation ###
     elif method == 'simple_heuristic':
@@ -752,7 +757,7 @@ if __name__ == '__main__':
 
     # space.setRobotRad(100)
     space.regionGraph()
-    genBuffers(4, space, 4)
+    genBuffers(1, space, 4)
     # space.setRobotRad(50)
     space.regionGraph()
 

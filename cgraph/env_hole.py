@@ -3,7 +3,7 @@ DiskCSpace(
     height=1000,
     width=1000,
     obstacles=[
-        Circle(700, 500, 220),
+        Circle(700, 500, 190),
         Rectangle(295, 400, 5, 300),
         Rectangle(295, 400, 300, 5),
         Rectangle(595, 700, -300, -5),
