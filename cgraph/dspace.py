@@ -730,6 +730,7 @@ if __name__ == '__main__':
             numObjs = int(sys.argv[1])
         else:
             space = loadEnv(sys.argv[1])
+            rad = space.robot.radius
 
     if len(sys.argv) > 2:
         if space is None:
@@ -751,7 +752,7 @@ if __name__ == '__main__':
 
     # space.setRobotRad(100)
     space.regionGraph()
-    genBuffers(2, space, 4)
+    genBuffers(4, space, 4)
     # space.setRobotRad(50)
     space.regionGraph()
 

@@ -41,20 +41,30 @@ class Experiments(object):
         start_poses = {}
         goal_poses = {}
         for pid in space.poseMap:
-            dd = str(pid).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
-            sd = str(pid).strip('0123456789')
-            if 'S' in sd:
-                start_poses[int(dd)] = pid
-            elif 'G' in sd:
-                goal_poses[int(dd)] = pid
+            # dd = str(pid).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
+            # sd = str(pid).strip('0123456789')
+            # if 'S' in sd:
+            #     start_poses[int(dd)] = pid
+            # elif 'G' in sd:
+            #     goal_poses[int(dd)] = pid
+            if type(pid) == str:
+                continue
+            if pid % 2 == 0:
+                start_poses[pid / 2] = pid
+            else:
+                goal_poses[pid // 2] = pid
+
+        start_poses, goal_poses = {0: 0, 1: 2}, {0: 1, 1: 3}
+
         region_dict, LL = linked_list_conversion(graph)
         DFS_Rec_for_Monotone_General(start_poses, goal_poses, {}, {}, object_locations, LL, region_dict)
 
-        start_poses = {}
-        goal_poses = {}
-        for i in range(numObjs):
-            start_poses[i] = 2 * i
-            goal_poses[i] = 2 * i + 1
+        print(start_poses, goal_poses)
+        # start_poses = {}
+        # goal_poses = {}
+        # for i in range(numObjs):
+        #     start_poses[i] = 2 * i
+        #     goal_poses[i] = 2 * i + 1
 
         start = time.time()
         DFS_non_gen = Non_Monotone_Solver_General(graph, object_locations, start_poses, goal_poses)
@@ -2900,9 +2910,10 @@ if __name__ == "__main__":
 
     # space.setRobotRad(100)
     space.regionGraph()
-    genBuffers(4, space, 4)
+    genBuffers(3, space, 4)
     # space.setRobotRad(50)
     space.regionGraph()
+    print(space.RGAdj.keys())
 
     # DGs = DG_Space(path_dict)
     # print DGs.DGs
