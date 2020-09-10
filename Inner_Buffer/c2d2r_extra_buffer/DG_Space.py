@@ -2381,7 +2381,7 @@ class DFS_for_Non_Monotone_General(object):
             else:
                 self.start_poses[i] = start_poses[i]
                 self.goal_poses[i] = goal_poses[i]
-        self.n = len(self.start_poses)
+        self.n = len(start_poses)
         self.b = len(obj_buffer_dict)
         self.dependency_dict = copy.deepcopy(dependency_dict)
         self.path_dict = copy.deepcopy(path_dict)
@@ -2489,18 +2489,18 @@ class DFS_for_Non_Monotone_General(object):
     def transformation(self,occupied_poses, obj):
         
         if obj < self.n:
-            start = 2*obj
+            start = self.start_poses[obj]
             if obj in self.obj_buffer_dict:
                 goal = self.obj_buffer_dict[obj][1]
             else:
-                goal = 2*obj+1
+                goal = self.goal_poses[obj]
         else:
             for key in self.obj_buffer_dict.keys():
                 if self.obj_buffer_dict[key][0] == obj:
                     real_object = key
                     break
             start = self.obj_buffer_dict[real_object][1]
-            goal = 2*real_object+1
+            goal = self.goal_poses[real_object]
         dependency_dict_key = (min(start, goal), max(start, goal))
         if dependency_dict_key not in self.dependency_dict:
             self.dependency_dict[dependency_dict_key] = []
@@ -2606,44 +2606,42 @@ class DFS_Rec_for_Non_Monotone_General(object):
         ###### 
         self.object_ordering = []
         self.path_selection_dict = {}
+
+        self.obj_buffer_dict = copy.deepcopy(obj_buffer_dict)
+        self.buffer_objects = [] # new defined objects based on buffers.
         self.obstacle_lst = []
         self.start_poses = {}
         self.goal_poses = {}
+        self.complete_index = 0
         for i in start_poses.keys():
             if start_poses[i] == goal_poses[i]:
-                self.obstacle_lst.append(start_poses[i])
+                self.obstacle_lst.append(start_poses[i])  # objects don't move
             else:
                 self.start_poses[i] = start_poses[i]
                 self.goal_poses[i] = goal_poses[i]
-        self.n = len(self.start_poses)
-        self.b = len(obj_buffer_dict)
+                self.complete_index += (1<<i)
+        for value in self.obj_buffer_dict.values():
+            self.buffer_objects.append(value[0])
+            self.complete_index += (1<<(value[0]))
+        self.n = len(start_poses) # all the objects in the scene
+        self.b = len(obj_buffer_dict) # number of objects need buffers
         self.dependency_dict = copy.deepcopy(dependency_dict)
         self.path_dict = copy.deepcopy(path_dict)
         self.obj_locations = copy.deepcopy(object_locations)
         self.linked_list = copy.deepcopy(linked_list)
         self.region_dict = copy.deepcopy(region_dict)
-        self.obj_buffer_dict = copy.deepcopy(obj_buffer_dict)
-        self.buffer_objects = []
-        for value in self.obj_buffer_dict.values():
-            self.buffer_objects.append(value[0])
         self.dynamic_programming()
         
 
     def dynamic_programming(self):
-        complete_index = 0
-        for i in self.start_poses.keys():
-            complete_index += (1<<i)
-        for value in self.obj_buffer_dict.values():
-            complete_index += (1<<value[0])
         self.explored = {}
         self.explored[0] = True
         # Recursion
         self.DFS_rec(0)
 
 
-        task_index = complete_index
-        if task_index in self.path_option:
-            current_task = task_index
+        if self.complete_index in self.path_option:
+            current_task = self.complete_index
             object_ordering = []
             while current_task in self.parent:
                 parent_task = self.parent[current_task]
@@ -2665,11 +2663,18 @@ class DFS_Rec_for_Non_Monotone_General(object):
         else:
             if (len(self.obj_buffer_dict)>0):
                 ###### pick out nodes with mutations ######
-                mutation_obj = self.obj_buffer_dict.keys()[0]
+                Greatest_Progress = -1
+                mutation_obj = self.obj_buffer_dict.keys()[0] # the objects needing buffers
                 for node in self.parent.keys():
-                    if(((node>>mutation_obj)%2) and (not((node>>self.obj_buffer_dict[mutation_obj][0])%2))):
-                        if(not ((self.parent[node]>>mutation_obj)%2)): # first mutation node in the branch
-                            self.mutation_nodes.append(node)
+                    if(((node>>mutation_obj)%2) and (not((node>>self.obj_buffer_dict[mutation_obj][0])%2))): # at the buffer but not goal pose
+                        if(not (((self.parent[node])>>mutation_obj)%2)): # first mutation node in the branch
+                            progress = 0
+                            for i in self.start_poses.keys():
+                                if((node>>mutation_obj)%2):
+                                    progress += 1
+                            if progress > Greatest_Progress:
+                                Greatest_Progress = progress
+                                self.mutation_nodes = [node]
                 # print "mutation"
                 # print self.mutation_nodes
             # print "Non-monotone"
@@ -2689,13 +2694,13 @@ class DFS_Rec_for_Non_Monotone_General(object):
             for i in self.start_poses.keys():
                 if i == next_object:
                     continue
-                elif i in self.obj_buffer_dict.keys(): # objects using buffers
+                elif i in self.obj_buffer_dict.keys(): # check the objects needing buffers
                     if self.obj_buffer_dict[i][0] == next_object:
-                        continue
+                        continue # no collision with itself
                     elif ((old_node>>(self.obj_buffer_dict[i][0]))%2):# has been at the goal pose
-                        occupied_poses.append(self.goal_poses[i])
+                        occupied_poses.append(self.goal_poses[i]) # at goal pose
                     elif ((old_node>>(i))%2):# at the buffer
-                        occupied_poses.append(self.obj_buffer_dict[i][1])
+                        occupied_poses.append(self.obj_buffer_dict[i][1]) # buffer pose
                     else: # at the start pose
                         occupied_poses.append(self.start_poses[i])
                 else:
@@ -2709,10 +2714,7 @@ class DFS_Rec_for_Non_Monotone_General(object):
                 self.path_option[new_node] = path_index
                 self.parent[new_node] = old_node
                 self.explored[new_node] = True
-                complete_node = 0
-                for i in self.start_poses.keys():
-                    complete_node += (1<<i)
-                if new_node == complete_node:
+                if new_node == self.complete_index:
                     return True
                 FLAG = self.DFS_rec(new_node)
                 if FLAG:
@@ -2736,20 +2738,20 @@ class DFS_Rec_for_Non_Monotone_General(object):
 
     def transformation(self,occupied_poses, obj):
         
-        if obj < self.n:
-            start = 2*obj
-            if obj in self.obj_buffer_dict:
+        if obj < self.n: # move from the start pose
+            start = self.start_poses[obj]
+            if obj in self.obj_buffer_dict: # to the buffer
                 goal = self.obj_buffer_dict[obj][1]
-            else:
-                goal = 2*obj+1
-        else:
+            else: # to the goal
+                goal = self.goal_poses[obj]
+        else: # move from the buffer
             for key in self.obj_buffer_dict.keys():
                 if self.obj_buffer_dict[key][0] == obj:
                     real_object = key
                     break
             start = self.obj_buffer_dict[real_object][1]
-            goal = 2*real_object+1
-        dependency_dict_key = (min(start, goal), max(start, goal))
+            goal = self.goal_poses[real_object]
+        dependency_dict_key = tuple(sorted(([start, goal])))
         if dependency_dict_key not in self.dependency_dict:
             self.dependency_dict[dependency_dict_key] = []
             self.path_dict[dependency_dict_key] = []
@@ -2841,7 +2843,7 @@ class DFS_Rec_for_Non_Monotone_General(object):
             except ValueError:
                 pass  # it was a string, not an int.
             if value >= -0.5:
-                dependency_set = dependency_set.union({value})
+                dependency_set.add(value)
         return dependency_set
 
 
