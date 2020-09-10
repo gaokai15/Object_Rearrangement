@@ -7,9 +7,7 @@ from klampt.vis.glprogram import GLProgram
 from klampt.math import vectorops
 
 import sys
-import math
 from time import time
-from copy import deepcopy
 from itertools import combinations
 from random import random, seed, choice
 
@@ -38,20 +36,20 @@ class Circle:
 
     def poly(self, numdivs=12, toint=True):
         pnts = []
-        # numdivs = int(math.ceil(self.radius * math.pi * 2 / res))
+        # numdivs = int(ceil(self.radius * pi * 2 / res))
         for i in xrange(numdivs + 1):
-            u = float(i) / float(numdivs) * math.pi * 2
+            u = float(i) / float(numdivs) * pi * 2
             if toint:
                 pnts.append(
                     (
-                        int(self.center[0] + self.radius * math.cos(u)),
-                        int(self.center[1] + self.radius * math.sin(u)),
+                        int(self.center[0] + self.radius * cos(u)),
+                        int(self.center[1] + self.radius * sin(u)),
                     )
                 )
             else:
                 pnts.append((
-                    self.center[0] + self.radius * math.cos(u),
-                    self.center[1] + self.radius * math.sin(u),
+                    self.center[0] + self.radius * cos(u),
+                    self.center[1] + self.radius * sin(u),
                 ))
         return pnts
 
@@ -611,7 +609,7 @@ def genPoses(n, space):
                 ### start only checks with starts
                 ### goal only checks with goals
                 # if j % 2 == pid % 2:
-                if pid[-1] == sorg:
+                if pid[0] == sorg:
                     space.addObstacle(pose)
             ### compute cspace
             space.computeMinkObs()
@@ -755,11 +753,13 @@ if __name__ == '__main__':
     if len(space.poseMap) == 0:
         genPoses(numObjs, space)
 
-    # space.setRobotRad(100)
     space.regionGraph()
-    genBuffers(2, space, 4)
-    # space.setRobotRad(50)
+    genBuffers(5, space, 4)
     space.regionGraph()
+
+    outfile = sys.stderr
+    if len(sys.argv) > 5:
+        outfile = open(sys.argv[5], 'w')
 
     print(
         """DiskCSpace(
@@ -770,17 +770,20 @@ if __name__ == '__main__':
             height,
             width,
         ),
-        file=sys.stderr,
+        file=outfile,
     )
-    print('    obstacles=[', file=sys.stderr)
+    print('    obstacles=[', file=outfile)
     for x in space.obstacles:
-        print('        ', x, ',', sep='', file=sys.stderr)
-    print('    ],', file=sys.stderr)
+        print('        ', x, ',', sep='', file=outfile)
+    print('    ],', file=outfile)
 
-    print('    poseMap={', file=sys.stderr)
+    print('    poseMap={', file=outfile)
     for k, v in space.poseMap.items():
-        print("        '", k, "': ", v, ',', sep='', file=sys.stderr)
-    print('    },\n)', file=sys.stderr)
+        print("        '", k, "': ", v, ',', sep='', file=outfile)
+    print('    },\n)', file=outfile)
+
+    if outfile is not sys.stderr:
+        outfile.close()
 
     # space = DiskCSpace(rad=50, poseMap=poseMap)
     # space.addObstacle(Circle(700, 500, 120))
