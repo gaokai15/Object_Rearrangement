@@ -51,9 +51,6 @@ class Experiments(object):
         region_dict, LL = linked_list_conversion(graph)
         DFS_Rec_for_Monotone_General(start_poses, goal_poses, {}, {}, object_locations, LL, region_dict)
 
-        print(start_poses, goal_poses)
-        print(object_locations)
-
         start = time.time()
         DFS_non_gen = Non_Monotone_Solver_General(graph, object_locations, start_poses, goal_poses)
         stop = time.time()
@@ -2513,7 +2510,7 @@ class DFS_Rec_for_Non_Monotone_General(object):
             else:
                 self.start_poses[i] = start_poses[i]
                 self.goal_poses[i] = goal_poses[i]
-        self.n = len(self.start_poses)
+        self.n = len(start_poses)
         self.b = len(obj_buffer_dict)
         self.dependency_dict = copy.deepcopy(dependency_dict)
         self.path_dict = copy.deepcopy(path_dict)
@@ -2607,6 +2604,8 @@ class DFS_Rec_for_Non_Monotone_General(object):
                 complete_node = 0
                 for i in self.start_poses.keys():
                     complete_node += (1 << i)
+                for value in self.obj_buffer_dict.values():
+                    complete_node += (1 << value[0])
                 if new_node == complete_node:
                     return True
                 FLAG = self.DFS_rec(new_node)
@@ -2648,7 +2647,8 @@ class DFS_Rec_for_Non_Monotone_General(object):
             start = self.obj_buffer_dict[real_object][1]
             # goal = 2 * real_object + 1
             goal = 'G' + str(real_object)
-        dependency_dict_key = (min(start, goal), max(start, goal))
+        # dependency_dict_key = (min(start, goal), max(start, goal))
+        dependency_dict_key = tuple(sorted([start,goal]))
         if dependency_dict_key not in self.dependency_dict:
             self.dependency_dict[dependency_dict_key] = []
             self.path_dict[dependency_dict_key] = []
@@ -2734,14 +2734,20 @@ class DFS_Rec_for_Non_Monotone_General(object):
                 region_tuple = key
                 break
         dependency_set = set()
-        for i in region_tuple:
-            value = -1
+        for pose in region_tuple:
             try:
-                value = int(i)
+                value = int(pose)
             except ValueError:
-                pass  # it was a string, not an int.
-            if value >= -0.5:
-                dependency_set = dependency_set.union({value})
+                if(pose[0] in "SGB"):  # it was a string, not an int.
+                    dependency_set.add(pose)
+            # value = -1
+            # try:
+            #     value = int(pose)
+            # except ValueError:
+            #     if(pose[0] in "SGB"):  # it was a string, not an int.
+            #         dependency_set.add(pose)
+            # if value >= -0.5:
+            #     dependency_set = dependency_set.union({value})
         return dependency_set
 
 
@@ -2757,18 +2763,16 @@ class Non_Monotone_Solver_General(object):
         self.n = len(self.start_poses)
         self.linked_list_conversion(graph)
         self.enumerate_cases()
-        self.dependency_dict_conversion()
+        # self.dependency_dict_conversion()
 
     def enumerate_cases(self):
         # enumerate possible cases
         FOUND = False
         for obj_num in range(self.n + 1):  # num of objects that need buffers
-            print "number of objects that use buffers", obj_num
+            # print "number of objects that use buffers", obj_num
             for obj_set in combinations(self.start_poses.keys(), obj_num):  # which objs need buffers
-                print(list(product(sorted(self.obj_locations.keys()), repeat=obj_num)))
-                print(obj_set)
+                # print(list(product(sorted(self.obj_locations.keys()), repeat=obj_num)))
                 for buffer_set in product(sorted(self.obj_locations.keys()), repeat=obj_num):  # which poses are buffers
-                    # print(buffer_set)
                     obj_buffer_dict = {}
                     Degrade = False  # when an object uses its own start or goal pose as a buffer, Degrade = True.
                     for index in xrange(len(obj_set)):
@@ -2841,6 +2845,7 @@ def linked_list_conversion(graph):
     for key in graph:
         for v in graph[key]:
             LL[region_dict[key]].append(region_dict[v])
+    print region_dict
     return region_dict, LL
     # print "LL"
     # print self.LL
@@ -2904,7 +2909,7 @@ if __name__ == "__main__":
 
     # space.setRobotRad(100)
     space.regionGraph()
-    genBuffers(4, space, 4)
+    genBuffers(1, space, 4)
     # space.setRobotRad(50)
     space.regionGraph()
     print(space.RGAdj.keys())
