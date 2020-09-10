@@ -627,7 +627,7 @@ def genPoses(n, space):
                 return False
 
             ### Congrats the object's goal/start is accepted
-            space.addPose(str(i) + sorg, Circle(point[0], point[1], space.robot.radius))
+            space.addPose(sorg + str(i), Circle(point[0], point[1], space.robot.radius))
             # space.addPose(2 * i + j, Circle(point[0], point[1], space.robot.radius))
 
     ### restore obstacles
@@ -655,8 +655,8 @@ def genBuffers(n, space, maxOverlap, method='random'):
                 timeout -= 1
                 ### try to sample point
                 numOverlap = 0
-                print(space.obstacles)
-                print(space.mink_obs.points)
+                # print(space.obstacles)
+                # print(space.mink_obs.points)
                 point = space.mink_obs.sample()
                 for p in space.poseMap.values():
                     if Circle(p.center[0], p.center[1], p.radius * 2).contains(point):
@@ -757,7 +757,7 @@ if __name__ == '__main__':
 
     # space.setRobotRad(100)
     space.regionGraph()
-    genBuffers(1, space, 4)
+    genBuffers(2, space, 4)
     # space.setRobotRad(50)
     space.regionGraph()
 
@@ -779,7 +779,7 @@ if __name__ == '__main__':
 
     print('    poseMap={', file=sys.stderr)
     for k, v in space.poseMap.items():
-        print('        ', k, ': ', v, ',', sep='', file=sys.stderr)
+        print("        '", k, "': ", v, ',', sep='', file=sys.stderr)
     print('    },\n)', file=sys.stderr)
 
     # space = DiskCSpace(rad=50, poseMap=poseMap)
