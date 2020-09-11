@@ -1405,9 +1405,9 @@ if __name__ == "__main__":
 
     space.regionGraph()
     # genBuffers(10, space, space.poseMap.keys(), 'random', 4)
-    genBuffers(10, space, space.poseMap.keys(), 'greedy_free')
+    # genBuffers(10, space, space.poseMap.keys(), 'greedy_free')
     # genBuffers(10, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
-    space.regionGraph()
+    # space.regionGraph()
 
     outfile = sys.stderr
     if len(sys.argv) > 5:
