@@ -1404,8 +1404,38 @@ if __name__ == "__main__":
         genPoses(numObjs, space)
 
     space.regionGraph()
-    genBuffers(5, space, 4)
+    # genBuffers(10, space, space.poseMap.keys(), 'random', 4)
+    genBuffers(10, space, space.poseMap.keys(), 'greedy_free')
+    # genBuffers(10, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
     space.regionGraph()
+
+    outfile = sys.stderr
+    if len(sys.argv) > 5:
+        outfile = open(sys.argv[5], 'w')
+
+    print(
+        """DiskCSpace(
+    rad={},
+    height={},
+    width={},""".format(
+            rad,
+            height,
+            width,
+        ),
+        file=outfile,
+    )
+    print('    obstacles=[', file=outfile)
+    for x in space.obstacles:
+        print('        ', x, ',', sep='', file=outfile)
+    print('    ],', file=outfile)
+
+    print('    poseMap={', file=outfile)
+    for k, v in space.poseMap.items():
+        print("        '", k, "': ", v, ',', sep='', file=outfile)
+    print('    },\n)', file=outfile)
+
+    if outfile is not sys.stderr:
+        outfile.close()
     # print(space.RGAdj.keys())
 
     # DGs = DG_Space(path_dict)

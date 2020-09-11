@@ -40,12 +40,10 @@ class Circle:
         for i in xrange(numdivs + 1):
             u = float(i) / float(numdivs) * pi * 2
             if toint:
-                pnts.append(
-                    (
-                        int(self.center[0] + self.radius * cos(u)),
-                        int(self.center[1] + self.radius * sin(u)),
-                    )
-                )
+                pnts.append((
+                    int(self.center[0] + self.radius * cos(u)),
+                    int(self.center[1] + self.radius * sin(u)),
+                ))
             else:
                 pnts.append((
                     self.center[0] + self.radius * cos(u),
@@ -613,10 +611,10 @@ def genPoses(n, space):
                     space.addObstacle(pose)
             ### compute cspace
             space.computeMinkObs()
-            try:
+            if space.mink_obs.type != 'Empty':
                 ### try to sample point
                 point = space.mink_obs.sample()
-            except:
+            else:
                 if j == 0:
                     print("failed to generate the start of object " + str(i))
                 else:
@@ -634,16 +632,17 @@ def genPoses(n, space):
     return True
 
 
-# def genBuffers(n, space=DiskCSpace(), maxOverlap, method='random'):
-def genBuffers(n, space, maxOverlap, method='random'):
+def genBuffers(n, space, occupied, method='random', param1=0, param2=[]):
     staticObstacles = space.saveObstacles()
 
     ### Random Generation ###
     ### The idea is we randomly generate a buffer in the space, hoping it will
-    ### overlap with nothing.  If it could not achieve after several trials, we
-    ### increment the number of object poses it can overlap.  We keep incrementing
+    ### overlap with nothing. If it could not achieve after several trials, we
+    ### increment the number of object poses it can overlap. We keep incrementing
     ### until we find enough buffers.
     if method == 'random':
+        maxOverlap = param1
+        noccupied = occupied[:]
         # V, E = space.RG
         numOverlapAllowed = 0
         for i in range(n):
@@ -656,7 +655,8 @@ def genBuffers(n, space, maxOverlap, method='random'):
                 # print(space.obstacles)
                 # print(space.mink_obs.points)
                 point = space.mink_obs.sample()
-                for p in space.poseMap.values():
+                for pid in noccupied:
+                    p = space.poseMap[pid]
                     if Circle(p.center[0], p.center[1], p.radius * 2).contains(point):
                         numOverlap += 1
 
@@ -675,11 +675,15 @@ def genBuffers(n, space, maxOverlap, method='random'):
 
             ### Otherwise the buffer is accepted
             space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
+            noccupied.append('B' + str(i))
             # space.addPose(len(space.poseMap) + 1, Circle(point[0], point[1], space.robot.radius))
             # print(space.poseMap)
 
     ### Hueristic Generation ###
-    elif method == 'simple_heuristic':
+    elif method == 'greedy_free':
+        for pid in occupied:
+            p = space.poseMap[pid]
+            space.addObstacle(p)
 
         # b_points = set()
         # if space.mink_obs.type == 'S_Poly':
@@ -690,32 +694,48 @@ def genBuffers(n, space, maxOverlap, method='random'):
         #         for y in x:
         #             b_points.update(x)
         # print(b_points)
-
         # numBuffers = len(b_points)
+
         for i in range(n):
             # point = choice(list(b_points))
             # b_points.remove(point)
-            point = polysum.sample(random)
-            buffer_points.append(point)
-            buffers.append(pn.Polygon(polygon + point))
-            mink_obj = 2 * polygon + point  ### grown_shape buffer
-            minkowski_buffers.append(pn.Polygon(mink_obj))
+            space.computeMinkObs()
+            if space.mink_obs.type != 'Empty':
+                point = space.mink_obs.sample()
+            else:
+                print("No free space!")
+                break
+            space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
+            space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+        space.computeMinkObs()
 
     ### Better Hueristic Generation ###
-    elif method == 'better_heuristic':
-        numBuffPerObj = 1
-        obj_ind = range(len(mink_objs))
-        for si, gi in zip(obj_ind[::2], obj_ind[1::2]):
-            ind_obs = set(obj_ind) - set([si, gi])
-            polysum = wall_mink - sum([mink_objs[x] for x in ind_obs], pn.Polygon())
-            for i in range(numBuffPerObj):
-                point = polysum.sample(random)
-                buffer_points.append(point)
-                buffers.append(pn.Polygon(polygon + point))
-                mink_obj = 2 * polygon + point  ### grown_shape buffer
-                minkowski_buffers.append(pn.Polygon(mink_obj))
+    elif method == 'object_feasible':
+        obj_mob = []
+        for pid in occupied:
+            if pid[0] != 'G':  # get objects not at goal poses
+                obj_mob.append(int(pid[1:]))
+            p = space.poseMap[pid]
+            space.addObstacle(p)
 
-        return buffer_points, buffers, minkowski_buffers
+        obj_sel = param1
+        obj_ord = param2
+        for obj in obj_ord:
+            if obj == obj_sel:
+                break
+            p = space.poseMap['S' + str(obj)]
+            space.addObstacle(p)
+
+        for i in range(n):
+            space.computeMinkObs()
+            if space.mink_obs.type != 'Empty':
+                point = space.mink_obs.sample()
+            else:
+                print("No free space!")
+                break
+            space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
+            space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+        space.computeMinkObs()
 
     ### reset obstacles
     space.restoreObstacles(staticObstacles)
@@ -754,7 +774,9 @@ if __name__ == '__main__':
         genPoses(numObjs, space)
 
     space.regionGraph()
-    genBuffers(5, space, 4)
+    # genBuffers(10, space, space.poseMap.keys(), 'random', 4)
+    genBuffers(10, space, space.poseMap.keys(), 'greedy_free')
+    # genBuffers(10, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
     space.regionGraph()
 
     outfile = sys.stderr
