@@ -462,7 +462,12 @@ class BiDirDPPlanner(object):
 
         # print("path: " + str(self.simplePath))
         self.solution = []
-        for nid in self.simplePath[1:]:
+        self.arrangements = []
+        for nid in self.simplePath:
+            if nid in self.treeL:
+                self.arrangements.append(self.treeL[nid].arrangement)
+            elif nid in self.treeR:
+                self.arrangements.append(self.treeR[nid].arrangement)
             if nid == self.bridge[1]:
                 self.solution.append((self.bridge[3], self.bridge[2]))
             if nid[1:] == '0':

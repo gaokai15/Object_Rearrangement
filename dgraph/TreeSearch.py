@@ -10,9 +10,12 @@ from time import clock
 from DG_Space import *
 from BiDirDPPlanner import BiDirDPPlanner
 
+visualize = True
+num_buffers = 5
+
 
 class Experiments(object):
-    def single_instance(self, space):
+    def single_instance(self, space, visualize):
         self.space = space
         self.graph = space.RGAdj
         self.object_locations = space.pose2reg
@@ -51,19 +54,28 @@ class Experiments(object):
         print("Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_local))
 
         self.solution = None
+        self.arrangements = None
         self.totalActions = -1
         self.best_solution_cost = -1
         if self.plan_DP_local.isConnected:
             self.plan_DP_local.getTheStat()
             self.solution = self.plan_DP_local.solution
+            self.arrangements = self.plan_DP_local.arrangements
             self.totalActions = self.plan_DP_local.totalActions
             self.best_solution_cost = self.plan_DP_local.best_solution_cost
 
             print("\nsolution path: " + str(self.solution))
+            print("arrangements: " + str(self.arrangements))
             print("total action: " + str(self.totalActions))
             print("solution cost: " + str(self.best_solution_cost))
         else:
             print("failed to find a solution within " + str(self.plan_DP_local.totalTime_allowed) + " seconds...")
+
+        if visualize:
+            program = DiskCSpaceProgram(space, self.solution, self.arrangements)
+            program.view.w = program.view.h = 1080
+            program.name = "Motion planning test"
+            program.run()
 
 
 if __name__ == "__main__":
@@ -72,6 +84,7 @@ if __name__ == "__main__":
     rad = 50
     height = 1000
     width = 1000
+
     if len(sys.argv) > 1:
         if sys.argv[1].isdigit():
             numObjs = int(sys.argv[1])
@@ -97,10 +110,10 @@ if __name__ == "__main__":
         genPoses(numObjs, space)
 
     space.regionGraph()
-    # genBuffers(1, space, space.poseMap.keys(), 'random', 4)
-    genBuffers(5, space, space.poseMap.keys(), 'greedy_free')
-    # genBuffers(1, space, space.poseMap.keys(), 'boundary_free')
-    # genBuffers(1, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
+    # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
+    genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+    # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
+    # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
     space.regionGraph()
     # print(space.RGAdj.keys())
 
@@ -110,4 +123,4 @@ if __name__ == "__main__":
     EXP = Experiments()
     set_max_memory(1.3 * 2**(34))  #2**34=16G
 
-    EXP.single_instance(space)
+    EXP.single_instance(space, visualize)

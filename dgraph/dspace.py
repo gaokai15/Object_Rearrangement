@@ -266,8 +266,8 @@ class DiskCSpace(CSpace):
         if self.mink_obs:
             self.mink_obs.drawGL()
 
-    def drawRobotGL(self, q):
-        glColor3f(0, 0, 1)
+    def drawRobotGL(self, q, color=(1, 0.5, 1)):
+        glColor3f(*color)
         newc = vectorops.add(self.robot.center, q)
         c = Circle(newc[0], newc[1], self.robot.radius)
         c.drawGL()
@@ -470,9 +470,10 @@ class DiskCSpace(CSpace):
 
 
 class DiskCSpaceProgram(GLProgram):
-    def __init__(self, space, start=None, goal=None):
+    def __init__(self, space, actions=[], arrangements=[], start=None, goal=None):
         GLProgram.__init__(self)
         self.space = space
+        self.staticObs = space.saveObstacles()
         #PRM planner
         # MotionPlan.setOptions(type="prm", knn=10, connectionThreshold=0.1)
         # self.optimizingPlanner = False
@@ -507,10 +508,14 @@ class DiskCSpaceProgram(GLProgram):
         #MotionPlan.setOptions(type="ompl:rrt",suboptimalityFactor=0.1,knn=10,connectionThreshold=0.1)
         #self.optimizingPlanner = True
 
+        self.move_actions = actions
+        self.arrangements = arrangements
+
+        self.index = -1
         self.start = start
         self.goal = goal
         self.planner = None
-        if start is not None and goal is not None:
+        if self.start is not None and self.goal is not None:
             self.planner = MotionPlan(space)
             self.planner.setEndpoints(start, goal)
         self.path = []
@@ -518,25 +523,68 @@ class DiskCSpaceProgram(GLProgram):
         self.drawRegions = True
 
     def keyboardfunc(self, key, x, y):
-        if self.planner is not None:
-            if key == ' ':
+        if key == ' ':
+            if self.planner is not None:
                 if self.optimizingPlanner or not self.path:
                     print("Planning 1...")
                     self.planner.planMore(1)
                     self.path = self.planner.getPath()
                     self.G = self.planner.getRoadmap()
                     self.refresh()
-            elif key == 'p':
+        elif key == 'p':
+            if self.planner is not None:
                 if self.optimizingPlanner or not self.path:
                     print("Planning 100...")
                     self.planner.planMore(100)
                     self.path = self.planner.getPath()
                     self.G = self.planner.getRoadmap()
                     self.refresh()
-            # elif key == 'q':
-            #     self.
-        if key == 'r':
+        elif key == 'r':
             self.drawRegions = not self.drawRegions
+        elif key == 'l':
+            if self.move_actions:
+                self.index += 1
+                if not self.getQuery():
+                    self.index -= 1
+                    # self.getQuery()
+                else:
+                    self.path = None
+                    self.G = None
+        elif key == 'h':
+            if self.move_actions:
+                self.index -= 1
+                if not self.getQuery():
+                    self.index += 1
+                    self.getQuery()
+                else:
+                    self.path = None
+                    self.G = None
+        elif key == 'c':
+            self.space.restoreObstacles(self.staticObs)
+            self.space.computeMinkObs()
+            self.path = None
+            self.G = None
+            self.planner = None
+            self.index = -1
+            self.refresh()
+
+    def getQuery(self):
+        if 0 <= self.index < len(self.move_actions):
+            pstart = self.move_actions[self.index][1][0]
+            pgoal = self.move_actions[self.index][1][1]
+            self.space.restoreObstacles(self.staticObs)
+            for pid in self.arrangements[self.index]:
+                if pid != pstart and pid != pgoal:
+                    self.space.addObstacle(self.space.poseMap[pid])
+            self.space.computeMinkObs()
+
+            self.planner = MotionPlan(self.space)
+            self.start = self.space.poseMap[pstart].center
+            self.goal = self.space.poseMap[pgoal].center
+            self.planner.setEndpoints(self.start, self.goal)
+            self.refresh()
+            return True
+        return False
 
     def display(self):
         glMatrixMode(GL_PROJECTION)
@@ -558,8 +606,8 @@ class DiskCSpaceProgram(GLProgram):
                 self.space.drawRobotGL(q)
         else:
             if self.planner:
-                self.space.drawRobotGL(self.start)
-                self.space.drawRobotGL(self.goal)
+                self.space.drawRobotGL(self.start, (1, 0, 1))
+                self.space.drawRobotGL(self.goal, (0.5, 0, 0.5))
 
         if self.G:
             #draw graph
@@ -802,9 +850,9 @@ if __name__ == '__main__':
 
     space.regionGraph()
     # genBuffers(1, space, space.poseMap.keys(), 'random', 4)
-    # genBuffers(1, space, space.poseMap.keys(), 'greedy_free')
+    genBuffers(5, space, space.poseMap.keys(), 'greedy_free')
     # genBuffers(1, space, space.poseMap.keys(), 'boundary_free')
-    genBuffers(1, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
+    # genBuffers(1, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
     space.regionGraph()
 
     outfile = sys.stderr
