@@ -793,6 +793,7 @@ class DFS_Rec_for_Monotone_General(object):
         self.obstacle_lst = []
         self.start_poses = {}
         self.goal_poses = {}
+        self.isMonotone = False
         for i in start_poses.keys():
             if start_poses[i] == goal_poses[i]:
                 self.obstacle_lst.append(start_poses[i])
@@ -834,10 +835,12 @@ class DFS_Rec_for_Monotone_General(object):
                 current_task = parent_task
             self.object_ordering = list(reversed(object_ordering))
             print("DFS_REC_MONOTONE", self.object_ordering)
+            self.isMonotone = True
             return True
         else:
             print("Non-monotone")
             # exit(0)
+            self.isMonotone = False
             return False
             # print(MISTAKE)
 
@@ -1404,10 +1407,11 @@ if __name__ == "__main__":
         genPoses(numObjs, space)
 
     space.regionGraph()
-    # genBuffers(10, space, space.poseMap.keys(), 'random', 4)
-    # genBuffers(10, space, space.poseMap.keys(), 'greedy_free')
-    # genBuffers(10, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
-    # space.regionGraph()
+    genBuffers(1, space, space.poseMap.keys(), 'random', 4)
+    # genBuffers(1, space, space.poseMap.keys(), 'greedy_free')
+    # genBuffers(1, space, space.poseMap.keys(), 'boundary_free')
+    # genBuffers(1, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
+    space.regionGraph()
 
     outfile = sys.stderr
     if len(sys.argv) > 5:

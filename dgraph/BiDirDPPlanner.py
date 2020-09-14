@@ -1,11 +1,13 @@
 from __future__ import division, print_function
 
-from DG_Space import DFS_Rec_for_Monotone_General
 import copy
 import time
 import numpy as np
 from random import sample, choice
 from collections import OrderedDict
+
+from util import checkBitStatusAtPos
+from DG_Space import DFS_Rec_for_Monotone_General
 
 
 class BiDirDPPlanner(object):
@@ -17,11 +19,11 @@ class BiDirDPPlanner(object):
     ### Output:
     ### the whole plan
     def __init__(self, init_arr, final_arr, space, region_dict, linked_list):
+        self.space = space
         self.initial_arrangement = init_arr
         self.final_arrangement = final_arr
         self.numObjs = len(self.initial_arrangement)
-        self.nPoses = len(self.space.poseMap)
-        self.allPoses = range(self.nPoses)
+        self.allPoses = self.space.poseMap.keys()
 
         ### initialize dependency_dict and path_dict as empty dict
         ### since now we are going to increment these two dicts online, instead of offline
@@ -74,10 +76,10 @@ class BiDirDPPlanner(object):
         if (self.isConnected != True):
             self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
-        totalTime_allowed = 500  ### allow 500s for the total search tree construction
+        self.totalTime_allowed = 500  ### allow 500s for the total search tree construction
         start_time = time.clock()
 
-        while (self.isConnected != True and time.clock() - start_time < totalTime_allowed):
+        while (self.isConnected != True and time.clock() - start_time < self.totalTime_allowed):
             ### The problem is not monotone
             newChild_nodeID = self.mutateLeftChild()
             if newChild_nodeID != None:
@@ -87,11 +89,11 @@ class BiDirDPPlanner(object):
                 if newChild_nodeID != None:
                     self.growSubTree(self.treeR[newChild_nodeID], self.treeL["L0"], "Right")
 
-        if self.isConnected:
-            self.getTheStat()
+        # if self.isConnected:
+        #     self.getTheStat()
 
-        if self.isConnected == False:
-            print("fail the find a solution within " + str(totalTime_allowed) + " seconds...")
+        # if self.isConnected == False:
+        #     print("failed to find a solution within " + str(self.totalTime_allowed) + " seconds...")
 
     def mutateRightChild(self):
         ### first choose a node to mutate
@@ -182,8 +184,14 @@ class BiDirDPPlanner(object):
         for i in range(len(new_arrangement)):
             goal_poses[i] = new_arrangement[i]
         subTree = DFS_Rec_for_Monotone_General(
-            start_poses, goal_poses, self.dependency_dict, self.path_dict, \
-            self.object_locations, self.linked_list, self.region_dict)
+            start_poses,
+            goal_poses,
+            self.dependency_dict,
+            self.path_dict,
+            self.object_locations,
+            self.linked_list,
+            self.region_dict,
+        )
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
@@ -217,8 +225,14 @@ class BiDirDPPlanner(object):
             goal_poses[i] = goalNode.arrangement[i]
 
         subTree = DFS_Rec_for_Monotone_General(
-            start_poses, goal_poses, self.dependency_dict, self.path_dict, \
-            self.object_locations, self.linked_list, self.region_dict)
+            start_poses,
+            goal_poses,
+            self.dependency_dict,
+            self.path_dict,
+            self.object_locations,
+            self.linked_list,
+            self.region_dict,
+        )
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
@@ -446,17 +460,23 @@ class BiDirDPPlanner(object):
             curr_waypoint_id = self.treeR[curr_waypoint_id].parent_id
             self.simplePath.append(curr_waypoint_id)
 
-        print("path: " + str(self.simplePath))
+        # print("path: " + str(self.simplePath))
+        self.solution = []
+        for nid in self.simplePath[1:]:
+            if nid == self.bridge[1]:
+                self.solution.append((self.bridge[3], self.bridge[2]))
+            if nid[1:] == '0':
+                continue
+            if nid in self.treeL:
+                self.solution.append((self.treeL[nid].objectMoved, self.treeL[nid].object_transition))
+            elif nid in self.treeR:
+                self.solution.append((self.treeR[nid].objectMoved, self.treeR[nid].object_transition))
+        # print("\nsolution path: " + str(self.solution))
+        # print("bridge?: " + str(self.bridge))
         self.totalActions = len(self.simplePath) - 1
-        print("total action: " + str(self.totalActions))
-        print("solution cost: " + str(self.best_solution_cost))
-
-    def getMagicNumber(self, numObjs):
-        temp_str = ''
-        for i in range(numObjs):
-            temp_str += '1'
-
-        return int(temp_str, 2)
+        # print("total action: " + str(self.totalActions))
+        # print("solution cost: " + str(self.best_solution_cost))
+        return self.solution
 
 
 class ArrNode(object):

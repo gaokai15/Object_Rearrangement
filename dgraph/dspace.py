@@ -635,25 +635,17 @@ def genPoses(n, space):
 def genBuffers(n, space, occupied, method='random', param1=0, param2=[]):
     staticObstacles = space.saveObstacles()
 
-    ### Random Generation ###
-    ### The idea is we randomly generate a buffer in the space, hoping it will
-    ### overlap with nothing. If it could not achieve after several trials, we
-    ### increment the number of object poses it can overlap. We keep incrementing
-    ### until we find enough buffers.
+    ### Random Sampling w/ max overlaps ###
     if method == 'random':
         maxOverlap = param1
         noccupied = occupied[:]
-        # V, E = space.RG
         numOverlapAllowed = 0
         for i in range(n):
             isValid = False
             timeout = 500
             while not isValid and timeout > 0:
                 timeout -= 1
-                ### try to sample point
                 numOverlap = 0
-                # print(space.obstacles)
-                # print(space.mink_obs.points)
                 point = space.mink_obs.sample()
                 for pid in noccupied:
                     p = space.poseMap[pid]
@@ -671,45 +663,80 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[]):
                 numOverlapAllowed += 1
                 if (numOverlapAllowed > maxOverlap):
                     print("Exceed the maximum limit of numOverlap for buffer generation")
-                    return
+                    break
 
             ### Otherwise the buffer is accepted
             space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
             noccupied.append('B' + str(i))
-            # space.addPose(len(space.poseMap) + 1, Circle(point[0], point[1], space.robot.radius))
-            # print(space.poseMap)
 
-    ### Hueristic Generation ###
+    ### Greedy Free Space Sampling ###
     elif method == 'greedy_free':
         for pid in occupied:
             p = space.poseMap[pid]
             space.addObstacle(p)
 
-        # b_points = set()
-        # if space.mink_obs.type == 'S_Poly':
-        #     for x in space.mink_obs.points:
-        #         b_points.update(x)
-        # elif space.mink_obs.type == 'C_Poly':
-        #     for x in space.mink_obs.points:
-        #         for y in x:
-        #             b_points.update(x)
-        # print(b_points)
-        # numBuffers = len(b_points)
-
         for i in range(n):
-            # point = choice(list(b_points))
-            # b_points.remove(point)
-            space.computeMinkObs()
             if space.mink_obs.type != 'Empty':
                 point = space.mink_obs.sample()
             else:
                 print("No free space!")
                 break
+            space.computeMinkObs()
             space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
             space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+
+    ### Boundary Free Space Sampling ###
+    elif method == 'boundary_free':
+        for pid in occupied:
+            p = space.poseMap[pid]
+            space.addObstacle(p)
         space.computeMinkObs()
 
-    ### Better Hueristic Generation ###
+        b_points = set()
+        if space.mink_obs.type == 'S_Poly':
+            for x in space.mink_obs.points:
+                b_points.add(tuple(x))
+        elif space.mink_obs.type == 'C_Poly':
+            for y in space.mink_obs.points:
+                for x in y:
+                    b_points.add(tuple(x))
+
+        maxOverlap = param1
+        boccupied = []
+        numOverlapAllowed = 0
+        for i in range(n):
+            isValid = False
+            timeout = 500
+            while not isValid and timeout > 0:
+                timeout -= 1
+                numOverlap = 0
+                if b_points:
+                    point = choice(list(b_points))
+                    b_points.remove(point)
+                else:
+                    print("No free space!")
+                    # set params to break out of outer loop
+                    timeout = -1
+                    numOverlapAllowed = maxOverlap + 1
+                    break
+                for pid in boccupied:
+                    p = space.poseMap[pid]
+                    if Circle(p.center[0], p.center[1], p.radius * 2).contains(point):
+                        numOverlap += 1
+
+                if numOverlap <= numOverlapAllowed:
+                    isValid = True
+
+            if timeout <= 0:
+                numOverlapAllowed += 1
+                if (numOverlapAllowed > maxOverlap):
+                    print("Exceed the maximum limit of numOverlap for buffer generation")
+                    break
+
+            space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
+            boccupied.append('B' + str(i))
+
+    ### Sample feasible region for given object and ordering ###
     elif method == 'object_feasible':
         obj_mob = []
         for pid in occupied:
@@ -774,10 +801,11 @@ if __name__ == '__main__':
         genPoses(numObjs, space)
 
     space.regionGraph()
-    # genBuffers(10, space, space.poseMap.keys(), 'random', 4)
-    # genBuffers(10, space, space.poseMap.keys(), 'greedy_free')
-    # genBuffers(10, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
-    # space.regionGraph()
+    # genBuffers(1, space, space.poseMap.keys(), 'random', 4)
+    # genBuffers(1, space, space.poseMap.keys(), 'greedy_free')
+    # genBuffers(1, space, space.poseMap.keys(), 'boundary_free')
+    genBuffers(1, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
+    space.regionGraph()
 
     outfile = sys.stderr
     if len(sys.argv) > 5:

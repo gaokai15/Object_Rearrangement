@@ -2,13 +2,13 @@ from __future__ import division, print_function
 
 import os
 import sys
-import time
 import copy
 import numpy as np
 from random import sample
 
+from time import clock
+from DG_Space import *
 from BiDirDPPlanner import BiDirDPPlanner
-from DG_Space import linked_list_conversion
 
 
 class Experiments(object):
@@ -37,9 +37,9 @@ class Experiments(object):
         print("initial_arrangement: " + str(self.initial_arrangement))
         print("final_arrangement: " + str(self.final_arrangement))
 
-        region_dict, linked_list = linked_list_conversion(graph)
+        region_dict, linked_list = linked_list_conversion(self.graph)
 
-        start_time = time.clock()
+        start_time = clock()
         self.plan_DP_local = BiDirDPPlanner(
             self.initial_arrangement,
             self.final_arrangement,
@@ -47,14 +47,23 @@ class Experiments(object):
             region_dict,
             linked_list,
         )
-        self.comTime_DP_local = time.clock() - start_time
+        self.comTime_DP_local = clock() - start_time
         print("Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_local))
 
-        if self.plan_DP_local.isConnected == False:
-            ### the solution is not found
-            self.totalActions_DP_local = -1
+        self.solution = None
+        self.totalActions = -1
+        self.best_solution_cost = -1
+        if self.plan_DP_local.isConnected:
+            self.plan_DP_local.getTheStat()
+            self.solution = self.plan_DP_local.solution
+            self.totalActions = self.plan_DP_local.totalActions
+            self.best_solution_cost = self.plan_DP_local.best_solution_cost
+
+            print("\nsolution path: " + str(self.solution))
+            print("total action: " + str(self.totalActions))
+            print("solution cost: " + str(self.best_solution_cost))
         else:
-            self.totalActions_DP_local = self.plan_DP_local.totalActions
+            print("failed to find a solution within " + str(self.plan_DP_local.totalTime_allowed) + " seconds...")
 
 
 if __name__ == "__main__":
@@ -88,7 +97,10 @@ if __name__ == "__main__":
         genPoses(numObjs, space)
 
     space.regionGraph()
-    genBuffers(5, space, 4)
+    # genBuffers(1, space, space.poseMap.keys(), 'random', 4)
+    genBuffers(5, space, space.poseMap.keys(), 'greedy_free')
+    # genBuffers(1, space, space.poseMap.keys(), 'boundary_free')
+    # genBuffers(1, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
     space.regionGraph()
     # print(space.RGAdj.keys())
 

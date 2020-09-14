@@ -114,6 +114,12 @@ def o55():
     return 0.55
 
 
+def checkBitStatusAtPos(n, k):
+    #This code is contributed by Gitanjali (GeeksforGeeks)
+    new_num = n >> k
+    return (new_num & 1)
+
+
 def circle_intersections(x0, y0, r0, x1, y1, r1):
     # circle 1: (x0, y0), radius r0
     # circle 2: (x1, y1), radius r1
