@@ -7,7 +7,7 @@ from random import sample, choice
 from collections import OrderedDict
 
 from util import checkBitStatusAtPos
-from DG_Space import DFS_Rec_for_Monotone_General
+from DG_Space import DFS_Rec_for_Monotone_General, linked_list_conversion
 
 
 class BiDirDPPlanner(object):
@@ -18,20 +18,18 @@ class BiDirDPPlanner(object):
     ### (i) workspace, (ii) object centers/slots, (iii) buffer centers/slots
     ### Output:
     ### the whole plan
-    def __init__(self, init_arr, final_arr, space, region_dict, linked_list):
+    def __init__(self, init_arr, final_arr, space):
         self.space = space
         self.initial_arrangement = init_arr
         self.final_arrangement = final_arr
         self.numObjs = len(self.initial_arrangement)
-        self.allPoses = self.space.poseMap.keys()
 
         ### initialize dependency_dict and path_dict as empty dict
         ### since now we are going to increment these two dicts online, instead of offline
         self.dependency_dict = {}
         self.path_dict = {}
-        self.object_locations = copy.deepcopy(self.space.pose2reg)
-        self.region_dict = copy.deepcopy(region_dict)
-        self.linked_list = copy.deepcopy(linked_list)
+        self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
+        self.object_locations = self.space.pose2reg
 
         self.treeL = {}
         self.treeR = {}
@@ -103,7 +101,7 @@ class BiDirDPPlanner(object):
         ### choose an object to move
         obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = choice(self.allPoses)
+        pose_idx = choice(self.space.poseMap.keys())
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
@@ -163,7 +161,7 @@ class BiDirDPPlanner(object):
         ### choose an object to move
         obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = choice(self.allPoses)
+        pose_idx = choice(self.space.poseMap.keys())
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))

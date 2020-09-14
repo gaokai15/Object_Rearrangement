@@ -16,6 +16,8 @@ import pyclipper as pc
 
 from util import *
 
+num_buffers = 2
+
 
 def interpolate(a, b, u):
     """Interpolates linearly between a and b"""
@@ -237,8 +239,11 @@ class DiskCSpace(CSpace):
     def removePose(self, oid, obj):
         return self.poseMap.pop(oid, False)
 
-    def setPoses(self, occ):
-        self.poseMap = occ
+    def restorePoses(self, poses):
+        self.poseMap = poses.copy()
+
+    def savePoses(self, poses):
+        return self.poseMap.copy()
 
     def clearPoses(self, obj):
         self.poseMap.clear()
@@ -331,7 +336,7 @@ class DiskCSpace(CSpace):
                 # r.drawGL((random(), random(), random()))
                 # seed()
 
-    def regionGraph(self):
+    def regionGraph(self, filterfunc=lambda x: True):
         """
         prune_dist =
             0 if you don't want to prune edges
@@ -346,7 +351,7 @@ class DiskCSpace(CSpace):
         polysum = []
         regions = {}
         # clip = pc.Pyclipper()
-        for i, o in self.poseMap.items():
+        for i, o in filter(filterfunc, self.poseMap.items()):
             # clip.AddPaths(pc.MinkowskiSum(shape, o.poly(), True), pc.PT_CLIP, True)
             # obj = clip.Execute(pc.CT_UNION, pc.PFT_NONZERO, pc.PFT_NONZERO)
             # obj = pc.MinkowskiSum(shape, o.poly(), True)
@@ -521,6 +526,7 @@ class DiskCSpaceProgram(GLProgram):
         self.path = []
         self.G = None
         self.drawRegions = True
+        self.drawPoses = True
 
     def keyboardfunc(self, key, x, y):
         if key == ' ':
@@ -543,6 +549,7 @@ class DiskCSpaceProgram(GLProgram):
             self.drawRegions = not self.drawRegions
         elif key == 'l':
             if self.move_actions:
+                self.drawPoses = False
                 self.index += 1
                 if not self.getQuery():
                     self.index -= 1
@@ -552,6 +559,7 @@ class DiskCSpaceProgram(GLProgram):
                     self.G = None
         elif key == 'h':
             if self.move_actions:
+                self.drawPoses = False
                 self.index -= 1
                 if not self.getQuery():
                     self.index += 1
@@ -560,6 +568,7 @@ class DiskCSpaceProgram(GLProgram):
                     self.path = None
                     self.G = None
         elif key == 'c':
+            self.drawPoses = True
             self.space.restoreObstacles(self.staticObs)
             self.space.computeMinkObs()
             self.path = None
@@ -630,7 +639,7 @@ class DiskCSpaceProgram(GLProgram):
 
         self.space.drawObstaclesGL()
         self.space.drawRegionGraphGL(self.drawRegions)
-        if not self.drawRegions:
+        if not self.drawRegions and self.drawPoses:
             self.space.drawPoses()
         self.space.drawMinkGL()
 
@@ -680,7 +689,7 @@ def genPoses(n, space):
     return True
 
 
-def genBuffers(n, space, occupied, method='random', param1=0, param2=[]):
+def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0, suffix=''):
     staticObstacles = space.saveObstacles()
 
     ### Random Sampling w/ max overlaps ###
@@ -714,8 +723,8 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[]):
                     break
 
             ### Otherwise the buffer is accepted
-            space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
-            noccupied.append('B' + str(i))
+            space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
+            noccupied.append('B' + str(i + count) + suffix)
 
     ### Greedy Free Space Sampling ###
     elif method == 'greedy_free':
@@ -730,7 +739,7 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[]):
                 print("No free space!")
                 break
             space.computeMinkObs()
-            space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
+            space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
             space.addObstacle(Circle(point[0], point[1], space.robot.radius))
 
     ### Boundary Free Space Sampling ###
@@ -781,8 +790,8 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[]):
                     print("Exceed the maximum limit of numOverlap for buffer generation")
                     break
 
-            space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
-            boccupied.append('B' + str(i))
+            space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
+            boccupied.append('B' + str(i + count) + suffix)
 
     ### Sample feasible region for given object and ordering ###
     elif method == 'object_feasible':
@@ -808,7 +817,7 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[]):
             else:
                 print("No free space!")
                 break
-            space.addPose('B' + str(i), Circle(point[0], point[1], space.robot.radius))
+            space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
             space.addObstacle(Circle(point[0], point[1], space.robot.radius))
         space.computeMinkObs()
 
@@ -823,6 +832,7 @@ if __name__ == '__main__':
     rad = 50
     height = 1000
     width = 1000
+
     if len(sys.argv) > 1:
         if sys.argv[1].isdigit():
             numObjs = int(sys.argv[1])
@@ -849,11 +859,13 @@ if __name__ == '__main__':
         genPoses(numObjs, space)
 
     space.regionGraph()
-    # genBuffers(1, space, space.poseMap.keys(), 'random', 4)
-    genBuffers(5, space, space.poseMap.keys(), 'greedy_free')
-    # genBuffers(1, space, space.poseMap.keys(), 'boundary_free')
-    # genBuffers(1, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
-    space.regionGraph()
+    if num_buffers > 0:
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
+        genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
+        # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
+        space.regionGraph()
+    # print(space.RGAdj.keys())
 
     outfile = sys.stderr
     if len(sys.argv) > 5:

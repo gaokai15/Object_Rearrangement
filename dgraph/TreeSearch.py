@@ -3,14 +3,18 @@ from __future__ import division, print_function
 import os
 import sys
 import copy
-import numpy as np
+# import numpy as np
+from time import clock
 from random import sample
 
-from time import clock
-from DG_Space import *
-from BiDirDPPlanner import BiDirDPPlanner
+from dspace import *
+from DG_Space import set_max_memory
+
+# from BiDirDPPlanner import BiDirDPPlanner
+from BiDirDPPlanner_dyn import BiDirDPPlanner
 
 visualize = True
+# visualize = False
 num_buffers = 5
 
 
@@ -40,16 +44,8 @@ class Experiments(object):
         print("initial_arrangement: " + str(self.initial_arrangement))
         print("final_arrangement: " + str(self.final_arrangement))
 
-        region_dict, linked_list = linked_list_conversion(self.graph)
-
         start_time = clock()
-        self.plan_DP_local = BiDirDPPlanner(
-            self.initial_arrangement,
-            self.final_arrangement,
-            self.space,
-            region_dict,
-            linked_list,
-        )
+        self.plan_DP_local = BiDirDPPlanner(self.initial_arrangement, self.final_arrangement, self.space)
         self.comTime_DP_local = clock() - start_time
         print("Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_local))
 
@@ -110,11 +106,12 @@ if __name__ == "__main__":
         genPoses(numObjs, space)
 
     space.regionGraph()
-    # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
-    genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
-    # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
-    # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
-    space.regionGraph()
+    if num_buffers > 0:
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
+        genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
+        # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
+        space.regionGraph()
     # print(space.RGAdj.keys())
 
     # DGs = DG_Space(path_dict)
@@ -124,3 +121,31 @@ if __name__ == "__main__":
     set_max_memory(1.3 * 2**(34))  #2**34=16G
 
     EXP.single_instance(space, visualize)
+
+    outfile = sys.stderr
+    if len(sys.argv) > 5:
+        outfile = open(sys.argv[5], 'w')
+
+    print(
+        """DiskCSpace(
+    rad={},
+    height={},
+    width={},""".format(
+            rad,
+            height,
+            width,
+        ),
+        file=outfile,
+    )
+    print('    obstacles=[', file=outfile)
+    for x in space.obstacles:
+        print('        ', x, ',', sep='', file=outfile)
+    print('    ],', file=outfile)
+
+    print('    poseMap={', file=outfile)
+    for k, v in space.poseMap.items():
+        print("        '", k, "': ", v, ',', sep='', file=outfile)
+    print('    },\n)', file=outfile)
+
+    if outfile is not sys.stderr:
+        outfile.close()
