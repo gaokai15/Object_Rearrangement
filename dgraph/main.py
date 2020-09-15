@@ -95,5 +95,10 @@ if __name__ == "__main__":
                     genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
                     # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
                     space.regionGraph()
-                actions, runtime = EXP.single_instance(space, False)
+                try:
+                    actions, runtime = EXP.single_instance(space, False)
+                except Exception as e:
+                    actions = -1
+                    runtime = repr(e)
+
                 print(','.join(name.split('_') + [str(actions), str(runtime)]), file=outfile)
