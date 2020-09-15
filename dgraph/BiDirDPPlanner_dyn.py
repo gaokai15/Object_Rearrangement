@@ -100,11 +100,11 @@ class BiDirDPPlanner(object):
         static_buffs = filter(lambda x: x[0] == 'B' and not x.find(';') < 0, self.space.poseMap.keys())
         bufs_for_obj = filter(lambda x: x[0] == 'B' and int(x.split(';')[-1][1:]) == obj_idx, self.space.poseMap.keys())
         prob_adj = int(PROB * (len(static_buffs) + len(bufs_for_obj))) + 1
-        print(static_buffs)
-        print(bufs_for_obj)
-        print(prob_adj)
+        # print(static_buffs)
+        # print(bufs_for_obj)
+        # print(prob_adj)
         pose_idx = choice(bufs_for_obj + static_buffs + [None] * prob_adj)
-        print(pose_idx)
+        # print(pose_idx)
 
         if pose_idx is None:
             ind = len(bufs_for_obj)
@@ -118,9 +118,9 @@ class BiDirDPPlanner(object):
             )
             pose_idx = 'B' + str(ind) + ';O' + str(obj_idx)
 
-        print("mutated_arrangement: " + str(mutated_arrangement))
-        print("obj_idx: " + str(obj_idx))
-        print("pose_idx: " + str(pose_idx))
+        # print("mutated_arrangement: " + str(mutated_arrangement))
+        # print("obj_idx: " + str(obj_idx))
+        # print("pose_idx: " + str(pose_idx))
 
         self.space.regionGraph(lambda x: x[0] in mutated_arrangement + [pose_idx])
         # self.space.regionGraph()
@@ -322,7 +322,7 @@ class BiDirDPPlanner(object):
                     ### this is a sign that two trees are connected
                     ### check if it is really a bridge
                     if parent_arrangement not in self.arrLeftRegistr:
-                        print("a bridge is found")
+                        # print("a bridge is found")
                         self.isConnected = True
                         ### check if it leads to a better solution
                         temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(child_arrangement)]
@@ -408,7 +408,7 @@ class BiDirDPPlanner(object):
                     ### this is a sign that two trees are connected
                     ### check if it is really a bridge
                     if parent_arrangement not in self.arrRightRegistr:
-                        print("a bridge is found")
+                        # print("a bridge is found")
                         self.isConnected = True
                         ### check if it leads to a better solution
                         temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(parent_arrangement)]
@@ -509,7 +509,7 @@ class BiDirDPPlanner(object):
             elif nid in self.treeR:
                 self.solution.append((self.treeR[nid].objectMoved, self.treeR[nid].object_transition))
         # print("\nsolution path: " + str(self.solution))
-        print("bridge?: " + str(self.bridge))
+        # print("bridge?: " + str(self.bridge))
         self.totalActions = len(self.simplePath) - 1
         # print("total action: " + str(self.totalActions))
         # print("solution cost: " + str(self.best_solution_cost))
