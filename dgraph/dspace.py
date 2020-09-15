@@ -733,12 +733,12 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
             space.addObstacle(p)
 
         for i in range(n):
+            space.computeMinkObs()
             if space.mink_obs.type != 'Empty':
                 point = space.mink_obs.sample()
             else:
                 print("No free space!")
                 break
-            space.computeMinkObs()
             space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
             space.addObstacle(Circle(point[0], point[1], space.robot.radius))
 
@@ -819,7 +819,6 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
                 break
             space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
             space.addObstacle(Circle(point[0], point[1], space.robot.radius))
-        space.computeMinkObs()
 
     ### reset obstacles
     space.restoreObstacles(staticObstacles)

@@ -1,5 +1,6 @@
-gurobipy
 numpy
+klampt
+gurobipy
 Polygon2
-visilibity
+pyclipper
 matplotlib

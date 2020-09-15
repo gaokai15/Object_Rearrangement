@@ -15,7 +15,7 @@ from BiDirDPPlanner_dyn import BiDirDPPlanner
 
 visualize = True
 # visualize = False
-num_buffers = 5
+num_buffers = 0
 
 
 class Experiments(object):

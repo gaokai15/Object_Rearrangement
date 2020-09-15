@@ -14,6 +14,9 @@ import numpy as np
 
 from dspace import *
 
+visualize = False
+num_buffers = 2
+
 
 def set_max_memory(MAX):
     soft, hard = resource.getrlimit(resource.RLIMIT_AS)
@@ -1407,10 +1410,10 @@ if __name__ == "__main__":
         genPoses(numObjs, space)
 
     space.regionGraph()
-    genBuffers(1, space, space.poseMap.keys(), 'random', 4)
-    # genBuffers(1, space, space.poseMap.keys(), 'greedy_free')
-    # genBuffers(1, space, space.poseMap.keys(), 'boundary_free')
-    # genBuffers(1, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
+    genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
+    # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+    # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
+    # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
     space.regionGraph()
 
     outfile = sys.stderr
