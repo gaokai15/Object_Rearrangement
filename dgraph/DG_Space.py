@@ -46,8 +46,8 @@ class Experiments(object):
         stop = time()
         DFS_non_time = stop - start
         print("DFS_time", DFS_non_time)
-
         print("DFS_non_monotone_object_ordering", DFS_non_gen.object_ordering)
+        return len(DFS_non_gen.object_ordering), DFS_non_time
 
 
 # class DG_Space(object):
@@ -1385,11 +1385,13 @@ if __name__ == "__main__":
     rad = 50
     height = 1000
     width = 1000
+
     if len(sys.argv) > 1:
         if sys.argv[1].isdigit():
             numObjs = int(sys.argv[1])
         else:
             space = loadEnv(sys.argv[1])
+            rad = space.robot.radius
 
     if len(sys.argv) > 2:
         if space is None:
@@ -1398,23 +1400,29 @@ if __name__ == "__main__":
             numObjs = int(sys.argv[2])
 
     if len(sys.argv) > 3:
-        height = int(sys.argv[3])
+        if space is None:
+            height = int(sys.argv[3])
+        else:
+            rad = int(sys.argv[3])
 
     if len(sys.argv) > 4:
         width = int(sys.argv[4])
 
     if space is None:
         space = DiskCSpace(rad, {}, [], height, width)
+    else:
+        space.setRobotRad(rad)
 
     if len(space.poseMap) == 0:
         genPoses(numObjs, space)
 
     space.regionGraph()
-    genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
-    # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
-    # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
-    # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
-    space.regionGraph()
+    if num_buffers > 0:
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
+        genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
+        # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
+        space.regionGraph()
 
     outfile = sys.stderr
     if len(sys.argv) > 5:
@@ -1443,11 +1451,7 @@ if __name__ == "__main__":
 
     if outfile is not sys.stderr:
         outfile.close()
-    # print(space.RGAdj.keys())
 
-    # DGs = DG_Space(path_dict)
-    # print(DGs.DGs)
-    # IP = feekback_arc_ILP(path_dict)
     EXP = Experiments()
     set_max_memory(1.3 * 2**(34))  #2**34=16G
 

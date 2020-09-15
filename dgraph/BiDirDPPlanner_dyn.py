@@ -123,6 +123,7 @@ class BiDirDPPlanner(object):
         print("pose_idx: " + str(pose_idx))
 
         self.space.regionGraph(lambda x: x[0] in mutated_arrangement + [pose_idx])
+        # self.space.regionGraph()
         self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
         self.object_locations = self.space.pose2reg
 
@@ -156,8 +157,8 @@ class BiDirDPPlanner(object):
         subTree = DFS_Rec_for_Monotone_General(
             start_poses,
             goal_poses,
-            self.dependency_dict,
-            self.path_dict,
+            {},# self.dependency_dict,
+            {},# self.path_dict,
             self.object_locations,
             self.linked_list,
             self.region_dict,
@@ -213,8 +214,8 @@ class BiDirDPPlanner(object):
         subTree = DFS_Rec_for_Monotone_General(
             start_poses,
             goal_poses,
-            self.dependency_dict,
-            self.path_dict,
+            {},# self.dependency_dict,
+            {},# self.path_dict,
             self.object_locations,
             self.linked_list,
             self.region_dict,
@@ -258,8 +259,8 @@ class BiDirDPPlanner(object):
         subTree = DFS_Rec_for_Monotone_General(
             start_poses,
             goal_poses,
-            self.dependency_dict,
-            self.path_dict,
+            {},# self.dependency_dict,
+            {},# self.path_dict,
             self.object_locations,
             self.linked_list,
             self.region_dict,
@@ -508,7 +509,7 @@ class BiDirDPPlanner(object):
             elif nid in self.treeR:
                 self.solution.append((self.treeR[nid].objectMoved, self.treeR[nid].object_transition))
         # print("\nsolution path: " + str(self.solution))
-        # print("bridge?: " + str(self.bridge))
+        print("bridge?: " + str(self.bridge))
         self.totalActions = len(self.simplePath) - 1
         # print("total action: " + str(self.totalActions))
         # print("solution cost: " + str(self.best_solution_cost))

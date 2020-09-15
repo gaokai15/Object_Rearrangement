@@ -13,9 +13,9 @@ from DG_Space import set_max_memory
 # from BiDirDPPlanner import BiDirDPPlanner
 from BiDirDPPlanner_dyn import BiDirDPPlanner
 
-visualize = True
-# visualize = False
-num_buffers = 0
+# VISUALIZE = False
+VISUALIZE = True
+num_buffers = 5
 
 
 class Experiments(object):
@@ -72,6 +72,7 @@ class Experiments(object):
             program.view.w = program.view.h = 1080
             program.name = "Motion planning test"
             program.run()
+        return self.totalActions, self.comTime_DP_local
 
 
 if __name__ == "__main__":
@@ -86,6 +87,7 @@ if __name__ == "__main__":
             numObjs = int(sys.argv[1])
         else:
             space = loadEnv(sys.argv[1])
+            rad = space.robot.radius
 
     if len(sys.argv) > 2:
         if space is None:
@@ -94,13 +96,18 @@ if __name__ == "__main__":
             numObjs = int(sys.argv[2])
 
     if len(sys.argv) > 3:
-        height = int(sys.argv[3])
+        if space is None:
+            height = int(sys.argv[3])
+        else:
+            rad = int(sys.argv[3])
 
     if len(sys.argv) > 4:
         width = int(sys.argv[4])
 
     if space is None:
         space = DiskCSpace(rad, {}, [], height, width)
+    else:
+        space.setRobotRad(rad)
 
     if len(space.poseMap) == 0:
         genPoses(numObjs, space)
@@ -112,15 +119,11 @@ if __name__ == "__main__":
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
         # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
         space.regionGraph()
-    # print(space.RGAdj.keys())
 
-    # DGs = DG_Space(path_dict)
-    # print(DGs.DGs)
-    # IP = feekback_arc_ILP(path_dict)
     EXP = Experiments()
     set_max_memory(1.3 * 2**(34))  #2**34=16G
 
-    EXP.single_instance(space, visualize)
+    EXP.single_instance(space, VISUALIZE)
 
     outfile = sys.stderr
     if len(sys.argv) > 5:

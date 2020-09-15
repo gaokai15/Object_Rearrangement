@@ -245,7 +245,7 @@ class DiskCSpace(CSpace):
     def savePoses(self, poses):
         return self.poseMap.copy()
 
-    def clearPoses(self, obj):
+    def clearPoses(self):
         self.poseMap.clear()
 
     def addObstacle(self, obs):
@@ -677,6 +677,10 @@ def genPoses(n, space):
                 else:
                     print("failed to generate the goal of object " + str(i))
                 print("FAIL TO GENERATE THE INITIAL INSTANCE")
+
+                ### restore obstacles
+                space.restoreObstacles(staticObstacles)
+                space.computeMinkObs()
                 return False
 
             ### Congrats the object's goal/start is accepted
@@ -846,13 +850,18 @@ if __name__ == '__main__':
             numObjs = int(sys.argv[2])
 
     if len(sys.argv) > 3:
-        height = int(sys.argv[3])
+        if space is None:
+            height = int(sys.argv[3])
+        else:
+            rad = int(sys.argv[3])
 
     if len(sys.argv) > 4:
         width = int(sys.argv[4])
 
     if space is None:
         space = DiskCSpace(rad, {}, [], height, width)
+    else:
+        space.setRobotRad(rad)
 
     if len(space.poseMap) == 0:
         genPoses(numObjs, space)
@@ -864,7 +873,6 @@ if __name__ == '__main__':
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
         # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
         space.regionGraph()
-    # print(space.RGAdj.keys())
 
     outfile = sys.stderr
     if len(sys.argv) > 5:
@@ -894,25 +902,7 @@ if __name__ == '__main__':
     if outfile is not sys.stderr:
         outfile.close()
 
-    # space = DiskCSpace(rad=50, poseMap=poseMap)
-    # space.addObstacle(Circle(700, 500, 120))
-    # space.addObstacle(Rectangle(295, 400, 5, 300))
-    # space.addObstacle(Rectangle(295, 400, 300, 5))
-    # space.addObstacle(Rectangle(595, 700, -300, -5))
-    # space.addObstacle(Rectangle(595, 700, -5, -300))
-    # space.computeMinkObs()
-    # print(space.mink_obs.points, space.mink_obs.type, space.mink_obs.sample())
-    # start = (150, 150)
-    # goal = (850, 850)
-
     program = DiskCSpaceProgram(space)
     program.view.w = program.view.h = 1080
     program.name = "Motion planning test"
     program.run()
-
-    # program = DiskCSpaceProgram(space)
-    # program.view.w = program.view.h = 1080
-    # program.name = "Motion planning test2"
-    # program.run()
-
-    print("TEST")
