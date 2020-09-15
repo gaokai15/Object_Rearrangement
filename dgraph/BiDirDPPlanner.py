@@ -288,7 +288,7 @@ class BiDirDPPlanner(object):
                     ### this is a sign that two trees are connected
                     ### check if it is really a bridge
                     if parent_arrangement not in self.arrLeftRegistr:
-                        print("a bridge is found")
+                        # print("a bridge is found")
                         self.isConnected = True
                         ### check if it leads to a better solution
                         temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(child_arrangement)]
@@ -374,7 +374,7 @@ class BiDirDPPlanner(object):
                     ### this is a sign that two trees are connected
                     ### check if it is really a bridge
                     if parent_arrangement not in self.arrRightRegistr:
-                        print("a bridge is found")
+                        # print("a bridge is found")
                         self.isConnected = True
                         ### check if it leads to a better solution
                         temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(parent_arrangement)]
