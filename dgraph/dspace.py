@@ -16,7 +16,7 @@ import pyclipper as pc
 
 from util import *
 
-num_buffers = 2
+num_buffers = 0
 
 
 def interpolate(a, b, u):
@@ -862,6 +862,14 @@ if __name__ == '__main__':
         space = DiskCSpace(rad, {}, [], height, width)
     else:
         space.setRobotRad(rad)
+
+    space.computeMinkObs()
+    if space.mink_obs.type == 'S_Poly':
+        print(pc.Area(space.mink_obs.points))
+    elif space.mink_obs.type == 'C_Poly':
+        print([pc.Area(x) for x in space.mink_obs.points])
+    else:
+        print("WTF?")
 
     if len(space.poseMap) == 0:
         genPoses(numObjs, space)
