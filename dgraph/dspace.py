@@ -288,13 +288,13 @@ class DiskCSpace(CSpace):
                     glColor3f(*getColor(int(dd) * 2.0 / len(self.poseMap)))
                 pose.drawGL()
 
-    def drawRegionGraphGL(self, drawRegions=True):
+    def drawRegionGraphGL(self, drawRegions=True, drawGraph=True):
         if self.regions is None:
             t0 = time()
             self.regionGraph()
             print("RG Time: ", time() - t0)
 
-        if self.RG:
+        if self.RG and drawGraph:
             V, E = self.RG
             glEnable(GL_BLEND)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -525,7 +525,8 @@ class DiskCSpaceProgram(GLProgram):
             self.planner.setEndpoints(start, goal)
         self.path = []
         self.G = None
-        self.drawRegions = True
+        self.drawRegions = False
+        self.drawRGraph = False
         self.drawPoses = True
 
     def keyboardfunc(self, key, x, y):
@@ -547,6 +548,8 @@ class DiskCSpaceProgram(GLProgram):
                     self.refresh()
         elif key == 'r':
             self.drawRegions = not self.drawRegions
+        elif key == 'g':
+            self.drawRGraph = not self.drawRGraph
         elif key == 'l':
             if self.move_actions:
                 self.drawPoses = False
@@ -638,7 +641,7 @@ class DiskCSpaceProgram(GLProgram):
             glDisable(GL_BLEND)
 
         self.space.drawObstaclesGL()
-        self.space.drawRegionGraphGL(self.drawRegions)
+        self.space.drawRegionGraphGL(self.drawRegions, self.drawRGraph)
         if not self.drawRegions and self.drawPoses:
             self.space.drawPoses()
         self.space.drawMinkGL()
@@ -879,6 +882,7 @@ if __name__ == '__main__':
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
         genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
+        # genBuffers(num_buffers, space, [], 'boundary_free')
         # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
         space.regionGraph()
 
