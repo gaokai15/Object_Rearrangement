@@ -76,7 +76,7 @@ class BiDirDPPlanner(object):
         if (self.isConnected != True):
             self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
-        self.totalTime_allowed = 60  ### allow 500s for the total search tree construction
+        self.totalTime_allowed = 30 * self.numObjs  ### allow 30s per object for the total search
         start_time = time.clock()
 
         while (self.isConnected != True and time.clock() - start_time < self.totalTime_allowed):

@@ -10,19 +10,17 @@ from random import sample
 from dspace import *
 from DG_Space import set_max_memory
 
-# from BiDirDPPlanner import BiDirDPPlanner
-from BiDirDPPlanner_dyn import BiDirDPPlanner
+from BiDirDPPlanner import BiDirDPPlanner
+# from BiDirDPPlanner_dyn import BiDirDPPlanner
 
 # VISUALIZE = False
 VISUALIZE = True
-num_buffers = 0
+num_buffers = 5
 
 
 class Experiments(object):
     def single_instance(self, space, visualize):
         self.space = space
-        self.graph = space.RGAdj
-        self.object_locations = space.pose2reg
 
         start_poses = {}
         goal_poses = {}

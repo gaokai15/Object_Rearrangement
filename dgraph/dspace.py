@@ -16,7 +16,7 @@ import pyclipper as pc
 
 from util import *
 
-num_buffers = 0
+num_buffers = 6
 
 
 def interpolate(a, b, u):
@@ -236,8 +236,8 @@ class DiskCSpace(CSpace):
     def addPose(self, oid, obj):
         self.poseMap[oid] = obj
 
-    def removePose(self, oid, obj):
-        return self.poseMap.pop(oid, False)
+    def removePose(self, pid):
+        return self.poseMap.pop(pid, False)
 
     def restorePoses(self, poses):
         self.poseMap = poses.copy()
@@ -694,6 +694,7 @@ def genPoses(n, space):
 
 
 def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0, suffix=''):
+    num_generated = 0
     staticObstacles = space.saveObstacles()
 
     ### Random Sampling w/ max overlaps ###
@@ -729,6 +730,7 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
             ### Otherwise the buffer is accepted
             space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
             noccupied.append('B' + str(i + count) + suffix)
+            num_generated += 1
 
     ### Greedy Free Space Sampling ###
     elif method == 'greedy_free':
@@ -745,6 +747,7 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
                 break
             space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
             space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+            num_generated += 1
 
     ### Boundary Free Space Sampling ###
     elif method == 'boundary_free':
@@ -796,6 +799,7 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
 
             space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
             boccupied.append('B' + str(i + count) + suffix)
+            num_generated += 1
 
     ### Sample feasible region for given object and ordering ###
     elif method == 'object_feasible':
@@ -823,10 +827,12 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
                 break
             space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
             space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+            num_generated += 1
 
     ### reset obstacles
     space.restoreObstacles(staticObstacles)
     space.computeMinkObs()
+    return num_generated
 
 
 if __name__ == '__main__':
