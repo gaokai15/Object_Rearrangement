@@ -10,12 +10,12 @@ from random import sample
 from dspace import *
 from DG_Space import set_max_memory
 
-from BiDirDPPlanner import BiDirDPPlanner
-# from BiDirDPPlanner_dyn import BiDirDPPlanner
+# from BiDirDPPlanner import BiDirDPPlanner
+from BiDirDPPlanner_dyn import BiDirDPPlanner
 
 # VISUALIZE = False
 VISUALIZE = True
-num_buffers = 5
+num_buffers = 0
 
 
 class Experiments(object):
@@ -86,6 +86,8 @@ if __name__ == "__main__":
         else:
             space = loadEnv(sys.argv[1])
             rad = space.robot.radius
+            height = space.bound[1][1]
+            width = space.bound[0][1]
 
     if len(sys.argv) > 2:
         if space is None:

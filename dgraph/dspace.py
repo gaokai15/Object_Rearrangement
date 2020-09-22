@@ -145,21 +145,22 @@ class Poly:
                 center = poly.sample(o55)
         return (int(center[0]), int(center[1]))
 
-    def sample(self):
-        sampled = (0, 0)
+    def sample(self, reachable_to=None):
         if self.type == 'C_Poly':
             poly = pn.Polygon()
             for cont in self.points:
                 if pc.Orientation(cont):
-                    poly += pn.Polygon(cont)
+                    if reachable_to is None or pc.PointInPolygon(reachable_to, cont):
+                        poly += pn.Polygon(cont)
                 else:
                     poly -= pn.Polygon(cont)
-            else:
-                sampled = poly.sample(random)
+            if poly:
+                return poly.sample(random)
         elif self.type == 'S_Poly':
-            poly = pn.Polygon(self.points)
-            sampled = poly.sample(random)
-        return (int(sampled[0]), int(sampled[1]))
+            if reachable_to is None or pc.PointInPolygon(reachable_to, cont):
+                poly = pn.Polygon(self.points)
+                return poly.sample(random)
+        return False
 
     def drawGL(self, color=(0.5, 0.5, 0.5)):
         if self.type == 'C_Poly':
@@ -806,31 +807,35 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
 
     ### Sample feasible region for given object and ordering ###
     elif method == 'object_feasible':
-        obj_mob = []
+        # obj_mob = []
         for pid in occupied:
-            if pid[0] != 'G':  # get objects not at goal poses
-                obj_mob.append(int(pid[1:]))
+            # if pid[0] != 'G':  # get objects not at goal poses
+            #     obj_mob.append(int(pid[1:]))
             p = space.poseMap[pid]
             space.addObstacle(p)
 
-        obj_sel = param1
-        obj_ord = param2
-        for obj in obj_ord:
-            if obj == obj_sel:
-                break
-            p = space.poseMap['S' + str(obj)]
-            space.addObstacle(p)
+        # obj_sel = param1
+        # obj_ord = param2
+        # for obj in obj_ord:
+        #     if obj == obj_sel:
+        #         break
+        #     p = space.poseMap['S' + str(obj)]
+        #     space.addObstacle(p)
+        pose_sel = param1
 
+        space.computeMinkObs()
         for i in range(n):
-            space.computeMinkObs()
             if space.mink_obs.type != 'Empty':
-                point = space.mink_obs.sample()
+                point = space.mink_obs.sample(space.poseMap[pose_sel].center)
             else:
                 print("No free space!")
                 break
-            space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
-            space.addObstacle(Circle(point[0], point[1], space.robot.radius))
-            num_generated += 1
+            if point:
+                space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
+                # space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+                num_generated += 1
+            else:
+                print("No feasible space!")
 
     ### reset obstacles
     space.restoreObstacles(staticObstacles)
@@ -851,6 +856,8 @@ if __name__ == '__main__':
         else:
             space = loadEnv(sys.argv[1])
             rad = space.robot.radius
+            height = space.bound[1][1]
+            width = space.bound[0][1]
 
     if len(sys.argv) > 2:
         if space is None:
@@ -889,7 +896,7 @@ if __name__ == '__main__':
         genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
         # genBuffers(num_buffers, space, [], 'boundary_free')
-        # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
+        # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 'G1')
         space.regionGraph()
 
     outfile = sys.stderr

@@ -109,13 +109,14 @@ class BiDirDPPlanner(object):
 
         # if pose_idx is None:
         ind = len(bufs_for_obj)
-        genBuffers(
+        didgen = genBuffers(
             1,
             self.space,
             filter(lambda x: x != mutated_arrangement[obj_idx], mutated_arrangement),
-            method='greedy_free',
+            method='object_feasible',
+            param1=mutated_arrangement[obj_idx],
             count=ind,
-            suffix=';O' + str(obj_idx)
+            suffix=';O' + str(obj_idx),
         )
         pose_idx = 'B' + str(ind) + ';O' + str(obj_idx)
 
@@ -132,7 +133,10 @@ class BiDirDPPlanner(object):
         # self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
         # self.object_locations = self.space.pose2reg
 
-        return pose_idx
+        if didgen:
+            return pose_idx
+        else:
+            return None
 
     def mutateRightChild(self):
         ### first choose a node to mutate
@@ -143,6 +147,11 @@ class BiDirDPPlanner(object):
         obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
         pose_idx = self.choose_pose(obj_idx, mutated_arrangement)
+
+        # failed to generate buffer
+        if pose_idx is None:
+            print("failed to generate buffer!")
+            return None
 
         ### get new arrangement
         new_arrangement = copy.deepcopy(mutated_arrangement)
@@ -201,6 +210,11 @@ class BiDirDPPlanner(object):
         obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
         pose_idx = self.choose_pose(obj_idx, mutated_arrangement)
+
+        # failed to generate buffer
+        if pose_idx is None:
+            print("failed to generate buffer!")
+            return None
 
         ### get new arrangement
         new_arrangement = copy.deepcopy(mutated_arrangement)
