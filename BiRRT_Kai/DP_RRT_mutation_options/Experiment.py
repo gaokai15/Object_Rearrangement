@@ -7,6 +7,7 @@ import time
 import copy
 from random import sample
 from util import *
+import cPickle as pickle
 
 from InstanceGenerator import InstanceGenerator
 from Visualizer import Visualizer
@@ -17,11 +18,13 @@ from BiRRTStarPlanner import BiRRTStarPlanner
 from BiRRT_tester import BiRRT_tester
 from BiRRTstar_tester import BiRRTstar_tester
 from BiDirDPPlanner import BiDirDPPlanner, BiDirDPPlanner_A_star_furthest, BiDirDPPlanner_A_star_nearest, BiDirDPPlanner_suboptimal_furthest, BiDirDPPlanner_Random_Range, BiDirDPPlanner_Random_Nearest, BiDirDPPlanner_Leaf_Root, BiDirDPPlanner_Leaf_Root_Improved_Mutation, BiDirDPPlanner_Leaf_Small_Range,  BiDirDPPlanner_Leaf_Large_Range, BiDirDPPlanner_Leaf_Nearest
-from DPBruteForce import Non_Monotone_Solver_General
+from DPBruteForce import Non_Monotone_Solver_General, Generalized_Brute_force
 from FVS import feekback_vertex_ILP
 
 # timeout version function
-from Timeout_Functions import timeout_BiDirDPPlanner, timeout_BiDirDPPlanner_A_star_furthest, timeout_BiDirDPPlanner_A_star_nearest, timeout_BiDirDPPlanner_suboptimal_furthest, timeout_BiDirDPPlanner_Random_Range, timeout_BiDirDPPlanner_Random_Nearest, timeout_BiDirDPPlanner_Leaf_Root, timeout_BiDirDPPlanner_Leaf_Root_Improved_Mutation, timeout_BiDirDPPlanner_Leaf_Small_Range, timeout_BiDirDPPlanner_Leaf_Large_Range, timeout_BiDirDPPlanner_Leaf_Nearest, timeout_BiRRTPlanner, timeout_BiRRTStarPlanner, timeout_DensePathGenerator, timeout_Non_Monotone_Solver_General
+from Timeout_Functions import timeout_BiDirDPPlanner, timeout_BiDirDPPlanner_A_star_furthest, timeout_BiDirDPPlanner_A_star_nearest, timeout_BiDirDPPlanner_suboptimal_furthest, timeout_BiDirDPPlanner_Random_Range, timeout_BiDirDPPlanner_Random_Nearest, timeout_BiDirDPPlanner_Leaf_Root, timeout_BiDirDPPlanner_Leaf_Root_Improved_Mutation, timeout_BiDirDPPlanner_Leaf_Small_Range, timeout_BiDirDPPlanner_Leaf_Large_Range, timeout_BiDirDPPlanner_Leaf_Nearest, timeout_BiRRTPlanner, timeout_BiRRTStarPlanner, timeout_DensePathGenerator, timeout_Non_Monotone_Solver_General, timeout_Generalized_Brute_force
+
+my_path = os.path.abspath(os.path.dirname(__file__))
 
 # Disable
 def blockPrint():
@@ -76,7 +79,13 @@ class Experiment(object):
         print "final_arrangement: " + str(self.final_arrangement)
 
         ### Now let's generate the region graph and build its connection
-        self.regionGraph = RegionGraphGenerator(self.instance, self.visualTool, self.wall_mink)
+        # self.regionGraph = RegionGraphGenerator(self.instance, self.visualTool, self.wall_mink)
+        # with open(os.path.join(my_path, "instance00.pkl"),
+        #             'wb') as output:
+        #     pickle.dump((self.regionGraph, self.instance), output, pickle.HIGHEST_PROTOCOL)
+
+        # with open(os.path.join(my_path, "instance00.pkl"), 'rb') as input:
+        #     (self.regionGraph, self.instance) = pickle.load(input)
         ### get the region dict and LL from the graph
         region_dict, linked_list = self.linked_list_conversion(self.regionGraph.graph)
 
@@ -320,7 +329,7 @@ class Experiment(object):
         self.genSolutionFailure_DP_BruteForce = False
         start_time = time.clock()
         try:
-            print Intentional_Error
+            # print Intentional_Error
             start_poses = {}
             goal_poses = {}
             for i in range(len(self.initial_arrangement)):
@@ -338,6 +347,31 @@ class Experiment(object):
             self.genSolutionFailure_DP_BruteForce = True
         self.comTime_DP_BruteForce = time.clock() - start_time
         print "Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_local)
+
+
+
+        ##################################################
+        self.genSolutionFailure_Generalized_BruteForce = False
+        start_time = time.clock()
+        try:
+            # print Intentional_Error
+            start_poses = {}
+            goal_poses = {}
+            for i in range(len(self.initial_arrangement)):
+                start_poses[i] = self.initial_arrangement[i]
+                goal_poses[i] = self.final_arrangement[i]
+            self.plan_Generalized_BruteForce = timeout_Generalized_Brute_force(
+                self.regionGraph.graph, self.regionGraph.obj2reg, start_poses, goal_poses)
+            if self.plan_Generalized_BruteForce.totalActions == 0:
+                ### the solution is not found
+                self.genSolutionFailure_Generalized_BruteForce = True
+            else:
+                self.totalActions_Generalized_BruteForce = self.plan_Generalized_BruteForce.totalActions
+        except Exception:
+            ### the solution is not found
+            self.genSolutionFailure_Generalized_BruteForce = True
+        self.comTime_Generalized_BruteForce = time.clock() - start_time
+        print "Time to perform Generalized Brute Force solver: " + str(self.comTime_Generalized_BruteForce)
         
 
         

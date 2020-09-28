@@ -86,7 +86,10 @@ class DFS_Rec_for_Monotone_General(object):
                 self.parent[new_node] = old_node
                 self.queue.append(new_node)
                 self.explored[new_node] = True
-                if new_node == 1<<(self.n) - 1:
+                task_index = 0
+                for i in self.start_poses.keys():
+                    task_index += (1<<i)
+                if new_node == task_index:
                     return True
                 FLAG = self.DFS_rec(new_node)
                 if FLAG:

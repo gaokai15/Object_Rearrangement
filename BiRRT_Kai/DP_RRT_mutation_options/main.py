@@ -74,8 +74,8 @@ if __name__ == "__main__":
 
     radius = 80
     para_combinations = []
-    for D in [0.5 for i in range(50)]:
-        for num in [10]:
+    for D in [0.4 for i in range(1)]:
+        for num in [5]:
             H = math.sqrt(2*num*math.pi*radius*radius/D)
             para_combinations.append([num, radius, H, H])
 
@@ -130,6 +130,9 @@ if __name__ == "__main__":
         successSolTimes_DP_BruteForce = 0 ### record the number of times you successfully find a solution
         comTime_DP_BruteForce = 0
         numActions_DP_BruteForce = 0
+        successSolTimes_Generalized_BruteForce = 0 ### record the number of times you successfully find a solution
+        comTime_Generalized_BruteForce = 0
+        numActions_Generalized_BruteForce = 0
         successSolTimes_biRRT = 0 ### record the number of times you successfully find a solution
         comTime_biRRT = 0
         numActions_biRRT = 0
@@ -373,6 +376,16 @@ if __name__ == "__main__":
                 comTime_DP_BruteForce += EXP.comTime_DP_BruteForce
                 numActions_DP_BruteForce += EXP.totalActions_DP_BruteForce
 
+            ### method 1.51: DP_BruteForce
+            if EXP.genSolutionFailure_Generalized_BruteForce == True:
+                pass
+            else:
+                ### record the stats
+                successSolTimes_Generalized_BruteForce += 1
+                comTime_Generalized_BruteForce += EXP.comTime_Generalized_BruteForce
+                numActions_Generalized_BruteForce += EXP.totalActions_Generalized_BruteForce
+
+
             ### method 2: biRRT (arc ILP)
             if EXP.genSolutionFailure_biRRT == True:
                 pass
@@ -408,20 +421,20 @@ if __name__ == "__main__":
         #     print("average computation time for successful cases: " + str(comTime_DP_local / successSolTimes_DP_local))
         #     print("average number of actions: " + str(numActions_DP_local / successSolTimes_DP_local))
         
-        print("success times for having a solution for biRRT_DP_local_A_star_furthest: " + str(successSolTimes_DP_local_A_star_furthest) + "/" + str(nExperiments))
-        if (successSolTimes_DP_local_A_star_furthest != 0):
-            print("average computation time for successful cases: " + str(comTime_DP_local_A_star_furthest / successSolTimes_DP_local_A_star_furthest))
-            print("average number of actions: " + str(numActions_DP_local_A_star_furthest / successSolTimes_DP_local_A_star_furthest))
+        # print("success times for having a solution for biRRT_DP_local_A_star_furthest: " + str(successSolTimes_DP_local_A_star_furthest) + "/" + str(nExperiments))
+        # if (successSolTimes_DP_local_A_star_furthest != 0):
+        #     print("average computation time for successful cases: " + str(comTime_DP_local_A_star_furthest / successSolTimes_DP_local_A_star_furthest))
+        #     print("average number of actions: " + str(numActions_DP_local_A_star_furthest / successSolTimes_DP_local_A_star_furthest))
 
-        print("success times for having a solution for biRRT_DP_local_A_star_nearest: " + str(successSolTimes_DP_local_A_star_nearest) + "/" + str(nExperiments))
-        if (successSolTimes_DP_local_A_star_nearest != 0):
-            print("average computation time for successful cases: " + str(comTime_DP_local_A_star_nearest / successSolTimes_DP_local_A_star_nearest))
-            print("average number of actions: " + str(numActions_DP_local_A_star_nearest / successSolTimes_DP_local_A_star_nearest))
+        # print("success times for having a solution for biRRT_DP_local_A_star_nearest: " + str(successSolTimes_DP_local_A_star_nearest) + "/" + str(nExperiments))
+        # if (successSolTimes_DP_local_A_star_nearest != 0):
+        #     print("average computation time for successful cases: " + str(comTime_DP_local_A_star_nearest / successSolTimes_DP_local_A_star_nearest))
+        #     print("average number of actions: " + str(numActions_DP_local_A_star_nearest / successSolTimes_DP_local_A_star_nearest))
 
-        print("success times for having a solution for biRRT_DP_local_suboptimal_furthest: " + str(successSolTimes_DP_local_suboptimal_furthest) + "/" + str(nExperiments))
-        if (successSolTimes_DP_local_suboptimal_furthest != 0):
-            print("average computation time for successful cases: " + str(comTime_DP_local_suboptimal_furthest / successSolTimes_DP_local_suboptimal_furthest))
-            print("average number of actions: " + str(numActions_DP_local_suboptimal_furthest / successSolTimes_DP_local_suboptimal_furthest))
+        # print("success times for having a solution for biRRT_DP_local_suboptimal_furthest: " + str(successSolTimes_DP_local_suboptimal_furthest) + "/" + str(nExperiments))
+        # if (successSolTimes_DP_local_suboptimal_furthest != 0):
+        #     print("average computation time for successful cases: " + str(comTime_DP_local_suboptimal_furthest / successSolTimes_DP_local_suboptimal_furthest))
+        #     print("average number of actions: " + str(numActions_DP_local_suboptimal_furthest / successSolTimes_DP_local_suboptimal_furthest))
 
         # print("success times for having a solution for biRRT_DP_local_random_range: " + str(successSolTimes_DP_local_random_range) + "/" + str(nExperiments))
         # if (successSolTimes_DP_local_random_range != 0):
@@ -438,10 +451,10 @@ if __name__ == "__main__":
             print("average computation time for successful cases: " + str(comTime_DP_local_leaf_root / successSolTimes_DP_local_leaf_root))
             print("average number of actions: " + str(numActions_DP_local_leaf_root / successSolTimes_DP_local_leaf_root))
 
-        print("success times for having a solution for biRRT_DP_local_leaf_root_Improved_Mutation: " + str(successSolTimes_DP_local_leaf_root_Improved_Mutation) + "/" + str(nExperiments))
-        if (successSolTimes_DP_local_leaf_root_Improved_Mutation != 0):
-            print("average computation time for successful cases: " + str(comTime_DP_local_leaf_root_Improved_Mutation / successSolTimes_DP_local_leaf_root_Improved_Mutation))
-            print("average number of actions: " + str(numActions_DP_local_leaf_root_Improved_Mutation / successSolTimes_DP_local_leaf_root_Improved_Mutation))
+        # print("success times for having a solution for biRRT_DP_local_leaf_root_Improved_Mutation: " + str(successSolTimes_DP_local_leaf_root_Improved_Mutation) + "/" + str(nExperiments))
+        # if (successSolTimes_DP_local_leaf_root_Improved_Mutation != 0):
+        #     print("average computation time for successful cases: " + str(comTime_DP_local_leaf_root_Improved_Mutation / successSolTimes_DP_local_leaf_root_Improved_Mutation))
+        #     print("average number of actions: " + str(numActions_DP_local_leaf_root_Improved_Mutation / successSolTimes_DP_local_leaf_root_Improved_Mutation))
         
         # print("success times for having a solution for biRRT_DP_local_leaf_small_range: " + str(successSolTimes_DP_local_leaf_small_range) + "/" + str(nExperiments))
         # if (successSolTimes_DP_local_leaf_small_range != 0):
@@ -463,6 +476,12 @@ if __name__ == "__main__":
             print("average computation time for successful cases: " + str(comTime_DP_BruteForce / successSolTimes_DP_BruteForce))
             print("average number of actions: " + str(numActions_DP_BruteForce / successSolTimes_DP_BruteForce))
 
+        print("success times for having a solution for biRRT_Generalized_BruteForce: " + str(successSolTimes_Generalized_BruteForce) + "/" + str(nExperiments))
+        if (successSolTimes_Generalized_BruteForce != 0):
+            print("average computation time for successful cases: " + str(comTime_Generalized_BruteForce / successSolTimes_Generalized_BruteForce))
+            print("average number of actions: " + str(numActions_Generalized_BruteForce / successSolTimes_Generalized_BruteForce))
+
+
         # print("success times for having a solution for biRRT: " + str(successSolTimes_biRRT) + "/" + str(nExperiments))
         # if (successSolTimes_biRRT != 0):
         #     print("average computation time for successful cases: " + str(comTime_biRRT / successSolTimes_biRRT))
@@ -473,7 +492,7 @@ if __name__ == "__main__":
         #     print("average computation time for successful cases: " + str(comTime_biRRTstar / successSolTimes_biRRTstar))
         #     print("average number of actions: " + str(numActions_biRRTstar / successSolTimes_biRRTstar))
 
-        f_stat.write(str(nExperiments) + " " + str(successSolTimes_DP_local_leaf_root) + " " + str(successSolTimes_DP_local_leaf_root_Improved_Mutation) + " " + str(successSolTimes_DP_BruteForce) + "\n")
+        f_stat.write(str(nExperiments) + " " + str(successSolTimes_DP_local_leaf_root) + " " + str(successSolTimes_DP_BruteForce) + " " + str(successSolTimes_Generalized_BruteForce) + "\n")
 
         if successSolTimes_biRRT < 1:
             successSolTimes_biRRT = -1
@@ -481,6 +500,8 @@ if __name__ == "__main__":
             successSolTimes_biRRTstar = -1
         if successSolTimes_DP_BruteForce < 1:
             successSolTimes_DP_BruteForce = -1
+        if successSolTimes_Generalized_BruteForce < 1:
+            successSolTimes_Generalized_BruteForce = -1
         if successSolTimes_DP_local < 1:
             successSolTimes_DP_local = -1
         if successSolTimes_DP_local_A_star_furthest < 1:
@@ -506,8 +527,8 @@ if __name__ == "__main__":
         if successSolTimes_GPD <1:
             successSolTimes_GPD = -1
 
-        f_stat.write(str(float(numActions_DP_local_leaf_root) / successSolTimes_DP_local_leaf_root) + " " +str(float(numActions_DP_local_leaf_root_Improved_Mutation) / successSolTimes_DP_local_leaf_root_Improved_Mutation) + " " + str(float(numActions_DP_BruteForce) / successSolTimes_DP_BruteForce) + " " + "\n")
-        f_stat.write( str(comTime_DP_local_leaf_root / successSolTimes_DP_local_leaf_root) +" " + str(comTime_DP_local_leaf_root_Improved_Mutation / successSolTimes_DP_local_leaf_root_Improved_Mutation) +" " + str(comTime_DP_BruteForce / successSolTimes_DP_BruteForce) + "\n")
+        f_stat.write(str(float(numActions_DP_local_leaf_root) / successSolTimes_DP_local_leaf_root) + " " + str(float(numActions_DP_BruteForce) / successSolTimes_DP_BruteForce) + " " + str(float(numActions_Generalized_BruteForce) / successSolTimes_Generalized_BruteForce) + "\n")
+        f_stat.write( str(comTime_DP_local_leaf_root / successSolTimes_DP_local_leaf_root) +" " + str(comTime_DP_BruteForce / successSolTimes_DP_BruteForce) +" " + str(comTime_Generalized_BruteForce / successSolTimes_Generalized_BruteForce) + "\n")
 
 
     f_stat.close()

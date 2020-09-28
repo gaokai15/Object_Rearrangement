@@ -2738,7 +2738,7 @@ class DFS_Rec_for_Non_Monotone_General(object):
 
     def transformation(self,occupied_poses, obj):
         
-        if obj < self.n: # move from the start pose
+        if obj in self.start_poses.keys(): # move from the start pose
             start = self.start_poses[obj]
             if obj in self.obj_buffer_dict: # to the buffer
                 goal = self.obj_buffer_dict[obj][1]
