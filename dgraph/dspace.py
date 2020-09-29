@@ -16,7 +16,7 @@ import pyclipper as pc
 
 from util import *
 
-num_buffers = 2
+num_buffers = 6
 
 
 def interpolate(a, b, u):
@@ -145,21 +145,22 @@ class Poly:
                 center = poly.sample(o55)
         return (int(center[0]), int(center[1]))
 
-    def sample(self):
-        sampled = (0, 0)
+    def sample(self, reachable_to=None):
         if self.type == 'C_Poly':
             poly = pn.Polygon()
             for cont in self.points:
                 if pc.Orientation(cont):
-                    poly += pn.Polygon(cont)
+                    if reachable_to is None or pc.PointInPolygon(reachable_to, cont):
+                        poly += pn.Polygon(cont)
                 else:
                     poly -= pn.Polygon(cont)
-            else:
-                sampled = poly.sample(random)
+            if poly:
+                return poly.sample(random)
         elif self.type == 'S_Poly':
-            poly = pn.Polygon(self.points)
-            sampled = poly.sample(random)
-        return (int(sampled[0]), int(sampled[1]))
+            if reachable_to is None or pc.PointInPolygon(reachable_to, cont):
+                poly = pn.Polygon(self.points)
+                return poly.sample(random)
+        return False
 
     def drawGL(self, color=(0.5, 0.5, 0.5)):
         if self.type == 'C_Poly':
@@ -236,8 +237,8 @@ class DiskCSpace(CSpace):
     def addPose(self, oid, obj):
         self.poseMap[oid] = obj
 
-    def removePose(self, oid, obj):
-        return self.poseMap.pop(oid, False)
+    def removePose(self, pid):
+        return self.poseMap.pop(pid, False)
 
     def restorePoses(self, poses):
         self.poseMap = poses.copy()
@@ -288,13 +289,13 @@ class DiskCSpace(CSpace):
                     glColor3f(*getColor(int(dd) * 2.0 / len(self.poseMap)))
                 pose.drawGL()
 
-    def drawRegionGraphGL(self, drawRegions=True):
+    def drawRegionGraphGL(self, drawRegions=True, drawGraph=True):
         if self.regions is None:
             t0 = time()
             self.regionGraph()
             print("RG Time: ", time() - t0)
 
-        if self.RG:
+        if self.RG and drawGraph:
             V, E = self.RG
             glEnable(GL_BLEND)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -525,7 +526,8 @@ class DiskCSpaceProgram(GLProgram):
             self.planner.setEndpoints(start, goal)
         self.path = []
         self.G = None
-        self.drawRegions = True
+        self.drawRegions = False
+        self.drawRGraph = False
         self.drawPoses = True
 
     def keyboardfunc(self, key, x, y):
@@ -547,6 +549,8 @@ class DiskCSpaceProgram(GLProgram):
                     self.refresh()
         elif key == 'r':
             self.drawRegions = not self.drawRegions
+        elif key == 'g':
+            self.drawRGraph = not self.drawRGraph
         elif key == 'l':
             if self.move_actions:
                 self.drawPoses = False
@@ -638,7 +642,7 @@ class DiskCSpaceProgram(GLProgram):
             glDisable(GL_BLEND)
 
         self.space.drawObstaclesGL()
-        self.space.drawRegionGraphGL(self.drawRegions)
+        self.space.drawRegionGraphGL(self.drawRegions, self.drawRGraph)
         if not self.drawRegions and self.drawPoses:
             self.space.drawPoses()
         self.space.drawMinkGL()
@@ -694,6 +698,7 @@ def genPoses(n, space):
 
 
 def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0, suffix=''):
+    num_generated = 0
     staticObstacles = space.saveObstacles()
 
     ### Random Sampling w/ max overlaps ###
@@ -729,6 +734,7 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
             ### Otherwise the buffer is accepted
             space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
             noccupied.append('B' + str(i + count) + suffix)
+            num_generated += 1
 
     ### Greedy Free Space Sampling ###
     elif method == 'greedy_free':
@@ -745,6 +751,7 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
                 break
             space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
             space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+            num_generated += 1
 
     ### Boundary Free Space Sampling ###
     elif method == 'boundary_free':
@@ -796,37 +803,44 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
 
             space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
             boccupied.append('B' + str(i + count) + suffix)
+            num_generated += 1
 
     ### Sample feasible region for given object and ordering ###
     elif method == 'object_feasible':
-        obj_mob = []
+        # obj_mob = []
         for pid in occupied:
-            if pid[0] != 'G':  # get objects not at goal poses
-                obj_mob.append(int(pid[1:]))
+            # if pid[0] != 'G':  # get objects not at goal poses
+            #     obj_mob.append(int(pid[1:]))
             p = space.poseMap[pid]
             space.addObstacle(p)
 
-        obj_sel = param1
-        obj_ord = param2
-        for obj in obj_ord:
-            if obj == obj_sel:
-                break
-            p = space.poseMap['S' + str(obj)]
-            space.addObstacle(p)
+        # obj_sel = param1
+        # obj_ord = param2
+        # for obj in obj_ord:
+        #     if obj == obj_sel:
+        #         break
+        #     p = space.poseMap['S' + str(obj)]
+        #     space.addObstacle(p)
+        pose_sel = param1
 
+        space.computeMinkObs()
         for i in range(n):
-            space.computeMinkObs()
             if space.mink_obs.type != 'Empty':
-                point = space.mink_obs.sample()
+                point = space.mink_obs.sample(space.poseMap[pose_sel].center)
             else:
                 print("No free space!")
                 break
-            space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
-            space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+            if point:
+                space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
+                # space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+                num_generated += 1
+            else:
+                print("No feasible space!")
 
     ### reset obstacles
     space.restoreObstacles(staticObstacles)
     space.computeMinkObs()
+    return num_generated
 
 
 if __name__ == '__main__':
@@ -842,6 +856,8 @@ if __name__ == '__main__':
         else:
             space = loadEnv(sys.argv[1])
             rad = space.robot.radius
+            height = space.bound[1][1]
+            width = space.bound[0][1]
 
     if len(sys.argv) > 2:
         if space is None:
@@ -863,6 +879,14 @@ if __name__ == '__main__':
     else:
         space.setRobotRad(rad)
 
+    space.computeMinkObs()
+    if space.mink_obs.type == 'S_Poly':
+        print(pc.Area(space.mink_obs.points))
+    elif space.mink_obs.type == 'C_Poly':
+        print([pc.Area(x) for x in space.mink_obs.points])
+    else:
+        print("WTF?")
+
     if len(space.poseMap) == 0:
         genPoses(numObjs, space)
 
@@ -871,7 +895,8 @@ if __name__ == '__main__':
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
         genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
-        # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
+        # genBuffers(num_buffers, space, [], 'boundary_free')
+        # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 'G1')
         space.regionGraph()
 
     outfile = sys.stderr

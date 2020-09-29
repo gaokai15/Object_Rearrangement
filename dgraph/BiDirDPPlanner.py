@@ -6,6 +6,7 @@ import numpy as np
 from random import sample, choice
 from collections import OrderedDict
 
+from dspace import genBuffers
 from util import checkBitStatusAtPos
 from DG_Space import DFS_Rec_for_Monotone_General, linked_list_conversion
 
@@ -23,62 +24,84 @@ class BiDirDPPlanner(object):
         self.initial_arrangement = init_arr
         self.final_arrangement = final_arr
         self.numObjs = len(self.initial_arrangement)
+        self.numBuffers = max(len(filter(lambda x: x[0] == 'B', self.space.poseMap.keys())), 1)
+        print("Number of Buffers: ", self.numBuffers)
 
-        ### initialize dependency_dict and path_dict as empty dict
-        ### since now we are going to increment these two dicts online, instead of offline
-        self.dependency_dict = {}
-        self.path_dict = {}
-        self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
-        self.object_locations = self.space.pose2reg
+        def init():
+            ### initialize dependency_dict and path_dict as empty dict
+            ### since now we are going to increment these two dicts online, instead of offline
+            self.dependency_dict = {}
+            self.path_dict = {}
+            self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
+            self.object_locations = copy.deepcopy(self.space.pose2reg)
 
-        self.treeL = {}
-        self.treeR = {}
-        self.trees = {}
-        self.trees["Left"] = self.treeL
-        self.trees["Right"] = self.treeR
-        self.arrLeftRegistr = []
-        self.arrRightRegistr = []
-        self.idLeftRegistr = []
-        self.idRightRegistr = []
-        ### add the initial_arrangement and final_arrangement as the root node to two trees, respectively
-        self.treeL["L0"] = ArrNode(self.initial_arrangement, "L0", None, None, None, 0, None)
-        self.treeR["R0"] = ArrNode(self.final_arrangement, "R0", None, None, None, 0, None)
-        self.arrLeftRegistr.append(self.initial_arrangement)
-        self.arrRightRegistr.append(self.final_arrangement)
-        self.idLeftRegistr.append("L0")
-        self.idRightRegistr.append("R0")
-        self.leftKey = "L0"
-        self.rightKey = "R0"
-        self.bridge = [None, None, None, None, None]
-        ### [leftKey, rightKey, object_transition, objectMoved, path_option]
-        self.leftLeaves = ["L0"]  ### keep track of leaves in the left tree
-        self.rightLeaves = ["R0"]  ### keep track of leaves in the right tree
+            self.treeL = {}
+            self.treeR = {}
+            self.trees = {}
+            self.trees["Left"] = self.treeL
+            self.trees["Right"] = self.treeR
+            self.arrLeftRegistr = []
+            self.arrRightRegistr = []
+            self.idLeftRegistr = []
+            self.idRightRegistr = []
+            ### add the initial_arrangement and final_arrangement as the root node to two trees, respectively
+            self.treeL["L0"] = ArrNode(self.initial_arrangement, "L0", None, None, None, 0, None)
+            self.treeR["R0"] = ArrNode(self.final_arrangement, "R0", None, None, None, 0, None)
+            self.arrLeftRegistr.append(self.initial_arrangement)
+            self.arrRightRegistr.append(self.final_arrangement)
+            self.idLeftRegistr.append("L0")
+            self.idRightRegistr.append("R0")
+            self.leftKey = "L0"
+            self.rightKey = "R0"
+            self.bridge = [None, None, None, None, None]
+            ### [leftKey, rightKey, object_transition, objectMoved, path_option]
+            self.leftLeaves = ["L0"]  ### keep track of leaves in the left tree
+            self.rightLeaves = ["R0"]  ### keep track of leaves in the right tree
 
-        ################## results ################
-        self.isConnected = False
-        self.best_solution_cost = np.inf
-        ### the whole_path is a list of items and each item has the following format
-        ### [("node1_id", node2_id), {2:path2, 1:path1, ...}]
-        self.totalActions = 0  ### record the total number of actions
-        self.numLeftBranches = 0  ### record the number of left branches in the solution
-        self.numRightBranches = 0  ### record the number of right branches in the solution
-        self.numNodesInLeftTree = 0  ### record the total number of nodes in the left tree
-        self.numNodesInRightTree = 0  ### record the total number of nodes in the right tree
+            ################## results ################
+            self.isConnected = False
+            self.best_solution_cost = np.inf
+            ### the whole_path is a list of items and each item has the following format
+            ### [("node1_id", node2_id), {2:path2, 1:path1, ...}]
+            self.totalActions = 0  ### record the total number of actions
+            self.numLeftBranches = 0  ### record the number of left branches in the solution
+            self.numRightBranches = 0  ### record the number of right branches in the solution
+            self.numNodesInLeftTree = 0  ### record the total number of nodes in the left tree
+            self.numNodesInRightTree = 0  ### record the total number of nodes in the right tree
 
-        ### start ruuning
-        self.left_idx = 1
-        self.right_idx = 1
-        ### initial connection attempt
+            ### start ruuning
+            self.left_idx = 1
+            self.right_idx = 1
+            ### initial connection attempt
 
-        self.growSubTree(self.treeL["L0"], self.treeR["R0"], "Left")
-        if (self.isConnected != True):
-            self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
+            self.growSubTree(self.treeL["L0"], self.treeR["R0"], "Left")
+            if (self.isConnected != True):
+                self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
-        self.totalTime_allowed = 60  ### allow 500s for the total search tree construction
+        init()
+        print(self.space.poseMap.keys())
+        print(self.space.regions.keys())
+        self.totalTime_allowed = 30 * self.numObjs  ### allow 30s per object for the total search
+        self.restartTime = 5 * self.numObjs  ### allow 5s per object for the search before restarting
         start_time = time.clock()
 
         while (self.isConnected != True and time.clock() - start_time < self.totalTime_allowed):
             ### The problem is not monotone
+
+            ### reinit for restart
+            if time.clock() - start_time > self.restartTime:
+                print("Restarting!")
+                self.restartTime += time.clock() - start_time
+                for pid in filter(lambda x: x[0] == 'B', self.space.poseMap.keys()):
+                    self.space.removePose(pid)
+                self.numBuffers += 1
+                genBuffers(self.numBuffers, self.space, self.space.poseMap.keys(), 'greedy_free')
+                self.space.regionGraph()
+                print(self.space.poseMap.keys())
+                print(self.space.regions.keys())
+                init()
+
+            ### otherwise continue growing
             newChild_nodeID = self.mutateLeftChild()
             if newChild_nodeID != None:
                 self.growSubTree(self.treeL[newChild_nodeID], self.treeR["R0"], "Left")

@@ -15,14 +15,12 @@ from BiDirDPPlanner_dyn import BiDirDPPlanner
 
 # VISUALIZE = False
 VISUALIZE = True
-num_buffers = 5
+num_buffers = 0
 
 
 class Experiments(object):
     def single_instance(self, space, visualize):
         self.space = space
-        self.graph = space.RGAdj
-        self.object_locations = space.pose2reg
 
         start_poses = {}
         goal_poses = {}
@@ -88,6 +86,8 @@ if __name__ == "__main__":
         else:
             space = loadEnv(sys.argv[1])
             rad = space.robot.radius
+            height = space.bound[1][1]
+            width = space.bound[0][1]
 
     if len(sys.argv) > 2:
         if space is None:

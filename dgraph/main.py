@@ -41,15 +41,25 @@ if __name__ == "__main__":
             sys.exit(-1)
 
     if env_folder:
-        num_objs_rad = [
-            [5, 99],
-            [5, 127],
-            [10, 70],
-            [10, 90],
-            [15, 57],
-            [15, 73],
-            [20, 49],
-            [20, 63],
+        # num_objs_rad = [
+        #     [5, 99],
+        #     [5, 127],
+        #     [10, 70],
+        #     [10, 90],
+        #     [15, 57],
+        #     [15, 73],
+        #     [20, 49],
+        #     [20, 63],
+        # ]
+        num_objs_dense = [
+            [5, 0.25],
+            [5, 0.5],
+            [10, 0.25],
+            [10, 0.5],
+            [15, 0.25],
+            [15, 0.5],
+            [20, 0.25],
+            [20, 0.5],
         ]
         base_envs = {'Empty': DiskCSpace()}
         for env_file in glob(env_folder + '/*'):
@@ -57,13 +67,34 @@ if __name__ == "__main__":
             base_envs[name] = loadEnv(env_file)
 
         for name, space in base_envs.items():
-            for params in num_objs_rad:
-                space.setRobotRad(params[1])
+            for params in num_objs_dense:
+                if name == 'shelf5':
+                    rad = 100
+                    space.setRobotRad(rad)
+                    space.computeMinkObs()
+                else:
+                    space.setRobotRad(1)
+                    space.computeMinkObs()
+                if space.mink_obs.type == 'S_Poly':
+                    area = pc.Area(space.mink_obs.points)
+                elif space.mink_obs.type == 'C_Poly':
+                    area = sum([pc.Area(x) for x in space.mink_obs.points])
+                else:
+                    print("WTF?")
+                    sys.exit(-1)
+
+                if name == 'shelf5':
+                    nobj = int(ceil(area * params[1] / (2 * pi * rad**2)))
+                else:
+                    nobj = params[0]
+                    rad = int(ceil(sqrt((area * params[1]) / (2 * nobj * pi))))
+                    space.setRobotRad(rad)
+                print(area, nobj, rad)
                 for i in range(nExperiments):
                     space.clearPoses()
-                    if not genPoses(params[0], space):
+                    if not genPoses(nobj, space):
                         continue
-                    with open("{}/{}_{}_{}_{}.py".format(out_folder, name, params[0], params[1], i), 'w') as outfile:
+                    with open("{}/{}_{}_{}_{}.py".format(out_folder, name, nobj, rad, i), 'w') as outfile:
                         print(
                             'DiskCSpace(\n    rad={},\n    height={},\n    width={},\n'.format(
                                 space.robot.radius,
