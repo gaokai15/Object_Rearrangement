@@ -1392,6 +1392,8 @@ if __name__ == "__main__":
         else:
             space = loadEnv(sys.argv[1])
             rad = space.robot.radius
+            height = space.bound[1][1]
+            width = space.bound[0][1]
 
     if len(sys.argv) > 2:
         if space is None:
