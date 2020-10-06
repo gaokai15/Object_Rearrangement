@@ -11,11 +11,14 @@ from dspace import *
 from DG_Space import set_max_memory
 
 # from BiDirDPPlanner import BiDirDPPlanner
-from BiDirDPPlanner_dyn import BiDirDPPlanner
+# from BiDirDPPlanner_dyn import BiDirDPPlanner
+
+# from DensePathGenerator import DensePathGenerator
+from FastHeuristicDPPlanner import FastHeuristicDPPlanner
 
 # VISUALIZE = False
 VISUALIZE = True
-num_buffers = 0
+num_buffers = 5
 
 
 class Experiments(object):
@@ -43,7 +46,15 @@ class Experiments(object):
         print("final_arrangement: " + str(self.final_arrangement))
 
         start_time = clock()
-        self.plan_DP_local = BiDirDPPlanner(self.initial_arrangement, self.final_arrangement, self.space)
+        if 'FastHeuristicDPPlanner' in sys.modules:
+            # self.gpd = DensePathGenerator(space.RGAdj, space.pose2reg)
+            # self.new_paths = {}
+            # for r1, r2 in space.RG[1]:
+            #     self.new_paths[(self.gpd.region_dict[r1], self.gpd.region_dict[r2])
+            #                    ] = copy.deepcopy(self.regionGraph.paths[(r1, r2)])
+            self.plan_DP_local = FastHeuristicDPPlanner(self.initial_arrangement, self.final_arrangement, self.space)
+        else:
+            self.plan_DP_local = BiDirDPPlanner(self.initial_arrangement, self.final_arrangement, self.space)
         self.comTime_DP_local = clock() - start_time
         print("Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_local))
 
