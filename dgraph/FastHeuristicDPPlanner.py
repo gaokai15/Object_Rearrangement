@@ -102,7 +102,7 @@ class FastHeuristicDPPlanner(object):
 
         print(self.space.poseMap.keys())
         print(self.space.regions.keys())
-        totalTime_allowed = 30 * self.numObjs  ### allow 30s per object for the total search
+        self.totalTime_allowed = 30 * self.numObjs  ### allow 30s per object for the total search
         # restartTime = 5 * self.numObjs  ### allow 5s per object for the search before restarting
         start_time = time.clock()
 
@@ -115,7 +115,7 @@ class FastHeuristicDPPlanner(object):
             ####### conduct a BFS for the perturbation process ########
             print("\n\nstart our non-monotone journey")
             while (len(self.queue) > 0) and (self.isConnected
-                                             == False) and (time.clock() - start_time < totalTime_allowed):
+                                             == False) and (time.clock() - start_time < self.totalTime_allowed):
                 startTime_task = time.clock()
                 curr_task = self.queue.pop(-1)
                 self.node_checked += 1

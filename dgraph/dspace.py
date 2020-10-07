@@ -16,7 +16,7 @@ import pyclipper as pc
 
 from util import *
 
-num_buffers = 6
+num_buffers = 10
 
 
 def interpolate(a, b, u):

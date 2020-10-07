@@ -13,12 +13,12 @@ from DG_Space import set_max_memory
 # from BiDirDPPlanner import BiDirDPPlanner as Planner
 # from BiDirDPPlanner_dyn import BiDirDPPlanner as Planner
 
-# from DensePathGenerator import DensePathGenerator as Planner
-from FastHeuristicDPPlanner import FastHeuristicDPPlanner as Planner
+# from FastHeuristicDPPlanner import FastHeuristicDPPlanner as Planner
+from FastHeuristicDPPlanner_dyn import FastHeuristicDPPlanner as Planner
 
 # VISUALIZE = False
 VISUALIZE = True
-num_buffers = 5
+num_buffers = 0
 
 
 class Experiments(object):
