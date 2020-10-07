@@ -484,10 +484,10 @@ class FastHeuristicDPPlanner(object):
                     ### check the constraint based on query_arrangement and goal_arrangement
                     ### if the constraint is caused by current pose of an object
                     if (constr in query_arrangement) and (query_arrangement.index(constr) != obj_idx):
-                        path_set = path_set.union({(query_arrangement.index(constr), 0)})
+                        path_set.add((query_arrangement.index(constr), 0))
                     ### if the constraint is caused by final pose of an object
                     if (constr in goal_arrangement) and (goal_arrangement.index(constr) != obj_idx):
-                        path_set = path_set.union({(goal_arrangement.index(constr), 1)})
+                        path_set.add((goal_arrangement.index(constr), 1))
                     ### Otherwise, it is a buffer and do nothing
                 object_dependency_opts[obj_idx].append(path_set)
 
@@ -540,8 +540,8 @@ class FastHeuristicDPPlanner(object):
         for arc in arcs:
             obj1 = arc[0]
             obj2 = arc[1]
-            object_candidates = object_candidates.union({obj1})
-            object_candidates = object_candidates.union({obj2})
+            object_candidates.add(obj1)
+            object_candidates.add(obj2)
 
         ### Then we use inner degree to take out those most constraining objects (largest inner degree)
         largest_inner_degree = -1
