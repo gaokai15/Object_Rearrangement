@@ -3,12 +3,15 @@ from __future__ import division
 import copy
 import time
 import numpy as np
+from itertools import product
 from collections import OrderedDict
 from operator import itemgetter, attrgetter
 
 from util import *
-from ILPSolver import feedback_arc_ILP_buffers
+from dspace import Circle
 from DG_Space import linked_list_conversion
+from ILPSolver import feedback_arc_ILP_buffers
+from DensePathGenerator import DensePathGenerator
 from DPLocalSolver import DFS_Rec_for_Monotone_General, DFS_Rec_for_Non_Monotone_General
 
 
@@ -33,62 +36,70 @@ class FastHeuristicDPPlanner(object):
         ### this number decides how many leafs we will love to add each time (braching factor)
         self.k = min(1, int(self.numObjs / 2))
 
-        def init():
-            ### initialize dependency_dict and path_dict as empty dict
-            ### since now we are going to increment these two dicts online, instead of offline
-            # self.dependency_dict = copy.deepcopy(gpd.dependency_dict)
-            # self.path_dict = copy.deepcopy(gpd.path_dict)
-            # self.new_paths = new_paths
-            # self.pose_locations = copy.deepcopy(gpd.pose_locations)
-            # self.region_dict = copy.deepcopy(gpd.region_dict)
-            # self.linked_list = copy.deepcopy(gpd.LL)
-            self.dependency_dict = {}
-            self.path_dict = {}
-            self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
-            self.pose_locations = copy.deepcopy(self.space.pose2reg)
-            # self.getStraightPaths()
+        # gpd = DensePathGenerator(self.space.RGAdj, self.space.pose2reg)
+        # self.new_paths = {}
+        # for r1, r2 in space.RG[1]:
+        #     self.new_paths[(self.gpd.region_dict[r1], self.gpd.region_dict[r2])
+        #                    ] = copy.deepcopy(self.regionGraph.paths[(r1, r2)])
 
-            self.treeL = {}
-            self.treeR = {}
-            self.trees = {}
-            self.trees["Left"] = self.treeL
-            self.trees["Right"] = self.treeR
-            self.arrLeftRegistr = []
-            self.arrRightRegistr = []
-            self.idLeftRegistr = []
-            self.idRightRegistr = []
-            ### add the initial_arrangement and final_arrangement as the root node to two trees, respectively
-            ### members in a node: arrangement, node_id, cost_to_come, object_ordering, paths_option, parent_id
-            self.treeL["L0"] = ArrNode(self.initial_arrangement, "L0", 0, None, None, None)
-            self.treeR["R0"] = ArrNode(self.final_arrangement, "R0", 0, None, None, None)
-            self.arrLeftRegistr.append(self.initial_arrangement)
-            self.arrRightRegistr.append(self.final_arrangement)
-            self.idLeftRegistr.append("L0")
-            self.idRightRegistr.append("R0")
+        ### initialize dependency_dict and path_dict as empty dict
+        ### since now we are going to increment these two dicts online, instead of offline
+        # self.dependency_dict = copy.deepcopy(gpd.dependency_dict)
+        # self.path_dict = copy.deepcopy(gpd.path_dict)
+        # self.new_paths = new_paths
+        # self.pose_locations = copy.deepcopy(gpd.pose_locations)
+        # self.region_dict = copy.deepcopy(gpd.region_dict)
+        # self.linked_list = copy.deepcopy(gpd.LL)
 
-            ### some variables ###
-            self.simplePath = []  ### a list of node_ids
-            self.solution_cost = np.inf
+        self.dependency_dict = {}
+        self.path_dict = {}
+        self.new_paths = {}
+        self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
+        self.pose_locations = copy.deepcopy(self.space.pose2reg)
+        self.getStraightPaths()
+        # print(self.dependency_dict)
+        # print(self.path_dict)
 
-            ################## results ################
-            self.isConnected = False
-            self.best_solution_cost = np.inf
-            ### the whole_path is a list of items and each item has the following format
-            ### [("node1_id", node2_id), {2:path2, 1:path1, ...}]
-            self.whole_path = []
-            self.totalActions = 0  ### record the total number of actions
-            self.numLeftBranches = 0  ### record the number of left branches in the solution
-            self.numRightBranches = 0  ### record the number of right branches in the solution
-            self.numNodesInLeftTree = 0  ### record the total number of nodes in the left tree
-            self.numNodesInRightTree = 0  ### record the total number of nodes in the right tree
+        self.treeL = {}
+        self.treeR = {}
+        self.trees = {}
+        self.trees["Left"] = self.treeL
+        self.trees["Right"] = self.treeR
+        self.arrLeftRegistr = []
+        self.arrRightRegistr = []
+        self.idLeftRegistr = []
+        self.idRightRegistr = []
+        ### add the initial_arrangement and final_arrangement as the root node to two trees, respectively
+        ### members in a node: arrangement, node_id, cost_to_come, object_ordering, paths_option, parent_id
+        self.treeL["L0"] = ArrNode(self.initial_arrangement, "L0", 0, None, None, None)
+        self.treeR["R0"] = ArrNode(self.final_arrangement, "R0", 0, None, None, None)
+        self.arrLeftRegistr.append(self.initial_arrangement)
+        self.arrRightRegistr.append(self.final_arrangement)
+        self.idLeftRegistr.append("L0")
+        self.idRightRegistr.append("R0")
 
-            ### start ruuning
-            self.left_idx = 1
-            self.right_idx = 1
-            self.queue = []
-            self.node_checked = 0
+        ### some variables ###
+        self.simplePath = []  ### a list of node_ids
+        self.solution_cost = np.inf
 
-        init()
+        ################## results ################
+        self.isConnected = False
+        self.best_solution_cost = np.inf
+        ### the whole_path is a list of items and each item has the following format
+        ### [("node1_id", node2_id), {2:path2, 1:path1, ...}]
+        self.whole_path = []
+        self.totalActions = 0  ### record the total number of actions
+        self.numLeftBranches = 0  ### record the number of left branches in the solution
+        self.numRightBranches = 0  ### record the number of right branches in the solution
+        self.numNodesInLeftTree = 0  ### record the total number of nodes in the left tree
+        self.numNodesInRightTree = 0  ### record the total number of nodes in the right tree
+
+        ### start ruuning
+        self.left_idx = 1
+        self.right_idx = 1
+        self.queue = []
+        self.node_checked = 0
+
         print(self.space.poseMap.keys())
         print(self.space.regions.keys())
         totalTime_allowed = 30 * self.numObjs  ### allow 30s per object for the total search
@@ -277,6 +288,8 @@ class FastHeuristicDPPlanner(object):
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
+        # print(self.dependency_dict)
+        # print(self.path_dict)
 
         # print("The problem is initially montone? " + str(bool(subTree.isMonotone)))
         # print("subTree.parent: " + str(subTree.parent))
@@ -460,8 +473,11 @@ class FastHeuristicDPPlanner(object):
             if obj_idx not in object_dependency_opts.keys():
                 object_dependency_opts[obj_idx] = []
             ### look into the path option for the current object's current pose and destination pose
-            pose_key1 = min(query_arrangement[obj_idx], goal_arrangement[obj_idx])
-            pose_key2 = max(query_arrangement[obj_idx], goal_arrangement[obj_idx])
+            # pose_key1 = min(query_arrangement[obj_idx], goal_arrangement[obj_idx])
+            # pose_key2 = max(query_arrangement[obj_idx], goal_arrangement[obj_idx])
+            pose_key1, pose_key2 = sorted((query_arrangement[obj_idx], goal_arrangement[obj_idx]))
+            # if pose_key1 == pose_key2:
+            #     continue
             for path in self.dependency_dict[(pose_key1, pose_key2)]:
                 path_set = set()
                 for constr in path:
@@ -606,42 +622,45 @@ class FastHeuristicDPPlanner(object):
         ### Before we perform search and increment the dependency and path dict
         ### Let's use the straight path as the first and backup path
         ### for each pair of pose
-        nPoses = len(self.space.poseMap)
-        for i in range(nPoses):
-            for j in range(i, nPoses):
-                key_pair = (i, j)
-                # print("key_pair: " + str(key_pair))
-                if key_pair not in self.dependency_dict.keys():
-                    self.dependency_dict[key_pair] = []
-                    self.path_dict[key_pair] = []
+        # nPoses = len(self.space.poseMap)
+        # for i in range(nPoses):
+        #     for j in range(i, nPoses):
+        for i, j in product(self.space.poseMap.keys(), repeat=2):
+            key_pair = (i, j)
+            # print("key_pair: " + str(key_pair))
 
-                    path = []
-                    dep_set = set()
+            path = []
+            dep_set = set()
 
-                    if i == j:
-                        path.append(self.points[i])
-                        self.path_dict[key_pair].append(path)
-                        dep_set = dep_set.union({i})
-                        self.dependency_dict[key_pair].append(dep_set)
-                        continue
+            if key_pair not in self.dependency_dict.keys():
+                self.dependency_dict[key_pair] = []
+                self.path_dict[key_pair] = []
 
-                start_pt = self.points[i]
-                goal_pt = self.points[j]
-                nsegs = 20
-                keypts_check = 5
-                for kk in range(nsegs + 1):
-                    temp_ptx = start_pt[0] + (goal_pt[0] - start_pt[0]) / nsegs * kk
-                    temp_pty = start_pt[1] + (goal_pt[1] - start_pt[1]) / nsegs * kk
-                    temp_pt = (temp_ptx, temp_pty)
-                    ### check with every pose except its own start and goal pose
-                    for ii in range(len(self.poses)):
-                        isColliFree = isCollisionFree(self.polygon, temp_pt, self.poses[ii])
-                        if not isColliFree:
-                            dep_set = dep_set.union({ii})
-                    if kk % 5 == 0:
-                        path.append(temp_pt)
-                self.dependency_dict[key_pair].append(dep_set)
-                self.path_dict[key_pair].append(path)
+                if i == j:
+                    path.append(self.space.poseMap[i].center)
+                    self.path_dict[key_pair].append(path)
+                    dep_set.add(i)
+                    self.dependency_dict[key_pair].append(dep_set)
+                    continue
+
+            # start_pt = self.points[i]
+            # goal_pt = self.points[j]
+            start_pt = self.space.poseMap[i].center
+            goal_pt = self.space.poseMap[j].center
+            nsegs = 20
+            keypts_check = 5
+            for kk in range(nsegs + 1):
+                temp_ptx = start_pt[0] + (goal_pt[0] - start_pt[0]) / nsegs * kk
+                temp_pty = start_pt[1] + (goal_pt[1] - start_pt[1]) / nsegs * kk
+                temp_pt = (temp_ptx, temp_pty)
+                ### check with every pose except its own start and goal pose
+                for ii, o in self.space.poseMap.items():
+                    if not Circle(o.center[0], o.center[1], o.radius + self.space.robot.radius).contains(temp_pt):
+                        dep_set.add(ii)
+                if kk % 5 == 0:
+                    path.append(temp_pt)
+            self.dependency_dict[key_pair].append(dep_set)
+            self.path_dict[key_pair].append(path)
 
         # print("dependency_dict: ")
         # for key_pair, dependency_set in self.dependency_dict.items():
@@ -651,92 +670,7 @@ class FastHeuristicDPPlanner(object):
         # for key_pair, path in self.path_dict.items():
         #     print(str(key_pair) + ": " + str(path))
 
-    def visualizeLocalBranch(self, parent_id, child_id, connectMode):
-        ### Two connect modes
-        ### (1) "L,L"
-        ### (2) "L,R"
-        if connectMode == "L,L":
-            parentNode = self.treeL[parent_id]
-            childNode = self.treeL[child_id]
-            temp_ppaths = self.getPaths(parentNode, childNode, "Left")
-        else:
-            ### "L,R"
-            parentNode = self.treeL[parent_id]
-            childNode = self.treeR[child_id]
-            temp_ppaths = self.getPaths(parentNode, childNode, "Bridge")
-
-        self.visualTool.drawLocalMotions(
-            (parent_id, child_id), temp_ppaths, self.points, self.poses, parentNode.arrangement, self.final_arrangement,
-            "save-to-tree"
-        )
-
-    def getPaths(self, parentNode, childNode, treeMode):
-        ### Input: 1. parentNode -> childNode, indicating the direction of tree node
-        ###        2. treeMode: Left, or Bridge
-        ### Output: point paths for all involved objects {obj_idx: [(x,x), (x,x), ... , (x, x)]}
-
-        result_path = OrderedDict()
-
-        ### loop through the objects moved based on object_ordering
-        for obj_idx in childNode.object_ordering:
-            ### get the key (pose1, pose2)
-            start_key = parentNode.arrangement[obj_idx]
-            goal_key = childNode.arrangement[obj_idx]
-            path_option_curr_obj = childNode.path_option[obj_idx]
-
-            if path_option_curr_obj == 0:
-                ### it is a straight path
-                start_pt = self.points[start_key]
-                goal_pt = self.points[goal_key]
-                nsteps = 3
-                result_path[obj_idx] = []
-                for step in range(nsteps + 1):
-                    pt_x = start_pt[0] + (goal_pt[0] - start_pt[0]) / nsteps * step
-                    pt_y = start_pt[1] + (goal_pt[1] - start_pt[1]) / nsteps * step
-                    result_path[obj_idx].append((pt_x, pt_y))
-            else:
-                ### it is a real region path (rpath)
-                key = (min(start_key, goal_key), max(start_key, goal_key))
-                rpath = copy.deepcopy(self.path_dict[key][path_option_curr_obj])
-                if start_key > goal_key:
-                    rpath = list(reversed(rpath))
-
-                ppath = [self.points[start_key]]
-                for i in range(len(rpath) - 2):
-                    region1 = rpath[i]
-                    region2 = rpath[i + 1]
-                    if (region1, region2) in self.new_paths.keys():
-                        ppath += self.new_paths[(region1, region2)][:-1]  ### only add region1 point
-                    elif (region2, region1) in self.new_paths.keys():
-                        ppath += list(reversed(self.new_paths[(region2, region1)]))[:-1]
-                    else:
-                        print "invalid path 1"
-                        exit()
-
-                if len(rpath) >= 2:
-                    ### add the last two region points
-                    region1 = rpath[-2]
-                    region2 = rpath[-1]
-                    if (region1, region2) in self.new_paths.keys():
-                        ppath += self.new_paths[(region1, region2)]
-                    elif (region2, region1) in self.new_paths.keys():
-                        ppath += list(reversed(self.new_paths[(region2, region1)]))
-                    else:
-                        print "invalid path 2"
-                        exit()
-
-                ppath.append(self.points[goal_key])
-
-                ### A single improvement: remove the second and second-to-last point in the ppath
-                ppath.pop(1)
-                ppath.pop(len(ppath) - 2)
-
-                result_path[obj_idx] = ppath
-
-        ### reach here since we have done all objects
-        return result_path
-
-    def getSolutionStats(self):
+    def getTheStat(self):
         # print("Let's get stats!!")
         ### This function is used to get the statistics if the path is found
         self.numNodesInLeftTree = len(self.treeL)
@@ -751,26 +685,40 @@ class FastHeuristicDPPlanner(object):
             self.simplePath.insert(0, curr_waypoint_id)
             curr_waypoint_id = self.treeL[curr_waypoint_id].parent_id
         self.simplePath.insert(0, curr_waypoint_id)
-        print("path: " + str(self.simplePath))
-        print("total action: " + str(self.totalActions))
 
-    def constructWholePath(self):
-        curr_waypoint_id = "R0"
-        childNode = self.treeR[curr_waypoint_id]
-        parent_waypoint_id = childNode.parent_id
-        parentNode = self.treeL[parent_waypoint_id]
+        self.solution = []
+        self.arrangements = []
+        for i in range(1, len(self.simplePath) - 1):
+            pid = self.simplePath[i - 1]
+            nid = self.simplePath[i]
+            carr = self.treeL[pid].arrangement
+            farr = self.treeL[nid].arrangement
+            for obj in self.treeL[nid].object_ordering:
+                # print(carr)
+                self.arrangements.append(carr[:])
+                # print(obj)
+                self.solution.append((obj, [carr[obj], farr[obj]]))
+                carr[obj] = farr[obj]
+            # self.arrangements.append(self.treeL[nid].arrangement)
+            # self.solution.append((self.treeL[nid].objectMoved, self.treeL[nid].object_transition))
 
-        temp_ppaths = self.getPaths(parentNode, childNode, "Bridge")
-        self.whole_path.insert(0, [(parent_waypoint_id, curr_waypoint_id), temp_ppaths])
-        curr_waypoint_id = self.treeR[curr_waypoint_id].parent_id
-
-        while curr_waypoint_id != "L0":
-            childNode = self.treeL[curr_waypoint_id]
-            parent_waypoint_id = self.treeL[parent_waypoint_id].parent_id
-            parentNode = self.treeL[parent_waypoint_id]
-            temp_ppaths = self.getPaths(parentNode, childNode, "Left")
-            self.whole_path.insert(0, [(parent_waypoint_id, curr_waypoint_id), temp_ppaths])
-            curr_waypoint_id = self.treeL[curr_waypoint_id].parent_id
+        # print(i, len(self.simplePath) - 2)
+        carr = self.treeL[self.simplePath[-2]].arrangement
+        farr = self.treeR[self.simplePath[-1]].arrangement
+        for obj in self.treeR[self.simplePath[-1]].object_ordering:
+            # print(carr)
+            self.arrangements.append(carr[:])
+            # print(obj)
+            self.solution.append((obj, [carr[obj], farr[obj]]))
+            carr[obj] = farr[obj]
+        # print(farr)
+        self.arrangements.append(farr)
+        # self.arrangements.append(self.treeR[nid].arrangement)
+        # self.solution.append((self.treeR[nid].objectMoved, self.treeR[nid].object_transition))
+        # self.totalActions = len(self.simplePath) - 1
+        # print("path: " + str(self.simplePath))
+        # print("total action: " + str(self.totalActions))
+        return self.solution
 
 
 class ArrNode(object):

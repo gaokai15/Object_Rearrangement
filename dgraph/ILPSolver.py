@@ -10,6 +10,7 @@ class feedback_arc_ILP_buffers(object):
     def __init__(self, object_dependency_opts):
         # print("\nILP solver starts")
         self.object_dependency_opts = object_dependency_opts
+        # print(self.object_dependency_opts)
         self.optimum = self.run_arc_ILP_buffers()
 
     def run_arc_ILP_buffers(self):
