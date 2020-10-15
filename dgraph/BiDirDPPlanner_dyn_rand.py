@@ -212,7 +212,8 @@ class BiDirDPPlanner(object):
             1,
             self.space,
             filter(lambda x: x != mutated_arrangement[obj_idx], mutated_arrangement),
-            method='random',
+            # method='random',
+            method='boundary_random',
             param1=50,
             count=ind,
             suffix=';O' + str(obj_idx),
@@ -726,7 +727,7 @@ class ArrNode(object):
         self.path_option = path_option
         self.cost_to_come = cost_to_come
         self.parent_id = parent_id
-        # self.dependency_dict = {}
+        self.dependency_dict = {}
 
     def updateObjectTransition(self, object_transition):
         self.object_transition = object_transition

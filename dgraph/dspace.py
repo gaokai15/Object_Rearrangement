@@ -19,11 +19,6 @@ from util import *
 num_buffers = 10
 
 
-def interpolate(a, b, u):
-    """Interpolates linearly between a and b"""
-    return vectorops.madd(a, vectorops.sub(b, a), u)
-
-
 class Circle:
     def __str__(self):
         return 'Circle(x={}, y={}, radius={})'.format(self.center[0], self.center[1], self.radius)
@@ -753,23 +748,15 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
             space.addObstacle(Circle(point[0], point[1], space.robot.radius))
             num_generated += 1
 
-    ### Boundary Free Space Sampling ###
+    ### Random Boundary Sampling ###
     elif method == 'boundary_random':
         for pid in occupied:
             p = space.poseMap[pid]
             space.addObstacle(p)
-        space.computeMinkObs()
 
-        b_points = []
-        if space.mink_obs.type == 'S_Poly':
-            for x in space.mink_obs.points:
-                b_points.append(tuple(x))
-            b_points.append(tuple(space.mink_obs.points[0]))
-        elif space.mink_obs.type == 'C_Poly':
-            for y in space.mink_obs.points:
-                for x in y:
-                    b_points.append(tuple(x))
-                b_points.append(tuple(y[0]))
+        space.setRobotRad(space.robot.radius + 5)
+        space.computeMinkObs()
+        space.setRobotRad(space.robot.radius - 5)
 
         maxOverlap = param1
         boccupied = []
@@ -780,11 +767,17 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
             while not isValid and timeout > 0:
                 timeout -= 1
                 numOverlap = 0
-                if b_points:
-                    ind = choice(range(len(b_points) - 1))
+                if space.mink_obs.type != 'Empty':
+                    if space.mink_obs.type == 'S_Poly':
+                        b_points = space.mink_obs.points
+                    elif space.mink_obs.type == 'C_Poly':
+                        b_points = choice(space.mink_obs.points)
+                    ind = choice(range(-1, len(b_points) - 1))
                     p1 = b_points[ind]
                     p2 = b_points[ind + 1]
-                    point = vectorops.interpolate(p1, p2, random())
+                    point = findNearest(
+                        [int(xy) for xy in vectorops.interpolate(p1, p2, random())], 1, space.mink_obs.contains
+                    )
                 else:
                     print("No free space!")
                     # set params to break out of outer loop
@@ -840,6 +833,40 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
                 num_generated += 1
             else:
                 print("No feasible space!")
+
+    ### Sample boundary of feasible region for given object and ordering ###
+    elif method == 'boundary_feasible':
+        for pid in occupied:
+            p = space.poseMap[pid]
+            space.addObstacle(p)
+        space.setRobotRad(space.robot.radius + 5)
+        space.computeMinkObs()
+        space.setRobotRad(space.robot.radius - 5)
+
+        pose_sel = param1
+
+        b_points = []
+        if space.mink_obs.type == 'S_Poly':
+            b_points = space.mink_obs.points
+        elif space.mink_obs.type == 'C_Poly':
+            for c in space.mink_obs.points:
+                if pc.Orientation(c) and pc.PointInPolygon(space.poseMap[pose_sel].center, c):
+                    b_points = c
+
+        for i in range(n):
+            if b_points:
+                ind = choice(range(-1, len(b_points) - 1))
+                p1 = b_points[ind]
+                p2 = b_points[ind + 1]
+                point = findNearest(
+                    [int(xy) for xy in vectorops.interpolate(p1, p2, random())], 1, space.mink_obs.contains
+                )
+            else:
+                print("No feasible space!")
+                break
+            space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
+            # space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+            num_generated += 1
 
     ### reset obstacles
     space.restoreObstacles(staticObstacles)
@@ -898,8 +925,9 @@ if __name__ == '__main__':
     if num_buffers > 0:
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 50)
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+        # genBuffers(num_buffers, space, [], 'boundary_random', 50)
         genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random')
-        # genBuffers(num_buffers, space, [], 'boundary_free')
+        # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'boundary_feasible', 'G1')
         # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 'G1')
         space.regionGraph()
 

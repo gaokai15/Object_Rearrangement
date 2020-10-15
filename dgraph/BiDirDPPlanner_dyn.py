@@ -203,7 +203,8 @@ class BiDirDPPlanner(object):
             1,
             self.space,
             filter(lambda x: x != mutated_arrangement[obj_idx], mutated_arrangement),
-            method='object_feasible',
+            # method='object_feasible',
+            method='boundary_feasible',
             param1=mutated_arrangement[obj_idx],
             count=ind,
             suffix=';O' + str(obj_idx),
@@ -222,7 +223,6 @@ class BiDirDPPlanner(object):
         # self.space.regionGraph()
         # self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
         # self.object_locations = self.space.pose2reg
-
         if didgen:
             return pose_idx
         else:
@@ -726,7 +726,7 @@ class ArrNode(object):
         self.path_option = path_option
         self.cost_to_come = cost_to_come
         self.parent_id = parent_id
-        # self.dependency_dict = {}
+        self.dependency_dict = {}
 
     def updateObjectTransition(self, object_transition):
         self.object_transition = object_transition
