@@ -754,20 +754,22 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
             num_generated += 1
 
     ### Boundary Free Space Sampling ###
-    elif method == 'boundary_free':
+    elif method == 'boundary_random':
         for pid in occupied:
             p = space.poseMap[pid]
             space.addObstacle(p)
         space.computeMinkObs()
 
-        b_points = set()
+        b_points = []
         if space.mink_obs.type == 'S_Poly':
             for x in space.mink_obs.points:
-                b_points.add(tuple(x))
+                b_points.append(tuple(x))
+            b_points.append(tuple(space.mink_obs.points[0]))
         elif space.mink_obs.type == 'C_Poly':
             for y in space.mink_obs.points:
                 for x in y:
-                    b_points.add(tuple(x))
+                    b_points.append(tuple(x))
+                b_points.append(tuple(y[0]))
 
         maxOverlap = param1
         boccupied = []
@@ -779,8 +781,10 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
                 timeout -= 1
                 numOverlap = 0
                 if b_points:
-                    point = choice(list(b_points))
-                    b_points.remove(point)
+                    ind = choice(range(len(b_points) - 1))
+                    p1 = b_points[ind]
+                    p2 = b_points[ind + 1]
+                    point = vectorops.interpolate(p1, p2, random())
                 else:
                     print("No free space!")
                     # set params to break out of outer loop
@@ -789,7 +793,7 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
                     break
                 for pid in boccupied:
                     p = space.poseMap[pid]
-                    if Circle(p.center[0], p.center[1], p.radius * 2).contains(point):
+                    if Circle(p.center[0], p.center[1], p.radius + space.robot.radius).contains(point):
                         numOverlap += 1
 
                 if numOverlap <= numOverlapAllowed:
@@ -892,9 +896,9 @@ if __name__ == '__main__':
 
     space.regionGraph()
     if num_buffers > 0:
-        # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
-        genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
-        # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 50)
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+        genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random')
         # genBuffers(num_buffers, space, [], 'boundary_free')
         # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 'G1')
         space.regionGraph()

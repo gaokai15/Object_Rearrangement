@@ -122,9 +122,10 @@ if __name__ == "__main__":
                 space = loadEnv(env_file)
                 space.regionGraph()
                 if num_buffers > 0:
-                    # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
-                    genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
-                    # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
+                    seed(env_file)
+                    genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 50)
+                    # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+                    # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random')
                     space.regionGraph()
                 try:
                     actions, runtime = EXP.single_instance(space, False)

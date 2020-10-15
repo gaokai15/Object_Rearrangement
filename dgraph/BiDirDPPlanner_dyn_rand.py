@@ -3,11 +3,14 @@ from __future__ import division, print_function
 import copy
 import time
 import numpy as np
+from itertools import product
 from random import sample, choice
 from collections import OrderedDict
+from operator import itemgetter, attrgetter
 
-from dspace import genBuffers
+from dspace import genBuffers, Circle
 from util import checkBitStatusAtPos
+from ILPSolver import feedback_arc_ILP_buffers
 from DG_Space import DFS_Rec_for_Monotone_General, linked_list_conversion
 
 
@@ -24,85 +27,65 @@ class BiDirDPPlanner(object):
         self.initial_arrangement = init_arr
         self.final_arrangement = final_arr
         self.numObjs = len(self.initial_arrangement)
-        self.numBuffers = max(len(filter(lambda x: x[0] == 'B', self.space.poseMap.keys())), 1)
-        print("Number of Buffers: ", self.numBuffers)
+        ### this number decides how many leafs we will love to add each time (braching factor)
+        self.k = self.numObjs  # min(1, int(self.numObjs / 2))
 
-        def init():
-            ### initialize dependency_dict and path_dict as empty dict
-            ### since now we are going to increment these two dicts online, instead of offline
-            self.dependency_dict = {}
-            self.path_dict = {}
-            self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
-            self.object_locations = copy.deepcopy(self.space.pose2reg)
+        ### initialize dependency_dict and path_dict as empty dict
+        ### since now we are going to increment these two dicts online, instead of offline
+        self.dependency_dict = {}
+        self.path_dict = {}
+        # self.space.regionGraph()
+        self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
+        self.object_locations = self.space.pose2reg
 
-            self.treeL = {}
-            self.treeR = {}
-            self.trees = {}
-            self.trees["Left"] = self.treeL
-            self.trees["Right"] = self.treeR
-            self.arrLeftRegistr = []
-            self.arrRightRegistr = []
-            self.idLeftRegistr = []
-            self.idRightRegistr = []
-            ### add the initial_arrangement and final_arrangement as the root node to two trees, respectively
-            self.treeL["L0"] = ArrNode(self.initial_arrangement, "L0", None, None, None, 0, None)
-            self.treeR["R0"] = ArrNode(self.final_arrangement, "R0", None, None, None, 0, None)
-            self.arrLeftRegistr.append(self.initial_arrangement)
-            self.arrRightRegistr.append(self.final_arrangement)
-            self.idLeftRegistr.append("L0")
-            self.idRightRegistr.append("R0")
-            self.leftKey = "L0"
-            self.rightKey = "R0"
-            self.bridge = [None, None, None, None, None]
-            ### [leftKey, rightKey, object_transition, objectMoved, path_option]
-            self.leftLeaves = ["L0"]  ### keep track of leaves in the left tree
-            self.rightLeaves = ["R0"]  ### keep track of leaves in the right tree
+        self.treeL = {}
+        self.treeR = {}
+        self.trees = {}
+        self.trees["Left"] = self.treeL
+        self.trees["Right"] = self.treeR
+        self.arrLeftRegistr = []
+        self.arrRightRegistr = []
+        self.idLeftRegistr = []
+        self.idRightRegistr = []
+        ### add the initial_arrangement and final_arrangement as the root node to two trees, respectively
+        self.treeL["L0"] = ArrNode(self.initial_arrangement, "L0", None, None, None, 0, None)
+        self.treeR["R0"] = ArrNode(self.final_arrangement, "R0", None, None, None, 0, None)
+        self.arrLeftRegistr.append(self.initial_arrangement)
+        self.arrRightRegistr.append(self.final_arrangement)
+        self.idLeftRegistr.append("L0")
+        self.idRightRegistr.append("R0")
+        self.leftKey = "L0"
+        self.rightKey = "R0"
+        self.bridge = [None, None, None, None, None]
+        ### [leftKey, rightKey, object_transition, objectMoved, path_option]
+        self.leftLeaves = ["L0"]  ### keep track of leaves in the left tree
+        self.rightLeaves = ["R0"]  ### keep track of leaves in the right tree
 
-            ################## results ################
-            self.isConnected = False
-            self.best_solution_cost = np.inf
-            ### the whole_path is a list of items and each item has the following format
-            ### [("node1_id", node2_id), {2:path2, 1:path1, ...}]
-            self.totalActions = 0  ### record the total number of actions
-            self.numLeftBranches = 0  ### record the number of left branches in the solution
-            self.numRightBranches = 0  ### record the number of right branches in the solution
-            self.numNodesInLeftTree = 0  ### record the total number of nodes in the left tree
-            self.numNodesInRightTree = 0  ### record the total number of nodes in the right tree
+        ################## results ################
+        self.isConnected = False
+        self.best_solution_cost = np.inf
+        ### the whole_path is a list of items and each item has the following format
+        ### [("node1_id", node2_id), {2:path2, 1:path1, ...}]
+        self.totalActions = 0  ### record the total number of actions
+        self.numLeftBranches = 0  ### record the number of left branches in the solution
+        self.numRightBranches = 0  ### record the number of right branches in the solution
+        self.numNodesInLeftTree = 0  ### record the total number of nodes in the left tree
+        self.numNodesInRightTree = 0  ### record the total number of nodes in the right tree
 
-            ### start ruuning
-            self.left_idx = 1
-            self.right_idx = 1
-            ### initial connection attempt
+        ### start ruuning
+        self.left_idx = 1
+        self.right_idx = 1
+        ### initial connection attempt
 
-            self.growSubTree(self.treeL["L0"], self.treeR["R0"], "Left")
-            if (self.isConnected != True):
-                self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
+        self.growSubTree(self.treeL["L0"], self.treeR["R0"], "Left")
+        if (self.isConnected != True):
+            self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
-        init()
-        print(self.space.poseMap.keys())
-        print(self.space.regions.keys())
         self.totalTime_allowed = 30 * self.numObjs  ### allow 30s per object for the total search
-        self.restartTime = 200 * self.numObjs  ### allow 2s per object for the search before restarting
         start_time = time.clock()
 
         while (self.isConnected != True and time.clock() - start_time < self.totalTime_allowed):
             ### The problem is not monotone
-
-            ### reinit for restart
-            if time.clock() - start_time > self.restartTime:
-                print("Restarting!")
-                self.restartTime += time.clock() - start_time
-                for pid in filter(lambda x: x[0] == 'B', self.space.poseMap.keys()):
-                    self.space.removePose(pid)
-                self.numBuffers += 1
-                # genBuffers(self.numBuffers, self.space, self.space.poseMap.keys(), 'greedy_free')
-                genBuffers(self.numBuffers, self.space, self.space.poseMap.keys(), 'random', 50)
-                self.space.regionGraph()
-                print(self.space.poseMap.keys())
-                print(self.space.regions.keys())
-                init()
-
-            ### otherwise continue growing
             newChild_nodeID = self.mutateLeftChild()
             if newChild_nodeID != None:
                 self.growSubTree(self.treeL[newChild_nodeID], self.treeR["R0"], "Left")
@@ -117,18 +100,166 @@ class BiDirDPPlanner(object):
         # if self.isConnected == False:
         #     print("failed to find a solution within " + str(self.totalTime_allowed) + " seconds...")
 
+    def computeObjectsToMove(self, init_arrangement, final_arrangement):
+        ### input: init_arrangement (a list of pose_idx)
+        ###        final arrangement (a list of pose_idx)
+        ### Output: objects_to_move (a list of obj_idx)
+        objects_to_move = []
+        for obj_idx in range(len(init_arrangement)):
+            if init_arrangement[obj_idx] != final_arrangement[obj_idx]:
+                objects_to_move.append(obj_idx)
+
+        return objects_to_move
+
+    def rankObjects(self, DG):
+        ### get the objects inner degree and outer degree from DG
+        objects_degree_dict = []  ### (obj_idx, inner_degree, outer_degree)
+        numObjs = DG.shape[0]
+        for obj_idx in range(numObjs):
+            objects_degree_dict.append((obj_idx, sum(DG[:, obj_idx]), sum(DG[obj_idx, :])))
+
+        # print("objects_degree_dict: ")
+        # print(objects_degree_dict)
+
+        objects_degree_dict = sorted(objects_degree_dict, key=itemgetter(2))
+        objects_degree_dict = sorted(objects_degree_dict, key=itemgetter(1), reverse=True)
+        # print("objects_degree_dict after: ")
+        # print(objects_degree_dict)
+
+        object_ranking = []
+        for obj_info in objects_degree_dict[0:self.k + 1]:
+            object_ranking.append(obj_info[0])
+
+        # print("object_ranking: " + str(object_ranking))
+
+        return object_ranking
+
+    def object_dependency_opts_generate(self, query_arrangement, goal_arrangement, object_to_move, dependency_dict):
+        num_objs = len(query_arrangement)
+        object_dependency_opts = {}
+        for obj_idx in range(num_objs):
+            if obj_idx not in object_dependency_opts.keys():
+                object_dependency_opts[obj_idx] = []
+            ### look into the path option for the current object's current pose and destination pose
+            # pose_key1 = min(query_arrangement[obj_idx], goal_arrangement[obj_idx])
+            # pose_key2 = max(query_arrangement[obj_idx], goal_arrangement[obj_idx])
+            pose_key1, pose_key2 = sorted((query_arrangement[obj_idx], goal_arrangement[obj_idx]))
+            # if pose_key1 == pose_key2:
+            #     path_set = set()
+            #     if (constr in query_arrangement) and (query_arrangement.index(constr) != obj_idx):
+            #         path_set.add((query_arrangement.index(constr), 0))
+            #     if (constr in goal_arrangement) and (goal_arrangement.index(constr) != obj_idx):
+            #         path_set.add((goal_arrangement.index(constr), 1))
+            #     object_dependency_opts[obj_idx].append(path_set)
+            # else:
+            for path in dependency_dict[(pose_key1, pose_key2)]:
+                path_set = set()
+                for constr in path:
+                    ### check the constraint based on query_arrangement and goal_arrangement
+                    ### if the constraint is caused by current pose of an object
+                    if (constr in query_arrangement) and (query_arrangement.index(constr) != obj_idx):
+                        path_set.add((query_arrangement.index(constr), 0))
+                    ### if the constraint is caused by final pose of an object
+                    if (constr in goal_arrangement) and (goal_arrangement.index(constr) != obj_idx):
+                        path_set.add((goal_arrangement.index(constr), 1))
+                    ### Otherwise, it is a buffer and do nothing
+                object_dependency_opts[obj_idx].append(path_set)
+
+        return object_dependency_opts
+
+    def choose_object(self, mutated_arrangement, goal_arrangement, dependency_dict):
+        return range(self.numObjs)
+        # print(dependency_dict)
+        object_to_move_leaf2goal = self.computeObjectsToMove(mutated_arrangement, goal_arrangement)
+        object_dependency_opts = self.object_dependency_opts_generate(
+            mutated_arrangement,
+            goal_arrangement,
+            object_to_move_leaf2goal,
+            dependency_dict,
+        )
+        IP_arc_buffers = feedback_arc_ILP_buffers(object_dependency_opts)
+        arc_setSize, arcs, path_selection, object_ordering, DG, dependencyEdge_paths = IP_arc_buffers.optimum
+        object_ranking = self.rankObjects(DG)
+        # object_ranking = list(reversed(self.rankObjects(DG)))
+        print("RANK: ", object_ranking)
+        # return weighted ranking
+        return sum([[x] * (len(object_ranking) - object_ranking.index(x)) for x in object_ranking], [])
+
+    def choose_pose(self, obj_idx, mutated_arrangement):
+        # PROB = 0.25
+        # static_buffs = filter(lambda x: x[0] == 'B' and not x.find(';') < 0, self.space.poseMap.keys())
+        bufs_for_obj = filter(lambda x: x[0] == 'B' and int(x.split(';')[-1][1:]) == obj_idx, self.space.poseMap.keys())
+        # prob_adj = int(PROB * (len(static_buffs) + len(bufs_for_obj))) + 1
+
+        # print(static_buffs)
+        # print(bufs_for_obj)
+        # print(prob_adj)
+        # pose_idx = choice(bufs_for_obj + static_buffs + [None] * prob_adj)
+        # print(pose_idx)
+
+        # if pose_idx is None:
+        ind = len(bufs_for_obj)
+        # didgen = genBuffers(
+        #     1,
+        #     self.space,
+        #     filter(lambda x: x != mutated_arrangement[obj_idx], mutated_arrangement),
+        #     method='object_feasible',
+        #     param1=mutated_arrangement[obj_idx],
+        #     count=ind,
+        #     suffix=';O' + str(obj_idx),
+        # )
+        didgen = genBuffers(
+            1,
+            self.space,
+            filter(lambda x: x != mutated_arrangement[obj_idx], mutated_arrangement),
+            method='random',
+            param1=50,
+            count=ind,
+            suffix=';O' + str(obj_idx),
+        )
+        pose_idx = 'B' + str(ind) + ';O' + str(obj_idx)
+
+        # check if created?
+        # bufs_for_obj = filter(lambda x: x[0] == 'B' and int(x.split(';')[-1][1:]) == obj_idx, self.space.poseMap.keys())
+        # ind = len(bufs_for_obj)
+
+        # print("mutated_arrangement: " + str(mutated_arrangement))
+        # print("obj_idx: " + str(obj_idx))
+        # print("pose_idx: " + str(pose_idx))
+
+        # self.space.regionGraph(lambda x: x[0] in mutated_arrangement + [pose_idx])
+        # self.space.regionGraph()
+        # self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
+        # self.object_locations = self.space.pose2reg
+
+        if didgen:
+            self.space.regionGraph(lambda x: x[0] in mutated_arrangement + [pose_idx])
+            self.dependency_dict = {}
+            self.path_dict = {}
+            self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
+            self.object_locations = self.space.pose2reg
+            return pose_idx
+        else:
+            return None
+
     def mutateRightChild(self):
         ### first choose a node to mutate
         # print("Right mutation")
         mutate_id = "R" + str(choice(range(len(self.treeR))))
         mutated_arrangement = self.treeR[mutate_id].arrangement
+        deps_thusfar = self.treeR[mutate_id].dependency_dict
         ### choose an object to move
-        obj_idx = choice(range(self.numObjs))
+        objs = self.choose_object(mutated_arrangement, self.initial_arrangement, deps_thusfar)
+        print(objs)
+        obj_idx = choice(objs)  # choose from weighted list
+        # obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = choice(self.space.poseMap.keys())
-        # print("mutated_arrangement: " + str(mutated_arrangement))
-        # print("obj_idx: " + str(obj_idx))
-        # print("pose_idx: " + str(pose_idx))
+        pose_idx = self.choose_pose(obj_idx, mutated_arrangement)
+
+        # failed to generate buffer
+        if pose_idx is None:
+            print("failed to generate buffer!")
+            return None
 
         ### get new arrangement
         new_arrangement = copy.deepcopy(mutated_arrangement)
@@ -154,41 +285,48 @@ class BiDirDPPlanner(object):
             self.linked_list,
             self.region_dict,
         )
-        ### update dependency_dict and path_dict
+        # ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
         if subTree.isMonotone == False:
             # print("the mutation node cannot be connected")
             return None
-        else:
-            ### we reach here since it is a duplicate and it can be connected
-            ### welcome this new arrangement
-            # print("the new arrangement after mutation has been accepted")
-            temp_transition = [new_arrangement[obj_idx], mutated_arrangement[obj_idx]]
-            temp_object_idx = obj_idx
-            temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
-            temp_parent_cost = self.treeR[mutate_id].cost_to_come
-            self.treeR["R" + str(self.right_idx)] = ArrNode(
-                new_arrangement, "R" + str(self.right_idx), temp_transition, temp_object_idx, temp_path_option,
-                temp_parent_cost + 1, mutate_id
-            )
-            self.arrRightRegistr.append(new_arrangement)
-            self.idRightRegistr.append("R" + str(self.right_idx))
-            self.right_idx += 1
-            return self.idRightRegistr[self.arrRightRegistr.index(new_arrangement)]
+        # else:
+
+        ### we reach here since it is not a duplicate and it can be connected
+        ### welcome this new arrangement
+        # print("the new arrangement after mutation has been accepted")
+        temp_transition = [new_arrangement[obj_idx], mutated_arrangement[obj_idx]]
+        temp_object_idx = obj_idx
+        temp_path_option = None  # subTree.path_option[subTree.parent.keys()[0]]
+        temp_parent_cost = self.treeR[mutate_id].cost_to_come
+        self.treeR["R" + str(self.right_idx)] = ArrNode(
+            new_arrangement, "R" + str(self.right_idx), temp_transition, temp_object_idx, temp_path_option,
+            temp_parent_cost + 1, mutate_id
+        )
+        self.arrRightRegistr.append(new_arrangement)
+        self.idRightRegistr.append("R" + str(self.right_idx))
+        self.right_idx += 1
+        return self.idRightRegistr[self.arrRightRegistr.index(new_arrangement)]
 
     def mutateLeftChild(self):
         ### first choose a node to mutate
         # print("Left mutation")
         mutate_id = "L" + str(choice(range(len(self.treeL))))
         mutated_arrangement = self.treeL[mutate_id].arrangement
+        deps_thusfar = self.treeL[mutate_id].dependency_dict
         ### choose an object to move
-        obj_idx = choice(range(self.numObjs))
+        objs = self.choose_object(mutated_arrangement, self.final_arrangement, deps_thusfar)
+        print(objs)
+        obj_idx = choice(objs)
+        # obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = choice(self.space.poseMap.keys())
-        # print("mutated_arrangement: " + str(mutated_arrangement))
-        # print("obj_idx: " + str(obj_idx))
-        # print("pose_idx: " + str(pose_idx))
+        pose_idx = self.choose_pose(obj_idx, mutated_arrangement)
+
+        # failed to generate buffer
+        if pose_idx is None:
+            print("failed to generate buffer!")
+            return None
 
         ### get new arrangement
         new_arrangement = copy.deepcopy(mutated_arrangement)
@@ -214,28 +352,29 @@ class BiDirDPPlanner(object):
             self.linked_list,
             self.region_dict,
         )
-        ### update dependency_dict and path_dict
+        # ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
         if subTree.isMonotone == False:
             # print("the mutation node cannot be connected")
             return None
-        else:
-            ### we reach here since it is a duplicate and it can be connected
-            ### welcome this new arrangement
-            # print("the new arrangement after mutation has been accepted")
-            temp_transition = [mutated_arrangement[obj_idx], new_arrangement[obj_idx]]
-            temp_object_idx = obj_idx
-            temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
-            temp_parent_cost = self.treeL[mutate_id].cost_to_come
-            self.treeL["L" + str(self.left_idx)] = ArrNode(
-                new_arrangement, "L" + str(self.left_idx), temp_transition, temp_object_idx, temp_path_option,
-                temp_parent_cost + 1, mutate_id
-            )
-            self.arrLeftRegistr.append(new_arrangement)
-            self.idLeftRegistr.append("L" + str(self.left_idx))
-            self.left_idx += 1
-            return self.idLeftRegistr[self.arrLeftRegistr.index(new_arrangement)]
+        # else:
+
+        ### we reach here since it is a duplicate and it can be connected
+        ### welcome this new arrangement
+        # print("the new arrangement after mutation has been accepted")
+        temp_transition = [mutated_arrangement[obj_idx], new_arrangement[obj_idx]]
+        temp_object_idx = obj_idx
+        temp_path_option = None  # subTree.path_option[subTree.parent.keys()[0]]
+        temp_parent_cost = self.treeL[mutate_id].cost_to_come
+        self.treeL["L" + str(self.left_idx)] = ArrNode(
+            new_arrangement, "L" + str(self.left_idx), temp_transition, temp_object_idx, temp_path_option,
+            temp_parent_cost + 1, mutate_id
+        )
+        self.arrLeftRegistr.append(new_arrangement)
+        self.idLeftRegistr.append("L" + str(self.left_idx))
+        self.left_idx += 1
+        return self.idLeftRegistr[self.arrLeftRegistr.index(new_arrangement)]
 
     def growSubTree(self, initNode, goalNode, treeSide):
         ### construct start_poses and goal_poses
@@ -246,6 +385,17 @@ class BiDirDPPlanner(object):
         for i in range(len(goalNode.arrangement)):
             goal_poses[i] = goalNode.arrangement[i]
 
+        all_poses = set(initNode.arrangement + goalNode.arrangement)
+        # print(start_poses, goal_poses)
+        # print(all_poses)
+        # self.space.regionGraph()
+        self.space.regionGraph(lambda x: x[0] in all_poses)
+        self.dependency_dict = {}
+        self.path_dict = {}
+        self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
+        self.object_locations = self.space.pose2reg
+        # self.getStraightPaths(all_poses)
+
         subTree = DFS_Rec_for_Monotone_General(
             start_poses,
             goal_poses,
@@ -255,6 +405,9 @@ class BiDirDPPlanner(object):
             self.linked_list,
             self.region_dict,
         )
+
+        # initNode.updateDeps(subTree.dependency_dict)
+        # print(initNode.dependency_dict)
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
@@ -307,6 +460,7 @@ class BiDirDPPlanner(object):
                         self.treeR[child_nodeID].updateObjectMoved(temp_object_idx)
                         self.treeR[child_nodeID].updatePathOption(temp_path_option)
                         self.treeR[child_nodeID].updateCostToCome(self.treeR[parent_nodeID].cost_to_come + 1)
+                        # self.treeR[child_nodeID].updateDeps(subTree.dependency_dict)
 
                 elif child_arrangement in self.arrLeftRegistr:
                     ### this is a sign that two trees are connected
@@ -339,6 +493,7 @@ class BiDirDPPlanner(object):
                         child_arrangement, "R" + str(self.right_idx), temp_transition, temp_object_idx,
                         temp_path_option, temp_cost_to_come, parent_nodeID
                     )
+                    # self.treeR["R" + str(self.right_idx)].updateDeps(subTree.dependency_dict)
                     self.arrRightRegistr.append(child_arrangement)
                     self.idRightRegistr.append("R" + str(self.right_idx))
                     self.right_idx += 1
@@ -393,6 +548,7 @@ class BiDirDPPlanner(object):
                         self.treeL[child_nodeID].updateObjectMoved(temp_object_idx)
                         self.treeL[child_nodeID].updatePathOption(temp_path_option)
                         self.treeL[child_nodeID].updateCostToCome(self.treeL[parent_nodeID].cost_to_come + 1)
+                        # self.treeL[child_nodeID].updateDeps(subTree.dependency_dict)
 
                 elif child_arrangement in self.arrRightRegistr:
                     ### this is a sign that two trees are connected
@@ -425,6 +581,7 @@ class BiDirDPPlanner(object):
                         child_arrangement, "L" + str(self.left_idx), temp_transition, temp_object_idx, temp_path_option,
                         temp_cost_to_come, parent_nodeID
                     )
+                    # self.treeL["L" + str(self.left_idx)].updateDeps(subTree.dependency_dict)
                     self.arrLeftRegistr.append(child_arrangement)
                     self.idLeftRegistr.append("L" + str(self.left_idx))
                     self.left_idx += 1
@@ -460,6 +617,58 @@ class BiDirDPPlanner(object):
                 new_arrangement.append(root_arrangement[i])
 
         return new_arrangement
+
+    def getStraightPaths(self, poses):
+        ### Before we perform search and increment the dependency and path dict
+        ### Let's use the straight path as the first and backup path
+        ### for each pair of pose
+        # nPoses = len(self.space.poseMap)
+        # for i in range(nPoses):
+        #     for j in range(i, nPoses):
+        for i, j in product(poses, repeat=2):
+            key_pair = (i, j)
+            # print("key_pair: " + str(key_pair))
+
+            path = []
+            dep_set = set()
+
+            if key_pair not in self.dependency_dict.keys():
+                self.dependency_dict[key_pair] = []
+                self.path_dict[key_pair] = []
+
+            if i == j:
+                path.append(self.space.poseMap[i].center)
+                self.path_dict[key_pair].append(path)
+                dep_set.add(i)
+                self.dependency_dict[key_pair].append(dep_set)
+                continue
+
+            # start_pt = self.points[i]
+            # goal_pt = self.points[j]
+            start_pt = self.space.poseMap[i].center
+            goal_pt = self.space.poseMap[j].center
+            nsegs = 20
+            keypts_check = 5
+            for kk in range(nsegs + 1):
+                temp_ptx = start_pt[0] + (goal_pt[0] - start_pt[0]) / nsegs * kk
+                temp_pty = start_pt[1] + (goal_pt[1] - start_pt[1]) / nsegs * kk
+                temp_pt = (temp_ptx, temp_pty)
+                ### check with every pose except its own start and goal pose
+                for ii, o in self.space.poseMap.items():
+                    if not Circle(o.center[0], o.center[1], o.radius + self.space.robot.radius).contains(temp_pt):
+                        dep_set.add(ii)
+                if kk % 5 == 0:
+                    path.append(temp_pt)
+            self.dependency_dict[key_pair].append(dep_set)
+            self.path_dict[key_pair].append(path)
+
+        # print("dependency_dict: ")
+        # for key_pair, dependency_set in self.dependency_dict.items():
+        #     print(str(key_pair) + ": " + str(dependency_set))
+
+        # print("path_dict: ")
+        # for key_pair, path in self.path_dict.items():
+        #     print(str(key_pair) + ": " + str(path))
 
     def getTheStat(self):
         # print("Let's get stats!!")
@@ -517,21 +726,25 @@ class ArrNode(object):
         self.path_option = path_option
         self.cost_to_come = cost_to_come
         self.parent_id = parent_id
+        # self.dependency_dict = {}
 
-    def updateObjectTransition(object_transition):
+    def updateObjectTransition(self, object_transition):
         self.object_transition = object_transition
 
-    def updateObjectMoved(objectMoved):
+    def updateObjectMoved(self, objectMoved):
         self.objectMoved = objectMoved
 
-    def updatePathOption(path_option):
+    def updatePathOption(self, path_option):
         self.path_option = path_option
 
-    def updateCostToCome(cost_to_come):
+    def updateCostToCome(self, cost_to_come):
         self.cost_to_come = cost_to_come
 
-    def updateParent(parent_id):
+    def updateParent(self, parent_id):
         self.parent_id = parent_id
+
+    # def updateDeps(self, depdict):
+    #     self.dependency_dict = copy.deepcopy(depdict)
 
     def getParentArr(self):
         parent_arr = copy.deepcopy(self.arrangement)

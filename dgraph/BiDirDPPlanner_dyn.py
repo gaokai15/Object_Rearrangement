@@ -9,7 +9,7 @@ from collections import OrderedDict
 from operator import itemgetter, attrgetter
 
 from dspace import genBuffers, Circle
-from util import checkBitStatusAtPos
+from util import checkBitStatusAtPos, polyTOUCH
 from ILPSolver import feedback_arc_ILP_buffers
 from DG_Space import DFS_Rec_for_Monotone_General, linked_list_conversion
 
@@ -180,7 +180,7 @@ class BiDirDPPlanner(object):
         IP_arc_buffers = feedback_arc_ILP_buffers(object_dependency_opts)
         arc_setSize, arcs, path_selection, object_ordering, DG, dependencyEdge_paths = IP_arc_buffers.optimum
         object_ranking = self.rankObjects(DG)
-        object_ranking = list(reversed(self.rankObjects(DG)))
+        # object_ranking = list(reversed(self.rankObjects(DG)))
         print("RANK: ", object_ranking)
         # return weighted ranking
         return sum([[x] * (len(object_ranking) - object_ranking.index(x)) for x in object_ranking], [])
@@ -380,7 +380,7 @@ class BiDirDPPlanner(object):
         self.path_dict = {}
         self.region_dict, self.linked_list = linked_list_conversion(self.space.RGAdj)
         self.object_locations = self.space.pose2reg
-        self.getStraightPaths(all_poses)
+        # self.getStraightPaths(all_poses)
 
         subTree = DFS_Rec_for_Monotone_General(
             start_poses,
@@ -392,7 +392,7 @@ class BiDirDPPlanner(object):
             self.region_dict,
         )
 
-        initNode.updateDeps(subTree.dependency_dict)
+        # initNode.updateDeps(subTree.dependency_dict)
         # print(initNode.dependency_dict)
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
@@ -446,7 +446,7 @@ class BiDirDPPlanner(object):
                         self.treeR[child_nodeID].updateObjectMoved(temp_object_idx)
                         self.treeR[child_nodeID].updatePathOption(temp_path_option)
                         self.treeR[child_nodeID].updateCostToCome(self.treeR[parent_nodeID].cost_to_come + 1)
-                        self.treeR[child_nodeID].updateDeps(subTree.dependency_dict)
+                        # self.treeR[child_nodeID].updateDeps(subTree.dependency_dict)
 
                 elif child_arrangement in self.arrLeftRegistr:
                     ### this is a sign that two trees are connected
@@ -479,7 +479,7 @@ class BiDirDPPlanner(object):
                         child_arrangement, "R" + str(self.right_idx), temp_transition, temp_object_idx,
                         temp_path_option, temp_cost_to_come, parent_nodeID
                     )
-                    self.treeR["R" + str(self.right_idx)].updateDeps(subTree.dependency_dict)
+                    # self.treeR["R" + str(self.right_idx)].updateDeps(subTree.dependency_dict)
                     self.arrRightRegistr.append(child_arrangement)
                     self.idRightRegistr.append("R" + str(self.right_idx))
                     self.right_idx += 1
@@ -534,7 +534,7 @@ class BiDirDPPlanner(object):
                         self.treeL[child_nodeID].updateObjectMoved(temp_object_idx)
                         self.treeL[child_nodeID].updatePathOption(temp_path_option)
                         self.treeL[child_nodeID].updateCostToCome(self.treeL[parent_nodeID].cost_to_come + 1)
-                        self.treeL[child_nodeID].updateDeps(subTree.dependency_dict)
+                        # self.treeL[child_nodeID].updateDeps(subTree.dependency_dict)
 
                 elif child_arrangement in self.arrRightRegistr:
                     ### this is a sign that two trees are connected
@@ -567,7 +567,7 @@ class BiDirDPPlanner(object):
                         child_arrangement, "L" + str(self.left_idx), temp_transition, temp_object_idx, temp_path_option,
                         temp_cost_to_come, parent_nodeID
                     )
-                    self.treeL["L" + str(self.left_idx)].updateDeps(subTree.dependency_dict)
+                    # self.treeL["L" + str(self.left_idx)].updateDeps(subTree.dependency_dict)
                     self.arrLeftRegistr.append(child_arrangement)
                     self.idLeftRegistr.append("L" + str(self.left_idx))
                     self.left_idx += 1
@@ -633,20 +633,34 @@ class BiDirDPPlanner(object):
             # goal_pt = self.points[j]
             start_pt = self.space.poseMap[i].center
             goal_pt = self.space.poseMap[j].center
-            nsegs = 20
-            keypts_check = 5
-            for kk in range(nsegs + 1):
-                temp_ptx = start_pt[0] + (goal_pt[0] - start_pt[0]) / nsegs * kk
-                temp_pty = start_pt[1] + (goal_pt[1] - start_pt[1]) / nsegs * kk
-                temp_pt = (temp_ptx, temp_pty)
-                ### check with every pose except its own start and goal pose
-                for ii, o in self.space.poseMap.items():
-                    if not Circle(o.center[0], o.center[1], o.radius + self.space.robot.radius).contains(temp_pt):
-                        dep_set.add(ii)
-                if kk % 5 == 0:
-                    path.append(temp_pt)
+
+            # staticObstacles = self.space.saveObstacles()
+            # self.space.restoreObstacles([])
+            # self.space.computeMinkObs()
+            path = [start_pt, goal_pt]
+            for pid, p in self.space.poseMap.items():
+                if pid == i or pid == j:
+                    continue
+                if polyTOUCH(path, Circle(p.center[0], p.center[1], p.radius + self.space.robot.radius).poly()):
+                    dep_set.add(pid)
+
+            # nsegs = 20
+            # keypts_check = 5
+            # for kk in range(nsegs + 1):
+            #     temp_ptx = start_pt[0] + (goal_pt[0] - start_pt[0]) / nsegs * kk
+            #     temp_pty = start_pt[1] + (goal_pt[1] - start_pt[1]) / nsegs * kk
+            #     temp_pt = (temp_ptx, temp_pty)
+            #     ### check with every pose except its own start and goal pose
+            #     for ii, o in self.space.poseMap.items():
+            #         if not Circle(o.center[0], o.center[1], o.radius + self.space.robot.radius).contains(temp_pt):
+            #             dep_set.add(ii)
+            #     if kk % 5 == 0:
+            #         path.append(temp_pt)
             self.dependency_dict[key_pair].append(dep_set)
             self.path_dict[key_pair].append(path)
+
+            # self.space.restoreObstacles(staticObstacles)
+            # self.space.computeMinkObs()
 
         # print("dependency_dict: ")
         # for key_pair, dependency_set in self.dependency_dict.items():
@@ -712,7 +726,7 @@ class ArrNode(object):
         self.path_option = path_option
         self.cost_to_come = cost_to_come
         self.parent_id = parent_id
-        self.dependency_dict = {}
+        # self.dependency_dict = {}
 
     def updateObjectTransition(self, object_transition):
         self.object_transition = object_transition
@@ -729,8 +743,8 @@ class ArrNode(object):
     def updateParent(self, parent_id):
         self.parent_id = parent_id
 
-    def updateDeps(self, depdict):
-        self.dependency_dict = copy.deepcopy(depdict)
+    # def updateDeps(self, depdict):
+    #     self.dependency_dict = copy.deepcopy(depdict)
 
     def getParentArr(self):
         parent_arr = copy.deepcopy(self.arrangement)
