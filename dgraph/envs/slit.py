@@ -1,10 +1,10 @@
 DiskCSpace(
-    rad=50,
-    height=1000,
-    width=1000,
+    rad=500,
+    height=10000,
+    width=10000,
     obstacles=[
-        Rectangle(x=499, y=0, width=2, height=350),
-        Rectangle(x=499, y=650, width=2, height=350),
+        Rectangle(x=4990, y=0, width=20, height=3500),
+        Rectangle(x=4990, y=6500, width=20, height=3500),
     ],
     poseMap={},
 )
