@@ -674,6 +674,8 @@ def genPoses(n, space):
                 # point = space.mink_obs.sample()
                 point = findNearest([int(xy) for xy in space.mink_obs.sample()], EPSILON, space.mink_obs.contains)
             else:
+                point = None
+            if not point:
                 if j == 0:
                     print("failed to generate the start of object " + str(i))
                 else:
