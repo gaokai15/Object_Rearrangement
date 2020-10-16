@@ -10,8 +10,8 @@ from random import sample
 from dspace import *
 from DG_Space import set_max_memory
 
-# from BiDirDPPlanner import BiDirDPPlanner as Planner
-from BiDirDPPlanner_dyn import BiDirDPPlanner as Planner
+from BiDirDPPlanner import BiDirDPPlanner as Planner
+# from BiDirDPPlanner_dyn import BiDirDPPlanner as Planner
 # from BiDirDPPlanner_dyn_rand import BiDirDPPlanner as Planner
 
 # from FastHeuristicDPPlanner import FastHeuristicDPPlanner as Planner
@@ -19,7 +19,7 @@ from BiDirDPPlanner_dyn import BiDirDPPlanner as Planner
 
 # VISUALIZE = False
 VISUALIZE = True
-num_buffers = 0
+num_buffers = 5
 
 
 class Experiments(object):
@@ -118,10 +118,10 @@ if __name__ == "__main__":
 
     space.regionGraph()
     if num_buffers > 0:
-        # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 50)
+        genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 50)
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
         # genBuffers(num_buffers, space, [], 'boundary_random', 50)
-        genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random')
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random')
         space.regionGraph()
 
     EXP = Experiments()
