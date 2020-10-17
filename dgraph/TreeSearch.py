@@ -10,8 +10,12 @@ from random import sample
 from dspace import *
 from DG_Space import set_max_memory
 
-# from BiDirDPPlanner import BiDirDPPlanner
-from BiDirDPPlanner_dyn import BiDirDPPlanner
+# from BiDirDPPlanner import BiDirDPPlanner as Planner
+from BiDirDPPlanner_dyn import BiDirDPPlanner as Planner
+# from BiDirDPPlanner_dyn_rand import BiDirDPPlanner as Planner
+
+# from FastHeuristicDPPlanner import FastHeuristicDPPlanner as Planner
+# from FastHeuristicDPPlanner_dyn import FastHeuristicDPPlanner as Planner
 
 # VISUALIZE = False
 VISUALIZE = True
@@ -43,7 +47,7 @@ class Experiments(object):
         print("final_arrangement: " + str(self.final_arrangement))
 
         start_time = clock()
-        self.plan_DP_local = BiDirDPPlanner(self.initial_arrangement, self.final_arrangement, self.space)
+        self.plan_DP_local = Planner(self.initial_arrangement, self.final_arrangement, self.space)
         self.comTime_DP_local = clock() - start_time
         print("Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_local))
 
@@ -66,7 +70,7 @@ class Experiments(object):
             print("failed to find a solution within " + str(self.plan_DP_local.totalTime_allowed) + " seconds...")
 
         if visualize:
-            program = DiskCSpaceProgram(space, self.solution, self.arrangements)
+            program = DiskCSpaceProgram(self.space, self.solution, self.arrangements)
             program.view.w = program.view.h = 1080
             program.name = "Motion planning test"
             program.run()
@@ -114,10 +118,10 @@ if __name__ == "__main__":
 
     space.regionGraph()
     if num_buffers > 0:
-        # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
-        genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
-        # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
-        # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 0, [1, 2, 0, 3, 4])
+        genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 50)
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+        # genBuffers(num_buffers, space, [], 'boundary_random', 50)
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random')
         space.regionGraph()
 
     EXP = Experiments()

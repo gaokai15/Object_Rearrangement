@@ -2,7 +2,10 @@
 # import Polygon.Utils as pu
 import colorsys
 from math import *
+from itertools import product
+
 import pyclipper as pc
+from klampt.math import vectorops
 
 
 def getColor(x):
@@ -108,6 +111,14 @@ def polyTOUCH(poly1, poly2):
             else:
                 c -= 1
     return c > 0
+
+
+def findNearest(point, rad, testfunc):
+    for disp in sorted(product(range(-rad, rad + 1), repeat=2), key=lambda x: vectorops.distanceSquared(x, (0, 0))):
+        testPoint = vectorops.add(point, disp)
+        if testfunc(testPoint):
+            return testPoint
+    return None
 
 
 def o55():

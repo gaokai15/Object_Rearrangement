@@ -7,10 +7,37 @@ from random import seed
 
 from dspace import *
 # from DG_Space import Experiments
-from DG_Space import set_max_memory
+from DG_Space import set_max_memory, DFS_Rec_for_Monotone_General, linked_list_conversion
 from TreeSearch import Experiments
 
-num_buffers = 5
+num_buffers = 0
+
+
+def isMonotone(space):
+    space.regionGraph()
+    start_poses = {}
+    goal_poses = {}
+    for pid in space.poseMap:
+        dd = str(pid).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
+        sd = str(pid).strip('0123456789')
+        if 'S' in sd:
+            start_poses[int(dd)] = pid
+        elif 'G' in sd:
+            goal_poses[int(dd)] = pid
+
+    region_dict, linked_list = linked_list_conversion(space.RGAdj)
+    object_locations = space.pose2reg
+    subTree = DFS_Rec_for_Monotone_General(
+        start_poses,
+        goal_poses,
+        {},
+        {},
+        object_locations,
+        linked_list,
+        region_dict,
+    )
+    return subTree.isMonotone
+
 
 if __name__ == "__main__":
 
@@ -52,14 +79,14 @@ if __name__ == "__main__":
         #     [20, 63],
         # ]
         num_objs_dense = [
-            [5, 0.25],
-            [5, 0.5],
-            [10, 0.25],
-            [10, 0.5],
-            [15, 0.25],
-            [15, 0.5],
-            [20, 0.25],
-            [20, 0.5],
+            [5, 0.35],
+            [5, 0.45],
+            [10, 0.35],
+            [10, 0.45],
+            [15, 0.35],
+            [15, 0.45],
+            [20, 0.35],
+            [20, 0.45],
         ]
         base_envs = {'Empty': DiskCSpace()}
         for env_file in glob(env_folder + '/*'):
@@ -69,7 +96,7 @@ if __name__ == "__main__":
         for name, space in base_envs.items():
             for params in num_objs_dense:
                 if name == 'shelf5':
-                    rad = 100
+                    rad = 1000
                     space.setRobotRad(rad)
                     space.computeMinkObs()
                 else:
@@ -92,8 +119,13 @@ if __name__ == "__main__":
                 print(area, nobj, rad)
                 for i in range(nExperiments):
                     space.clearPoses()
-                    if not genPoses(nobj, space):
-                        continue
+                    num_fail = 10
+                    while num_fail > 0:
+                        if genPoses(nobj, space):
+                            if not isMonotone(space):
+                                break
+                        else:
+                            num_fail -= 1
                     with open("{}/{}_{}_{}_{}.py".format(out_folder, name, nobj, rad, i), 'w') as outfile:
                         print(
                             'DiskCSpace(\n    rad={},\n    height={},\n    width={},\n'.format(
@@ -122,9 +154,11 @@ if __name__ == "__main__":
                 space = loadEnv(env_file)
                 space.regionGraph()
                 if num_buffers > 0:
-                    # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 4)
-                    genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
-                    # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_free')
+                    seed(env_file)
+                    genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 50)
+                    # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+                    # genBuffers(num_buffers, space, [], 'boundary_random', 50)
+                    # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random')
                     space.regionGraph()
                 try:
                     actions, runtime = EXP.single_instance(space, False)

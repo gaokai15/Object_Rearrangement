@@ -1,9 +1,9 @@
 DiskCSpace(
-    rad=50,
-    height=1000,
-    width=1000,
+    rad=500,
+    height=10000,
+    width=10000,
     obstacles=[
-        Circle(500, 500, 220),
+        Circle(5000, 5000, 2200),
     ],
     poseMap={},
 )
