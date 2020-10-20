@@ -82,17 +82,22 @@ class BiDirDPPlanner(object):
             self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
         self.totalTime_allowed = 30 * self.numObjs  ### allow 30s per object for the total search
+        self.iterations = 0
         start_time = time.clock()
 
         while (self.isConnected != True and time.clock() - start_time < self.totalTime_allowed):
             ### The problem is not monotone
             newChild_nodeID = self.mutateLeftChild()
+            self.iterations += 1
             if newChild_nodeID != None:
                 self.growSubTree(self.treeL[newChild_nodeID], self.treeR["R0"], "Left")
+                self.iterations += 1
             if (self.isConnected != True):
                 newChild_nodeID = self.mutateRightChild()
+                self.iterations += 1
                 if newChild_nodeID != None:
                     self.growSubTree(self.treeR[newChild_nodeID], self.treeL["L0"], "Right")
+                    self.iterations += 1
 
         # if self.isConnected:
         #     self.getTheStat()

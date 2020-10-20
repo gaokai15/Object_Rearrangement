@@ -148,7 +148,7 @@ if __name__ == "__main__":
         EXP = Experiments()
         set_max_memory(1.3 * 2**(34))  #2**34=16G
         with open(out_file, 'w') as outfile:
-            print('name, num_objs, radius, trial, actions, time', file=outfile)
+            print('name, num_objs, radius, trial, actions, time, iterations', file=outfile)
             for env_file in glob(tests_glob):
                 name = env_file.split('/')[-1].split('.')[0]
                 space = loadEnv(env_file)
@@ -161,9 +161,10 @@ if __name__ == "__main__":
                     # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random')
                     space.regionGraph()
                 try:
-                    actions, runtime = EXP.single_instance(space, False)
+                    actions, runtime, iters = EXP.single_instance(space, False)
                 except Exception as e:
                     actions = -1
-                    runtime = repr(e)
+                    runtime = -1
+                    iters = repr(e).replace(',', '.')
 
-                print(','.join(name.split('_') + [str(actions), str(runtime)]), file=outfile)
+                print(','.join(name.split('_') + [str(actions), str(runtime), str(iters)]), file=outfile)

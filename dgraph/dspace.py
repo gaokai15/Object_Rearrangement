@@ -573,6 +573,11 @@ class DiskCSpaceProgram(GLProgram):
             self.space.restoreObstacles(self.staticObs)
             self.space.computeMinkObs()
             self.path = None
+            # print(self.space.pose2reg['S1'])
+            # print(self.space.pose2reg['G1'])
+            # path = BFS(self.space.RGAdj, self.space.pose2reg['S1'], self.space.pose2reg['G1'])
+            # self.path = [self.space.regions[p].quasiCenter() for p in path]
+            print(self.path)
             self.G = None
             self.planner = None
             self.index = -1

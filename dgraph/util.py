@@ -3,6 +3,7 @@
 import colorsys
 from math import *
 from itertools import product
+from collections import deque
 
 import pyclipper as pc
 from klampt.math import vectorops
@@ -129,6 +130,28 @@ def checkBitStatusAtPos(n, k):
     #This code is contributed by Gitanjali (GeeksforGeeks)
     new_num = n >> k
     return (new_num & 1)
+
+
+def BFS(graphAdj, start, goal):
+    path = []
+    backtrace = {start: start}
+    explore = deque([start])
+    while goal not in backtrace:
+        if len(explore) > 0:
+            u = explore.pop()
+        else:
+            return []
+        for v in graphAdj[u]:
+            if v not in backtrace:
+                backtrace[v] = u
+                explore.append(v)
+
+    path.append(goal)
+    while backtrace[path[-1]] != path[-1]:
+        path.append(backtrace[path[-1]])
+    path.reverse()
+
+    return path
 
 
 def circle_intersections(x0, y0, r0, x1, y1, r1):
