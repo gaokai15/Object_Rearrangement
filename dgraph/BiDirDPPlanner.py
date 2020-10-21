@@ -7,7 +7,7 @@ from random import sample, choice
 from collections import OrderedDict
 
 from dspace import genBuffers
-from util import checkBitStatusAtPos
+from util import checkBitStatusAtPos, BFS
 from DG_Space import DFS_Rec_for_Monotone_General, linked_list_conversion
 
 
@@ -122,6 +122,28 @@ class BiDirDPPlanner(object):
         # if self.isConnected == False:
         #     print("failed to find a solution within " + str(self.totalTime_allowed) + " seconds...")
 
+    def choose_pose(self, obj_idx, mutated_arrangement):
+        cur_pose = mutated_arrangement[obj_idx]
+        hard_poses = set(mutated_arrangement)
+        free_poses = set(self.space.poseMap.keys()) - hard_poses
+        buffs = {b: set() for b in filter(lambda x: x[0] == 'B', free_poses)}
+        for b in buffs.keys():
+            path = BFS(self.space.RGAdj, self.space.pose2reg[cur_pose], self.space.pose2reg[b])
+            for rid in path:
+                buffs[b].update(rid[:-1])
+            # print(b, buffs[b].intersection(hard_poses))
+            # print(b, buffs[b].intersection(soft_poses))
+            # buffs[b].intersection_update(mutated_arrangement)
+
+        # buff_ranking = sorted(buffs.keys(), key=lambda x: len(buffs[x].intersection(hard_poses)))
+        # for b in buff_ranking:
+        #     print(b, buffs[b].intersection(hard_poses), len(hard_poses)-len(buffs[b].intersection(hard_poses)))
+        poses = sum([[x] * (len(hard_poses) - len(buffs[x].intersection(hard_poses))) for x in buffs.keys()], [])
+        # poses = self.space.poseMap.keys()
+        # print(poses)
+        pose = choice(poses)
+        return pose
+
     def mutateRightChild(self):
         ### first choose a node to mutate
         # print("Right mutation")
@@ -130,7 +152,8 @@ class BiDirDPPlanner(object):
         ### choose an object to move
         obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = choice(self.space.poseMap.keys())
+        # pose_idx = choice(self.space.poseMap.keys())
+        pose_idx = self.choose_pose(obj_idx, mutated_arrangement)
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
@@ -190,7 +213,8 @@ class BiDirDPPlanner(object):
         ### choose an object to move
         obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = choice(self.space.poseMap.keys())
+        # pose_idx = choice(self.space.poseMap.keys())
+        pose_idx = self.choose_pose(obj_idx, mutated_arrangement)
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))

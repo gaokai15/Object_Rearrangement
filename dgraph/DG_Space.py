@@ -837,11 +837,11 @@ class DFS_Rec_for_Monotone_General(object):
 
                 current_task = parent_task
             self.object_ordering = list(reversed(object_ordering))
-            print("DFS_REC_MONOTONE", self.object_ordering)
+            # print("DFS_REC_MONOTONE", self.object_ordering)
             self.isMonotone = True
             return True
         else:
-            print("Non-monotone")
+            # print("Non-monotone")
             # exit(0)
             self.isMonotone = False
             return False

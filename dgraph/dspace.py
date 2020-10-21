@@ -16,7 +16,7 @@ import pyclipper as pc
 
 from util import *
 
-num_buffers = 0
+num_buffers = 100
 EPSILON = 1
 
 
@@ -577,7 +577,7 @@ class DiskCSpaceProgram(GLProgram):
             # print(self.space.pose2reg['G1'])
             # path = BFS(self.space.RGAdj, self.space.pose2reg['S1'], self.space.pose2reg['G1'])
             # self.path = [self.space.regions[p].quasiCenter() for p in path]
-            print(self.path)
+            # print(self.path)
             self.G = None
             self.planner = None
             self.index = -1
@@ -753,6 +753,38 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
             if space.mink_obs.type != 'Empty':
                 # point = space.mink_obs.sample()
                 point = findNearest([int(xy) for xy in space.mink_obs.sample()], EPSILON, space.mink_obs.contains)
+            else:
+                print("No free space!")
+                break
+            space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
+            space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+            num_generated += 1
+
+    ### Greedy Boundary Sampling ###
+    elif method == 'greedy_boundary':
+        for pid in occupied:
+            p = space.poseMap[pid]
+            space.addObstacle(p)
+
+        space.setRobotRad(space.robot.radius + 5)
+        space.computeMinkObs()
+        space.setRobotRad(space.robot.radius - 5)
+
+        for i in range(n):
+            space.computeMinkObs()
+            if space.mink_obs.type != 'Empty':
+                # point = space.mink_obs.sample()
+                # point = findNearest([int(xy) for xy in space.mink_obs.sample()], EPSILON, space.mink_obs.contains)
+                if space.mink_obs.type == 'S_Poly':
+                    b_points = space.mink_obs.points
+                elif space.mink_obs.type == 'C_Poly':
+                    b_points = choice(space.mink_obs.points)
+                ind = choice(range(-1, len(b_points) - 1))
+                p1 = b_points[ind]
+                p2 = b_points[ind + 1]
+                point = findNearest(
+                    [int(xy) for xy in vectorops.interpolate(p1, p2, random())], EPSILON, space.mink_obs.contains
+                )
             else:
                 print("No free space!")
                 break
@@ -940,10 +972,13 @@ if __name__ == '__main__':
 
     space.regionGraph()
     if num_buffers > 0:
-        genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 50)
+        genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 1)
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
-        # genBuffers(num_buffers, space, [], 'boundary_random', 50)
-        # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random')
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_boundary')
+        # genBuffers(num_buffers, space, [], 'greedy_free')
+        # genBuffers(num_buffers, space, [], 'greedy_boundary')
+        # genBuffers(num_buffers, space, [], 'boundary_random', 1)
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random', 2)
         # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'boundary_feasible', 'G1')
         # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 'G1')
         space.regionGraph()
