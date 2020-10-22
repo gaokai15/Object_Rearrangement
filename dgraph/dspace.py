@@ -118,7 +118,7 @@ class Poly:
                         c -= 1
             return c > 0
         elif self.type == 'S_Poly':
-            return pc.PointInPolygon(point, self.points)
+            return bool(pc.PointInPolygon(point, self.points))
 
     def quasiCenter(self):
         center = (0, 0)
@@ -153,10 +153,33 @@ class Poly:
             if poly:
                 return poly.sample(random)
         elif self.type == 'S_Poly':
-            if reachable_to is None or pc.PointInPolygon(reachable_to, cont):
+            if reachable_to is None or pc.PointInPolygon(reachable_to, self.points):
                 poly = pn.Polygon(self.points)
                 return poly.sample(random)
         return False
+
+    def pathConnected(self, u, v):
+        if self.type == 'C_Poly':
+            c = 0
+            d = 0
+            cu = 0
+            cv = 0
+            for cont in self.points:
+                uinc = pc.PointInPolygon(u, cont)
+                vinc = pc.PointInPolygon(v, cont)
+                # print("in", uinc, vinc)
+                if uinc:
+                    cu += 1
+                if vinc:
+                    cv += 1
+                if uinc and vinc:
+                    c += 1
+                    d += 1 if pc.Orientation(cont) else -1
+            # print("==", d, cu, cv, c)
+            return (d > 0) and (cu == cv == c)
+        elif self.type == 'S_Poly':
+            # print("==", bool(pc.PointInPolygon(u, self.points)) and bool(pc.PointInPolygon(v, self.points)))
+            return bool(pc.PointInPolygon(u, self.points)) and bool(pc.PointInPolygon(v, self.points))
 
     def drawGL(self, color=(0.5, 0.5, 0.5)):
         if self.type == 'C_Poly':
@@ -575,8 +598,8 @@ class DiskCSpaceProgram(GLProgram):
             self.path = None
             # print(self.space.pose2reg['S1'])
             # print(self.space.pose2reg['G1'])
-            # path = BFS(self.space.RGAdj, self.space.pose2reg['S1'], self.space.pose2reg['G1'])
-            # self.path = [self.space.regions[p].quasiCenter() for p in path]
+            path = BFS(self.space.RGAdj, self.space.pose2reg['S1'], self.space.pose2reg['G1'])
+            self.path = [self.space.regions[p].quasiCenter() for p in path]
             # print(self.path)
             self.G = None
             self.planner = None

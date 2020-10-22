@@ -132,7 +132,7 @@ def checkBitStatusAtPos(n, k):
     return (new_num & 1)
 
 
-def BFS(graphAdj, start, goal):
+def BFS(graphAdj, start, goal, condition=lambda x: True):
     path = []
     backtrace = {start: start}
     explore = deque([start])
@@ -141,10 +141,10 @@ def BFS(graphAdj, start, goal):
             u = explore.pop()
         else:
             return []
-        for v in graphAdj[u]:
+        for v in filter(condition, graphAdj[u]):
             if v not in backtrace:
                 backtrace[v] = u
-                explore.append(v)
+                explore.appendleft(v)
 
     path.append(goal)
     while backtrace[path[-1]] != path[-1]:
