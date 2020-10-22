@@ -27,6 +27,13 @@ class BiDirDPPlanner(object):
         self.numBuffers = max(len(filter(lambda x: x[0] == 'B', self.space.poseMap.keys())), 1)
         print("Number of Buffers: ", self.numBuffers)
 
+        self.shortestPath = {}
+        for obj in range(self.numObjs):
+            self.shortestPath[obj] = BFS(
+                self.space.RGAdj, self.space.pose2reg['S' + str(obj)], self.space.pose2reg['G' + str(obj)]
+            )
+            # print(obj, self.shortestPath[obj])
+
         def init():
             ### initialize dependency_dict and path_dict as empty dict
             ### since now we are going to increment these two dicts online, instead of offline
@@ -79,8 +86,8 @@ class BiDirDPPlanner(object):
                 self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
         init()
-        print(self.space.poseMap.keys())
-        print(self.space.regions.keys())
+        # print(self.space.poseMap.keys())
+        # print(self.space.regions.keys())
         self.totalTime_allowed = 30 * self.numObjs  ### allow 30s per object for the total search
         self.restartTime = 200 * self.numObjs  ### allow 2s per object for the search before restarting
         self.iterations = 0
@@ -99,8 +106,8 @@ class BiDirDPPlanner(object):
                 # genBuffers(self.numBuffers, self.space, self.space.poseMap.keys(), 'greedy_free')
                 genBuffers(self.numBuffers, self.space, self.space.poseMap.keys(), 'random', 50)
                 self.space.regionGraph()
-                print(self.space.poseMap.keys())
-                print(self.space.regions.keys())
+                # print(self.space.poseMap.keys())
+                # print(self.space.regions.keys())
                 init()
 
             ### otherwise continue growing
@@ -171,7 +178,23 @@ class BiDirDPPlanner(object):
                 feasible_poses.remove(pose)
         # print(time.time() - t0, len(feasible_poses))
 
-        poses = list(feasible_poses)
+        # t0 = time.time()
+        pose_ranks = {}
+        for buff in feasible_poses:
+            interf = 0
+            for obj in range(self.numObjs):
+                if obj == obj_idx or mutated_arrangement[obj][0] == 'G':
+                    continue
+                for rid in self.shortestPath[obj]:
+                    if buff in rid[:-1]:
+                        interf += 1
+                        break
+            pose_ranks[buff] = interf
+
+        poses_ranked = sorted(pose_ranks, key=lambda x: pose_ranks[x])
+        poses = sum([[x] * (len(poses_ranked) - poses_ranked.index(x)) for x in poses_ranked], [])
+        # print(time.time() - t0)
+        # poses = list(feasible_poses)
         # poses = self.space.poseMap.keys()
 
         # print(poses)
