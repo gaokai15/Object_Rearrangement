@@ -122,7 +122,7 @@ class BiDirDPPlanner(object):
         # if self.isConnected == False:
         #     print("failed to find a solution within " + str(self.totalTime_allowed) + " seconds...")
 
-    def is_reachable(self, obj_idx, mutated_arrangement, pose_idx):
+    def pose_reachable(self, obj_idx, mutated_arrangement, pose_idx):
         obj_pose = mutated_arrangement[obj_idx]
         obs_poses = set(mutated_arrangement).difference([obj_pose, pose_idx])
 
@@ -161,8 +161,22 @@ class BiDirDPPlanner(object):
         # # for b in buff_ranking:
         # #     print(b, buffs[b].intersection(hard_poses), len(hard_poses)-len(buffs[b].intersection(hard_poses)))
         # poses = sum([[x] * (len(hard_poses) - len(buffs[x].intersection(hard_poses))) for x in buffs.keys()], [])
-        poses = self.space.poseMap.keys()
+
+        feasible_poses = set(self.space.poseMap.keys()).difference(mutated_arrangement)
+
+        # print(len(feasible_poses))
+        # t0 = time.time()
+        for pose in list(feasible_poses):
+            if not self.pose_reachable(obj_idx, mutated_arrangement, pose):
+                feasible_poses.remove(pose)
+        # print(time.time() - t0, len(feasible_poses))
+
+        poses = list(feasible_poses)
+        # poses = self.space.poseMap.keys()
+
         # print(poses)
+        if not poses:
+            return False
         pose = choice(poses)
         return pose
 
@@ -176,6 +190,8 @@ class BiDirDPPlanner(object):
         ### choose a slot to put the object
         # pose_idx = choice(self.space.poseMap.keys())
         pose_idx = self.choose_pose(obj_idx, mutated_arrangement)
+        if not pose_idx:
+            return None
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
@@ -212,11 +228,11 @@ class BiDirDPPlanner(object):
         #     return None
         # else:
 
-        t0 = time.time()
-        is_reachable = self.is_reachable(obj_idx, mutated_arrangement, pose_idx)
-        print(time.time() - t0)
-        if not is_reachable:
-            return None
+        # t0 = time.time()
+        # pose_reachable = self.pose_reachable(obj_idx, mutated_arrangement, pose_idx)
+        # print(time.time() - t0)
+        # if not pose_reachable:
+        #     return None
 
         ### we reach here since it is a duplicate and it can be connected
         ### welcome this new arrangement
@@ -244,6 +260,8 @@ class BiDirDPPlanner(object):
         ### choose a slot to put the object
         # pose_idx = choice(self.space.poseMap.keys())
         pose_idx = self.choose_pose(obj_idx, mutated_arrangement)
+        if not pose_idx:
+            return None
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
@@ -280,11 +298,11 @@ class BiDirDPPlanner(object):
         #     return None
         # else:
 
-        t0 = time.time()
-        is_reachable = self.is_reachable(obj_idx, mutated_arrangement, pose_idx)
-        print(time.time() - t0)
-        if not is_reachable:
-            return None
+        # t0 = time.time()
+        # pose_reachable = self.pose_reachable(obj_idx, mutated_arrangement, pose_idx)
+        # print(time.time() - t0)
+        # if not pose_reachable:
+        #     return None
 
         ### we reach here since it is a duplicate and it can be connected
         ### welcome this new arrangement
