@@ -185,10 +185,25 @@ class BiDirDPPlanner(object):
             for obj in range(self.numObjs):
                 if obj == obj_idx or mutated_arrangement[obj][0] == 'G':
                     continue
-                for rid in self.shortestPath[obj]:
-                    if buff in rid[:-1]:
-                        interf += 1
-                        break
+
+                def condition(x):
+                    # print("Test: ", buff, x[:-1])
+                    return buff not in x[:-1]
+
+                path = BFS(
+                    self.space.RGAdj,
+                    self.space.pose2reg[mutated_arrangement[obj]],
+                    self.space.pose2reg['G' + str(obj)],
+                    condition,
+                )
+
+                if not path:
+                    interf += 1
+
+                # for rid in self.shortestPath[obj]:
+                #     if buff in rid[:-1]:
+                #         interf += 1
+                #         break
             pose_ranks[buff] = interf
 
         poses_ranked = sorted(pose_ranks, key=lambda x: pose_ranks[x])
