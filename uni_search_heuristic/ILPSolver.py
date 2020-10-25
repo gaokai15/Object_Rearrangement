@@ -4,11 +4,16 @@ import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
 import math
+import IPython
 
 class feedback_arc_ILP_buffers(object):
     def __init__(self, object_dependency_opts):
         # print("\nILP solver starts")
         self.object_dependency_opts = object_dependency_opts
+        print("check object_dependency_opts")
+        for obj_idx, constr_set in self.object_dependency_opts.items():
+            print(str(obj_idx) + ": " + str(constr_set))
+
         self.optimum = self.run_arc_ILP_buffers()
 
     def run_arc_ILP_buffers(self):
@@ -30,6 +35,11 @@ class feedback_arc_ILP_buffers(object):
                         if (constr[0], i) not in dependencyEdge_paths:
                             dependencyEdge_paths[(constr[0], i)] = []
                         dependencyEdge_paths[(constr[0], i)].append([i, path_index])
+
+        # print("check dependencyEdge_paths")
+        # for dependency_edge, path_options in dependencyEdge_paths.items():
+        #     print(str(dependency_edge) + ": " + str(path_options))
+
         
         m = gp.Model()
         m.setParam('OutputFlag', 0)
@@ -124,6 +134,10 @@ class feedback_arc_ILP_buffers(object):
         final_order = [obj_index for _, obj_index in sorted(zip(order_count, obj_indexes), reverse=True)]
         # print("Final objects order: ")
         # print(final_order)
+
+        # print("check output")
+        # print("arc size: " + str(obj.getValue()))
+        # print("violated arcs: " + str(edges_to_be_removed))
 
 
         return obj.getValue(), edges_to_be_removed, tuple(path_selection), final_order, DG, dependencyEdge_paths

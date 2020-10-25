@@ -366,7 +366,7 @@ class DFS_Rec_for_Non_Monotone_General(object):
                         if(not ((self.parent[node]>>mutation_obj)%2)): # first mutation node in the branch
                             progress = 0
                             for i in self.start_poses.keys():
-                                if((node>>mutation_obj)%2):
+                                if((node>>i)%2):
                                     progress += 1
                             if progress > Greatest_Progress:
                                 Greatest_Progress = progress
