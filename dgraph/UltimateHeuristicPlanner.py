@@ -528,14 +528,57 @@ class UltimateHeuristicPlanner(object):
         #                     ### the objects have not yet moved to the goal on the current arrangement
         #                     objects2buffers.append([obj, buff])
 
+        buff_ranks = {}
         for obj in object_ranking:
             feasible_poses = set(self.space.poseMap.keys()).difference(curr_arrangement)
             for pose in list(feasible_poses):
                 if not self.pose_reachable(obj, curr_arrangement, pose):
                     feasible_poses.remove(pose)
 
+            # feasible_poses = list(feasible_poses)[:5]
+            # for buff in feasible_poses:
+            #     objects2buffers.append([obj, buff])
+            pose_ranks = {}
             for buff in feasible_poses:
+                rank = self.numObjs
+                for obj_test in range(self.numObjs):
+                    obj_pose = curr_arrangement[obj_test]
+                    if obj == obj_test or obj_pose[0] == 'G':
+                        continue
+
+                    goal_pose = 'G' + str(obj)
+                    obs_poses = set(curr_arrangement).difference([obj_pose, goal_pose])
+
+                    def condition(x):
+                        # print("Test: ", x, obs_poses)
+                        return len(obs_poses.intersection(x[:-1])) == 0
+
+                    path = BFS(
+                        self.space.RGAdj,
+                        self.space.pose2reg[obj_pose],
+                        self.space.pose2reg[goal_pose],
+                        condition,
+                    )
+
+                    # for rid in self.shortestPath[obj]:
+                    for rid in path:
+                        if buff in rid[:-1]:
+                            rank -= 1
+                            break
+                pose_ranks[buff] = rank
+            buff_ranks[obj] = pose_ranks
+
+            ### object priority
+            poses_ranked = sorted(pose_ranks, key=lambda x: pose_ranks[x], reverse=True)
+            for buff in poses_ranked[:5]:
                 objects2buffers.append([obj, buff])
+
+        ### buffer priority
+        # for drank in range(self.numObjs, -1, -1):
+        #     for obj in object_ranking:
+        #         for buff, rank in buff_ranks[obj].items():
+        #             if rank == drank:
+        #                 objects2buffers.append([obj, buff])
 
         return objects2buffers
 

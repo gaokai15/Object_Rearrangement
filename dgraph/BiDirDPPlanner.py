@@ -181,34 +181,38 @@ class BiDirDPPlanner(object):
         # t0 = time.time()
         pose_ranks = {}
         for buff in feasible_poses:
-            interf = 0
+            rank = self.numObjs
             for obj in range(self.numObjs):
-                if obj == obj_idx or mutated_arrangement[obj][0] == 'G':
+                obj_pose = mutated_arrangement[obj]
+                if obj == obj_idx or obj_pose[0] == 'G':
                     continue
 
+                goal_pose = 'G' + str(obj)
+                obs_poses = set(mutated_arrangement).difference([obj_pose, goal_pose])
+
                 def condition(x):
-                    # print("Test: ", buff, x[:-1])
-                    return buff not in x[:-1]
+                    # print("Test: ", x, obs_poses)
+                    return len(obs_poses.intersection(x[:-1])) == 0
 
                 path = BFS(
                     self.space.RGAdj,
-                    self.space.pose2reg[mutated_arrangement[obj]],
-                    self.space.pose2reg['G' + str(obj)],
+                    self.space.pose2reg[obj_pose],
+                    self.space.pose2reg[goal_pose],
                     condition,
                 )
 
-                if not path:
-                    interf += 1
-
                 # for rid in self.shortestPath[obj]:
-                #     if buff in rid[:-1]:
-                #         interf += 1
-                #         break
-            pose_ranks[buff] = interf
+                for rid in path:
+                    if buff in rid[:-1]:
+                        rank -= 1
+                        break
+            pose_ranks[buff] = rank
 
-        poses_ranked = sorted(pose_ranks, key=lambda x: pose_ranks[x])
-        poses = sum([[x] * (len(poses_ranked) - poses_ranked.index(x)) for x in poses_ranked], [])
+        # poses_ranked = sorted(pose_ranks, key=lambda x: pose_ranks[x])
+        # poses = sum([[x] * poses_ranked.index(x) for x in poses_ranked], [])
+        poses = sum([[x] * pose_ranks[x] for x in pose_ranks], [])
         # print(time.time() - t0)
+
         # poses = list(feasible_poses)
         # poses = self.space.poseMap.keys()
 
