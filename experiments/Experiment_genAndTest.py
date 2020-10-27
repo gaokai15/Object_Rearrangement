@@ -19,7 +19,7 @@ from DensePathGenerator import DensePathGenerator
 
 from BiDirDPPlanner import BiDirDPPlanner
 from UltimateHeuristicPlanner import UltimateHeuristicPlanner 
-from BiDir_fmRS_Planner import BiDir_fmRS_Planner
+# from BiDir_fmRS_Planner import BiDir_fmRS_Planner
 
 
 class Experiment_genAndTest(object):
@@ -76,6 +76,7 @@ class Experiment_genAndTest(object):
 
         ########## Now let's generate the region graph and build its connection #############
         self.regionGraph = RegionGraphGenerator(self.instance, self.wall_mink)
+        # print(self.regionGraph.graph, self.regionGraph.obj2reg)
         ### The things we want to store are in gpd (LL, region_dict)
         self.gpd = DensePathGenerator(self.regionGraph.graph, self.regionGraph.obj2reg)
         self.new_paths = {}
@@ -89,6 +90,12 @@ class Experiment_genAndTest(object):
         self.visualTool = Visualizer(self.HEIGHT, self.WIDTH, self.numObjs, self.wall_pts, \
                                 self.display, self.displayMore, self.saveimage, self.instance_dir)
         self.visualTool.drawProblem(self.instance.objects, self.instance.points, self.instance.buffers)
+
+        ### region graph without connections
+        self.visualTool.drawRegionGraph({}, self.regionGraph.regions.values(), label=False)
+        ### connectivity graph
+        self.visualTool.drawConGraph(
+            self.regionGraph.paths, self.instance.points, self.instance.objects, self.instance.buffers)
 
         ### get the constraint sets for poses 
         ### key: pose_id
@@ -143,7 +150,7 @@ class Experiment_genAndTest(object):
         start_time = time.clock()
         self.plan_UltimateHeuristic = UltimateHeuristicPlanner(
             self.initial_arrangement, self.final_arrangement, self.instance, self.gpd, \
-            self.new_paths, self.polygon, self.RAD, self.constraint_set, self.visualTool)
+            self.new_paths, self.polygon, self.RAD, self.regionGraph, self.constraint_set, self.visualTool)
         self.comTime_UltimateHeuristic = time.clock() - start_time
         print "Time to perform search with Ultimateheuristic solver: " + str(self.comTime_UltimateHeuristic)
         print("find solution? " + str(self.plan_UltimateHeuristic.isConnected))

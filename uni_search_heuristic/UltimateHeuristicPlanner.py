@@ -25,12 +25,16 @@ class UltimateHeuristicPlanner(object):
 
     ### Output:
     ### the whole plan
-    def __init__(self, init_arr, final_arr, instance, gpd, new_paths, polygon, RAD, constraint_set, visualTool):
+    def __init__(self, init_arr, final_arr, instance, gpd, region_graph, new_paths, polygon, RAD, constraint_set, visualTool):
         print("\n")
         # time_initialization = time.clock()
 
         self.initial_arrangement = init_arr
         self.final_arrangement = final_arr
+        self.RGAdg = region_graph.graph
+        self.pose2reg = region_graph.obj2reg
+        print(self.RGAdg)
+        print(self.pose2reg)
         self.points = instance.points + instance.buffer_points
         self.poses = instance.objects + instance.buffers
         self.numObjs = len(self.initial_arrangement)

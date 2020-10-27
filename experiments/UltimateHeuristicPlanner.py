@@ -15,22 +15,27 @@ import Polygon as pn
 # from random import uniform, random
 from operator import itemgetter, attrgetter
 
+
 class UltimateHeuristicPlanner(object):
     ### Input:
     ### (1) initial_arrangement (a list of pose_ids, each of which indicating the initial pose for an object)
     ### (2) final_arrangement (a list of pose_ids, each of which indicating the final pose for an object)
-    ### instance 
+    ### instance
     ### (i) workspace, (ii) object centers/slots, (iii) buffer centers/slots
     ### visualTool: a visualization tool as a debugging purpose
 
     ### Output:
     ### the whole plan
-    def __init__(self, init_arr, final_arr, instance, gpd, new_paths, polygon, RAD, constraint_set, visualTool):
+    def __init__(
+        self, init_arr, final_arr, instance, gpd, new_paths, polygon, RAD, regionGraph, constraint_set, visualTool
+    ):
 
         # time_initialization = time.clock()
 
         self.initial_arrangement = init_arr
         self.final_arrangement = final_arr
+        self.RGAdj = regionGraph.graph
+        self.pose2reg = regionGraph.obj2reg
         self.points = instance.points + instance.buffer_points
         self.poses = instance.objects + instance.buffers
         self.numObjs = len(self.initial_arrangement)
@@ -76,9 +81,8 @@ class UltimateHeuristicPlanner(object):
         self.idRightRegistr.append("R0")
 
         ### some variables ###
-        self.simplePath = [] ### a list of node_ids
-        self.solution_cost  = np.inf
-
+        self.simplePath = []  ### a list of node_ids
+        self.solution_cost = np.inf
 
         ################## results ################
         self.isConnected = False
@@ -86,11 +90,11 @@ class UltimateHeuristicPlanner(object):
         ### the whole_path is a list of items and each item has the following format
         ### [("node1_id", node2_id), {2:path2, 1:path1, ...}]
         self.whole_path = []
-        self.totalActions = 0 ### record the total number of actions
-        self.numLeftBranches = 0 ### record the number of left branches in the solution
-        self.numRightBranches = 0 ### record the number of right branches in the solution
-        self.numNodesInLeftTree = 0 ### record the total number of nodes in the left tree
-        self.numNodesInRightTree = 0 ### record the total number of nodes in the right tree
+        self.totalActions = 0  ### record the total number of actions
+        self.numLeftBranches = 0  ### record the number of left branches in the solution
+        self.numRightBranches = 0  ### record the number of right branches in the solution
+        self.numNodesInLeftTree = 0  ### record the total number of nodes in the left tree
+        self.numNodesInRightTree = 0  ### record the total number of nodes in the right tree
 
         ### start ruuning
         self.left_idx = 1
@@ -98,10 +102,9 @@ class UltimateHeuristicPlanner(object):
         self.queue = []
         self.node_checked = 0
 
-        totalTime_allowed = 10*self.numObjs ### allow 500s for the total search tree construction
+        totalTime_allowed = 10 * self.numObjs  ### allow 500s for the total search tree construction
         start_time = time.clock()
         # print("Initialization time: " + str(time.clock() - time_initialization))
-
 
         # time_monotoneConnect = time.clock()
         ### initial connection attempt
@@ -113,7 +116,8 @@ class UltimateHeuristicPlanner(object):
         else:
             ####### conduct a BFS for the perturbation process ########
             print("start our non-monotone journey")
-            while (len(self.queue) > 0) and (self.isConnected == False) and (time.clock() - start_time < totalTime_allowed):
+            while (len(self.queue) > 0) and (self.isConnected
+                                             == False) and (time.clock() - start_time < totalTime_allowed):
                 # startTime_task = time.clock()
                 curr_task = self.queue.pop(-1)
                 # print("queue empty? " + str(bool(len(self.queue)==0)))
@@ -144,15 +148,14 @@ class UltimateHeuristicPlanner(object):
                 # print("#objects to move in this non-monotone call: " + str(nObjectToMove+1))
                 # startTime_nonmonDP = time.clock()
                 subTree = DFS_Rec_for_Non_Monotone_General(
-                    start_poses, goal_poses, self.dependency_dict, self.path_dict, 
-                    self.pose_locations, self.linked_list, self.region_dict, 
-                    obj_buffer_dict)
+                    start_poses, goal_poses, self.dependency_dict, self.path_dict, self.pose_locations,
+                    self.linked_list, self.region_dict, obj_buffer_dict
+                )
                 ### update dependency_dict and path_dict
                 self.dependency_dict = subTree.dependency_dict
                 self.path_dict = subTree.path_dict
 
                 # print("Time for calling non_monotone_general: " + str(time.clock() - startTime_nonmonDP))
-
 
                 # print("The problem is solved? " + str(bool(subTree.isMonotone)))
                 # print("subTree.parent: " + str(subTree.parent))
@@ -163,7 +166,8 @@ class UltimateHeuristicPlanner(object):
                     ### the problem is solved and we get the solution
                     root_nodeID = subTree.leafs.keys()[0]
                     root_arrangement = self.decodeArrangement_withBuffer(
-                        root_nodeID, start_arrangement, goal_arrangement, obj_idx, buff_idx)
+                        root_nodeID, start_arrangement, goal_arrangement, obj_idx, buff_idx
+                    )
                     # print("root arrangement: " + str(root_arrangement))
                     # print("ordering: " + str(subTree.object_ordering))
                     # print("subTree.path_selection_dict: " + str(subTree.path_selection_dict))
@@ -175,7 +179,8 @@ class UltimateHeuristicPlanner(object):
                         pathSelection_untilBuffer, pathSelection_afterBuffer_tillEnd = self.splitOrderingAndPathSelection(
                             subTree.object_ordering, subTree.path_selection_dict, obj_idx)
                     intermediate_arrangement = self.interpolateArr(
-                                            start_arrangement, goal_arrangement, order_untilBuffer, obj_idx, buff_idx)
+                        start_arrangement, goal_arrangement, order_untilBuffer, obj_idx, buff_idx
+                    )
                     # print("order_untilBuffer: " + str(order_untilBuffer))
                     # print("order_afterBuffer_tillEnd: " + str(order_afterBuffer_tillEnd))
                     # print("pathSelection_untilBuffer: " + str(pathSelection_untilBuffer))
@@ -206,10 +211,8 @@ class UltimateHeuristicPlanner(object):
                     # print("Time for harvest solution after buffer introduction: " + str(time.clock() - startTime_harvestMonotoneAfterBuffer))
                     return
 
-
-                
                 ### the subproblem is non-monotone even with a help of a buffer
-                ### again we have to reason about the failure 
+                ### again we have to reason about the failure
                 ### we look at the dependency graph from the mutation node
                 if len(subTree.mutation_nodes) == 0:
                     # print("not able to continue" + str(curr_task))
@@ -227,7 +230,7 @@ class UltimateHeuristicPlanner(object):
                         # print("mutate_ids_choice: " + str(mutate_ids_choice))
                         temp_cost = [self.treeL[mutate_id].cost_to_come for mutate_id in mutate_ids_choice]
                         # print("temp_cost: " + str(temp_cost))
-                        mutate_ids_choice = [x for _,x in sorted(zip(temp_cost, mutate_ids_choice))]
+                        mutate_ids_choice = [x for _, x in sorted(zip(temp_cost, mutate_ids_choice))]
                         for mutate_id in mutate_ids_choice:
                             ### random perturbation
                             obj_idx = random.choice(range(self.numObjs))
@@ -245,15 +248,16 @@ class UltimateHeuristicPlanner(object):
                 leaf_nodeID = subTree.leafs.keys()[0]
                 leaf_object_ordering = subTree.leafs.values()[0]
                 leaf_arrangement = self.decodeArrangement_withBuffer(
-                                    leaf_nodeID, start_arrangement, goal_arrangement, obj_idx, buff_idx)
+                    leaf_nodeID, start_arrangement, goal_arrangement, obj_idx, buff_idx
+                )
                 leaf_path_selection_dict = subTree.leaf_path_selection_dict[leaf_nodeID]
                 # print("leaf arrangement: " + str(leaf_arrangement))
                 # print("ordering: " + str(leaf_object_ordering))
                 # print("leaf_path_selection_dict: " + str(leaf_path_selection_dict))
-                
+
                 ### add it to the tree
                 leaf_cost_to_come = self.treeL[start_node_id].cost_to_come + len(leaf_object_ordering)
-                currTreeNode_id = "L"+str(self.left_idx)
+                currTreeNode_id = "L" + str(self.left_idx)
                 self.treeL[currTreeNode_id] = ArrNode(
                         leaf_arrangement, currTreeNode_id, leaf_cost_to_come, \
                         leaf_object_ordering, leaf_path_selection_dict, start_node_id)
@@ -275,7 +279,8 @@ class UltimateHeuristicPlanner(object):
                 # print("time_computeObjectsToMove_nm: " + str(time.clock() - time_computeObjectsToMove_nm))
                 # time_objectDependencyOptsGenerate_nm = time.clock()
                 object_dependency_opts = self.object_dependency_opts_generate(
-                                                leaf_arrangement, goal_arrangement, object_to_move_leaf2goal)
+                    leaf_arrangement, goal_arrangement, object_to_move_leaf2goal
+                )
                 # print("time_objectDependencyOptsGenerate_nm: " + str(time.clock() - time_objectDependencyOptsGenerate_nm))
                 # time_IPsolver_nm = time.clock()
                 # IP_arc_buffers = feedback_arc_ILP_buffers(object_dependency_opts)
@@ -302,12 +307,11 @@ class UltimateHeuristicPlanner(object):
                 ### (3) add these new tasks to the queue
                 for triple_task in objects2buffers:
                     # print("triple_task through nm: " + str(triple_task))
-                    self.queue.insert(0, triple_task) ### update the queue
+                    self.queue.insert(0, triple_task)  ### update the queue
 
                 # print("Time for adding tasks to queue during non-monotone query: " + str(time.clock() - startTime_addingQueueInTask))
                 # print("Time for a task: " + str(time.clock() - startTime_task) + "\n")
-                    
-                    
+
                 ### before the next iteration, check if the queue is empty
                 if (len(self.queue) == 0):
                     # print("the queue is empty and the solution is not found")
@@ -322,7 +326,7 @@ class UltimateHeuristicPlanner(object):
                     # print("mutate_ids_choice: " + str(mutate_ids_choice))
                     temp_cost = [self.treeL[mutate_id].cost_to_come for mutate_id in mutate_ids_choice]
                     # print("temp_cost: " + str(temp_cost))
-                    mutate_ids_choice = [x for _,x in sorted(zip(temp_cost, mutate_ids_choice))]
+                    mutate_ids_choice = [x for _, x in sorted(zip(temp_cost, mutate_ids_choice))]
                     for mutate_id in mutate_ids_choice:
                         ### random perturbation
                         obj_idx = random.choice(range(self.numObjs))
@@ -330,9 +334,6 @@ class UltimateHeuristicPlanner(object):
                         triple_task = [obj_idx, pose_idx, mutate_id]
                         self.queue.insert(0, triple_task)
                     # print("current queue: " + str(self.queue))
-
-               
-
 
     def monotoneConnect(self, initNode, goalNode):
         ### construct start_poses and goal_poses
@@ -356,7 +357,6 @@ class UltimateHeuristicPlanner(object):
         # print("The problem is initially montone? " + str(bool(subTree.isMonotone)))
         # print("subTree.parent: " + str(subTree.parent))
         # print("subTree.leafs: " + str(subTree.leafs))
-
 
         if subTree.isMonotone == True:
             ### the problem is solved and we get the solution
@@ -398,7 +398,8 @@ class UltimateHeuristicPlanner(object):
             # print("time_computeObjectsToMove: " + str(time.clock() - time_computeObjectsToMove))
             time_objectDependencyOptsGenerate = time.clock()
             object_dependency_opts = self.object_dependency_opts_generate(
-                                            leaf_arrangement, goalNode.arrangement, object_to_move_leaf2goal)
+                leaf_arrangement, goalNode.arrangement, object_to_move_leaf2goal
+            )
             time_objectRank = time.clock()
             object_ranking = self.rankObjectsFromDependency(object_dependency_opts, object_to_move_leaf2goal)
             # print("time_objectRank: " + str(time.clock() - time_objectRank))
@@ -442,9 +443,7 @@ class UltimateHeuristicPlanner(object):
 
             for triple_task in objects2buffers:
                 # print("triple_task: " + str(triple_task))
-                self.queue.insert(0, triple_task) ### initialization of the queue
-
-
+                self.queue.insert(0, triple_task)  ### initialization of the queue
 
     def assignBuffers(self, object_ranking, curr_arrangement, goal_arrangement):
         ### Input: object_ranking (a list of obj_idx)
@@ -457,7 +456,8 @@ class UltimateHeuristicPlanner(object):
             curr_obj_pose = curr_arrangement[obj_idx]
             goal_obj_pose = goal_arrangement[obj_idx]
             farthest_reachable_buffer_pose = self.findBufferForPose(
-                    curr_obj_pose, curr_arrangement, goal_obj_pose, goal_arrangement)
+                curr_obj_pose, curr_arrangement, goal_obj_pose, goal_arrangement
+            )
             objects2buffers.append([obj_idx, farthest_reachable_buffer_pose])
 
         # print("objects2buffers: " + str(objects2buffers))
@@ -470,67 +470,138 @@ class UltimateHeuristicPlanner(object):
         for [obj, buff] in objects2buffers_to_eliminated:
             objects2buffers.remove([obj, buff])
 
-
         return objects2buffers
 
+    def pose_reachable(self, obj_idx, mutated_arrangement, pose_idx):
+        obj_pose = mutated_arrangement[obj_idx]
+        obs_poses = set(mutated_arrangement).difference([obj_pose, pose_idx])
+
+        # staticObstacles = self.space.saveObstacles()
+        # for pid in obs_poses:
+        #     p = self.space.poseMap[pid]
+        #     self.space.addObstacle(p)
+        # self.space.computeMinkObs()
+        # self.space.restoreObstacles(staticObstacles)
+        # return self.space.mink_obs.pathConnected(
+        #     self.space.poseMap[obj_pose].center, self.space.poseMap[pose_idx].center
+        # )
+
+        def condition(x):
+            # print("Test: ", x, obs_poses)
+            return len(obs_poses.intersection(x[:-1])) == 0
+
+        path = BFS(self.RGAdj, self.pose2reg[obj_pose], self.pose2reg[pose_idx], condition)
+        # print(path)
+        return len(path)
 
     def assignBuffers_constraintSet(self, object_ranking, curr_arrangement, goal_arrangement):
         ### This function assigns buffers for each object in the object_ranking
         ### based on the available poses in the constraint set given the curr_arrangment
-        available_poses = copy.deepcopy(self.allPoses)
-        collision_poses = set()
-        for curr_pose in curr_arrangement:
-            collision_poses = collision_poses.union(self.constraint_set[curr_pose])
-            collision_poses = collision_poses.union([curr_pose])
 
-        for pose in list(collision_poses):
-            available_poses.remove(pose)
+        # print(self.RGAdj)
 
-        objects2buffers = [] ### a list of [obj_idx, buff_idx]
+        # available_poses = copy.deepcopy(self.allPoses)
+        # collision_poses = set()
+        # for curr_pose in curr_arrangement:
+        #     collision_poses = collision_poses.union(self.constraint_set[curr_pose])
+        #     collision_poses = collision_poses.union([curr_pose])
 
+        # for pose in list(collision_poses):
+        #     available_poses.remove(pose)
 
+        num_buffers = 5
+        objects2buffers = []  ### a list of [obj_idx, buff_idx]
 
-        ### (1) given priority to the extra buffers we generated
-        for obj in object_ranking:
-            for buff in available_poses:
-                if int(buff / 2) not in range(self.numObjs):
-                    ### only extra buffers
-                    objects2buffers.append([obj, buff])
-
-        ### (2) then consider the poses of objects which has been moved at the current arrangement
-        for obj in object_ranking:
-            for buff in available_poses:
-                if int(buff / 2) in range(self.numObjs):
-                    ### they are object poses
-                    if (buff % 2 == 0):
-                        ### they are start poses
-                        obj_idx = int(buff / 2)
-                        if (curr_arrangement[obj_idx] == goal_arrangement[obj_idx]):
-                            ### the objects have already been moved on the current arrangement
-                            objects2buffers.append([obj, buff])
-
-        # ### (3) then consider poses which are not in available poses but can reach for certain object
+        # ### (1) given priority to the extra buffers we generated
         # for obj in object_ranking:
-        #     overlap_poses = self.constraint_set[curr_arrangement[obj]]
-        #     for buff in overlap_poses:
-        #         objects2buffers.append([obj, buff])
+        #     for buff in available_poses:
+        #         if int(buff / 2) not in range(self.numObjs):
+        #             ### only extra buffers
+        #             objects2buffers.append([obj, buff])
 
-        ### (4) finally consider the poses of objects which has yet to move at the current arrangement
+        # ### (2) then consider the poses of objects which has been moved at the current arrangement
+        # for obj in object_ranking:
+        #     for buff in available_poses:
+        #         if int(buff / 2) in range(self.numObjs):
+        #             ### they are object poses
+        #             if (buff % 2 == 0):
+        #                 ### they are start poses
+        #                 obj_idx = int(buff / 2)
+        #                 if (curr_arrangement[obj_idx] == goal_arrangement[obj_idx]):
+        #                     ### the objects have already been moved on the current arrangement
+        #                     objects2buffers.append([obj, buff])
+
+        # # ### (3) then consider poses which are not in available poses but can reach for certain object
+        # # for obj in object_ranking:
+        # #     overlap_poses = self.constraint_set[curr_arrangement[obj]]
+        # #     for buff in overlap_poses:
+        # #         objects2buffers.append([obj, buff])
+
+        # ### (4) finally consider the poses of objects which has yet to move at the current arrangement
+        # for obj in object_ranking:
+        #     for buff in available_poses:
+        #         if int(buff / 2) in range(self.numObjs):
+        #             ### they are object poses
+        #             if (buff % 2 == 1):
+        #                 ### they are goal poses
+        #                 obj_idx = int(buff / 2)
+        #                 if (curr_arrangement[obj_idx] != goal_arrangement[obj_idx]):
+        #                     ### the objects have not yet moved to the goal on the current arrangement
+        #                     objects2buffers.append([obj, buff])
+
+        buff_ranks = {}
         for obj in object_ranking:
-            for buff in available_poses:
-                if int(buff / 2) in range(self.numObjs):
-                    ### they are object poses
-                    if (buff % 2 == 1):
-                        ### they are goal poses
-                        obj_idx = int(buff / 2)
-                        if (curr_arrangement[obj_idx] != goal_arrangement[obj_idx]):
-                            ### the objects have not yet moved to the goal on the current arrangement
-                            objects2buffers.append([obj, buff])
+            feasible_poses = set(self.allPoses).difference(curr_arrangement)
+            for pose in list(feasible_poses):
+                if not self.pose_reachable(obj, curr_arrangement, pose):
+                    feasible_poses.remove(pose)
+
+            # feasible_poses = list(feasible_poses)[:5]
+            # for buff in feasible_poses:
+            #     objects2buffers.append([obj, buff])
+            pose_ranks = {}
+            for buff in feasible_poses:
+                rank = self.numObjs
+                for obj_test in range(self.numObjs):
+                    obj_pose = curr_arrangement[obj_test]
+                    if obj == obj_test or obj_pose % 2 == 1:
+                        continue
+
+                    goal_pose = 2 * obj + 1
+                    obs_poses = set(curr_arrangement).difference([obj_pose, goal_pose])
+
+                    def condition(x):
+                        # print("Test: ", x, obs_poses)
+                        return len(obs_poses.intersection(x[:-1])) == 0
+
+                    path = BFS(
+                        self.RGAdj,
+                        self.pose2reg[obj_pose],
+                        self.pose2reg[goal_pose],
+                        condition,
+                    )
+
+                    # for rid in self.shortestPath[obj]:
+                    for rid in path:
+                        if buff in rid[:-1]:
+                            rank -= 1
+                            break
+                pose_ranks[buff] = rank
+            buff_ranks[obj] = pose_ranks
+
+            ### object priority
+            poses_ranked = sorted(pose_ranks, key=lambda x: pose_ranks[x], reverse=True)
+            for buff in poses_ranked[:num_buffers]:
+                objects2buffers.append([obj, buff])
+
+        ### buffer priority
+        # for drank in range(self.numObjs, -1, -1):
+        #     for obj in object_ranking:
+        #         for buff, rank in buff_ranks[obj].items():
+        #             if rank == drank:
+        #                 objects2buffers.append([obj, buff])
 
         return objects2buffers
-
-
-
 
     def findBufferForPose(self, curr_obj_pose, curr_arrangement, goal_obj_pose, goal_arrangement):
         occupied_poses = []
@@ -585,10 +656,9 @@ class UltimateHeuristicPlanner(object):
         ### You are reaching here since the BFS search is finished
         return farthest_reachable_buffer_pose
 
-
     def rankObjects(self, DG):
         ### get the objects inner degree and outer degree from DG
-        objects_degree_dict = [] ### (obj_idx, inner_degree, outer_degree)
+        objects_degree_dict = []  ### (obj_idx, inner_degree, outer_degree)
         numObjs = DG.shape[0]
         for obj_idx in range(numObjs):
             objects_degree_dict.append((obj_idx, sum(DG[:, obj_idx]), sum(DG[obj_idx, :])))
@@ -602,13 +672,12 @@ class UltimateHeuristicPlanner(object):
         # print(objects_degree_dict)
 
         object_ranking = []
-        for obj_info in objects_degree_dict[0:self.k+1]:
+        for obj_info in objects_degree_dict[0:self.k + 1]:
             object_ranking.append(obj_info[0])
 
         # print("object_ranking: " + str(object_ranking))
 
         return object_ranking
-
 
     def rankObjectsFromDependency(self, object_dependency_opts, object_to_move):
         ### This function tries to rank objects (priority to leave the current pose) given object dependency at given arrangement
@@ -635,13 +704,13 @@ class UltimateHeuristicPlanner(object):
 
         ### Given the objects_degree_dict, let's rank the object
         ### (0) the objects not moved at the current arrangement
-        ### (1) start pose degree of interference 
+        ### (1) start pose degree of interference
         ### (2) goal pose degree of interference
 
         ### we prioritze the unmoved objects
-        # objects_degree_dict = sorted(objects_degree_dict, key=itemgetter(3), reverse=True) 
+        # objects_degree_dict = sorted(objects_degree_dict, key=itemgetter(3), reverse=True)
         # ### we prioritize the objects whose current poses is a constraint
-        # objects_degree_dict = sorted(objects_degree_dict, key=itemgetter(1), reverse=True) 
+        # objects_degree_dict = sorted(objects_degree_dict, key=itemgetter(1), reverse=True)
         # ### we prioritize the objects whose goal poses is a constraint
         # objects_degree_dict = sorted(objects_degree_dict, key=itemgetter(2), reverse=True)
         objects_degree_dict = sorted(objects_degree_dict, reverse=True)
@@ -651,13 +720,12 @@ class UltimateHeuristicPlanner(object):
         #     print(item)
 
         object_ranking = []
-        for obj_info in objects_degree_dict[0:self.k+1]:
+        for obj_info in objects_degree_dict[0:self.k + 1]:
             object_ranking.append(obj_info[3])
 
         # print("object_ranking: " + str(object_ranking))
 
         return object_ranking
-
 
     def object_dependency_opts_generate(self, query_arrangement, goal_arrangement, object_to_move):
         num_objs = len(query_arrangement)
@@ -683,7 +751,6 @@ class UltimateHeuristicPlanner(object):
 
         return object_dependency_opts
 
-
     def decodeArrangement(self, node_id, init_arrangement, goal_arrangement):
         ### This function, based on number of objects in the current problem
         ### convert the node_id (int) into arrangement (a list of pose idx)
@@ -698,7 +765,6 @@ class UltimateHeuristicPlanner(object):
                 new_arrangement.append(init_arrangement[i])
 
         return new_arrangement
-
 
     def decodeArrangement_withBuffer(self, node_id, init_arrangement, goal_arrangement, obj_idx, buff_idx):
         new_arrangement = []
@@ -721,7 +787,6 @@ class UltimateHeuristicPlanner(object):
             new_arrangement[obj_idx] = goal_arrangement[obj_idx]
 
         return new_arrangement
-
 
     def identifyObject2buffer(self, arcs, DG):
         ### Input: arcs that are inevitably violated
@@ -747,7 +812,7 @@ class UltimateHeuristicPlanner(object):
             elif curr_inner_degree == largest_inner_degree:
                 most_constraining_objects.append(obj_idx)
 
-        ### if there are more than one most constraining objects, 
+        ### if there are more than one most constraining objects,
         ### pick the one with the least constrained one (smallest outer degree)
         if len(most_constraining_objects) != 1:
             smallest_outer_degree = np.inf
@@ -763,7 +828,6 @@ class UltimateHeuristicPlanner(object):
         else:
             return most_constraining_objects[0]
 
-
     def computeObjectsToMove(self, init_arrangement, final_arrangement):
         ### input: init_arrangement (a list of pose_idx)
         ###        final arrangement (a list of pose_idx)
@@ -775,9 +839,8 @@ class UltimateHeuristicPlanner(object):
 
         return objects_to_move
 
-
     def splitOrderingAndPathSelection(self, object_ordering, path_selection_dict, obj_idx):
-        ### This function splits the object_ordering and path_selection_dict into two pieces 
+        ### This function splits the object_ordering and path_selection_dict into two pieces
         ### using obj_idx as the splitting factor
         order_untilBuffer = []
         order_afterBuffer_tillEnd = []
@@ -791,16 +854,15 @@ class UltimateHeuristicPlanner(object):
             ### check if object_index the the object to put to the buffer
             if object_index == obj_idx:
                 break
-        for mm in range(kk+1, len(object_ordering)):
+        for mm in range(kk + 1, len(object_ordering)):
             object_index = object_ordering[mm]
             order_afterBuffer_tillEnd.append(object_index)
-            if object_index == obj_idx: 
+            if object_index == obj_idx:
                 pathSelection_afterBuffer_tillEnd[object_index] = path_selection_dict[self.numObjs]
             else:
                 pathSelection_afterBuffer_tillEnd[object_index] = path_selection_dict[object_index]
 
         return order_untilBuffer, order_afterBuffer_tillEnd, pathSelection_untilBuffer, pathSelection_afterBuffer_tillEnd
-
 
     def interpolateArr(self, start_arrangement, goal_arrangement, order_untilBuffer, obj_idx, buff_idx):
         ### This function figures out an intermediate arrangement between start_arrangement and goal_arrangement
@@ -813,7 +875,6 @@ class UltimateHeuristicPlanner(object):
                 intermediate_arrangement[object_index] = goal_arrangement[object_index]
 
         return intermediate_arrangement
-
 
     def getStraightPaths(self):
         ### Before we perform search and increment the dependency and path dict
@@ -845,9 +906,9 @@ class UltimateHeuristicPlanner(object):
                 start_pt = self.points[i]
                 goal_pt = self.points[j]
                 straight_dist = dist(start_pt, goal_pt)
-                nsegs = max(1, int(straight_dist/dist_piece)) ### at least 1 nsegs
-                keypts_check = 5 ### only add every 5 pts
-                for kk in range(nsegs+1):
+                nsegs = max(1, int(straight_dist / dist_piece))  ### at least 1 nsegs
+                keypts_check = 5  ### only add every 5 pts
+                for kk in range(nsegs + 1):
                     temp_ptx = start_pt[0] + (goal_pt[0] - start_pt[0]) / nsegs * kk
                     temp_pty = start_pt[1] + (goal_pt[1] - start_pt[1]) / nsegs * kk
                     temp_pt = (temp_ptx, temp_pty)
@@ -869,7 +930,6 @@ class UltimateHeuristicPlanner(object):
         # for key_pair, path in self.path_dict.items():
         #     print(str(key_pair) + ": " + str(path))
 
-
     def visualizeLocalBranch(self, parent_id, child_id, connectMode):
         ### Two connect modes
         ### (1) "L,L"
@@ -884,9 +944,10 @@ class UltimateHeuristicPlanner(object):
             childNode = self.treeR[child_id]
             temp_ppaths = self.getPaths(parentNode, childNode, "Bridge")
 
-        self.visualTool.drawLocalMotions((parent_id, child_id), temp_ppaths,
-            self.points, self.poses, parentNode.arrangement, self.final_arrangement, "save-to-tree")
-
+        self.visualTool.drawLocalMotions(
+            (parent_id, child_id), temp_ppaths, self.points, self.poses, parentNode.arrangement, self.final_arrangement,
+            "save-to-tree"
+        )
 
     def getPaths(self, parentNode, childNode, treeMode):
         ### Input: 1. parentNode -> childNode, indicating the direction of tree node
@@ -894,7 +955,7 @@ class UltimateHeuristicPlanner(object):
         ### Output: point paths for all involved objects {obj_idx: [(x,x), (x,x), ... , (x, x)]}
 
         result_path = OrderedDict()
-        
+
         ### loop through the objects moved based on object_ordering
         for obj_idx in childNode.object_ordering:
             ### get the key (pose1, pose2)
@@ -902,14 +963,13 @@ class UltimateHeuristicPlanner(object):
             goal_key = childNode.arrangement[obj_idx]
             path_option_curr_obj = childNode.path_option[obj_idx]
 
-
             if path_option_curr_obj == 0:
                 ### it is a straight path
                 start_pt = self.points[start_key]
                 goal_pt = self.points[goal_key]
                 nsteps = 3
                 result_path[obj_idx] = []
-                for step in range(nsteps+1):
+                for step in range(nsteps + 1):
                     pt_x = start_pt[0] + (goal_pt[0] - start_pt[0]) / nsteps * step
                     pt_y = start_pt[1] + (goal_pt[1] - start_pt[1]) / nsteps * step
                     result_path[obj_idx].append((pt_x, pt_y))
@@ -925,7 +985,7 @@ class UltimateHeuristicPlanner(object):
                     region1 = rpath[i]
                     region2 = rpath[i + 1]
                     if (region1, region2) in self.new_paths.keys():
-                        ppath += self.new_paths[(region1, region2)][:-1] ### only add region1 point
+                        ppath += self.new_paths[(region1, region2)][:-1]  ### only add region1 point
                     elif (region2, region1) in self.new_paths.keys():
                         ppath += list(reversed(self.new_paths[(region2, region1)]))[:-1]
                     else:
@@ -943,18 +1003,17 @@ class UltimateHeuristicPlanner(object):
                     else:
                         print "invalid path 2"
                         exit()
-                
+
                 ppath.append(self.points[goal_key])
 
                 ### A single improvement: remove the second and second-to-last point in the ppath
                 ppath.pop(1)
-                ppath.pop(len(ppath)-2)
+                ppath.pop(len(ppath) - 2)
 
                 result_path[obj_idx] = ppath
 
         ### reach here since we have done all objects
         return result_path
-
 
     def getSolutionStats(self):
         # print("Let's get stats!!")
@@ -962,7 +1021,7 @@ class UltimateHeuristicPlanner(object):
         self.numNodesInLeftTree = len(self.treeL)
         self.numNodesInRightTree = len(self.treeR)
         self.numLeftBranches = self.numNodesInLeftTree - 1
-        self.numRightBranches = self.numNodesInRightTree - 1        
+        self.numRightBranches = self.numNodesInRightTree - 1
         self.simplePath = []
         ### from R0, back track to left root via parent search
         self.simplePath.insert(0, "R0")
@@ -976,11 +1035,11 @@ class UltimateHeuristicPlanner(object):
 
         ### add ordering here
         ### add non-monotone actions here
-        self.final_order = [] ### a list of obj_idx
-        self.all_transitions = [] ### value: [obj_idx, [from_pose_idx, to_pose_idx]]
+        self.final_order = []  ### a list of obj_idx
+        self.all_transitions = []  ### value: [obj_idx, [from_pose_idx, to_pose_idx]]
         for kk in range(1, len(self.simplePath)):
             pointNode_id = self.simplePath[kk]
-            prev_pointNode_id = self.simplePath[kk-1]
+            prev_pointNode_id = self.simplePath[kk - 1]
             if pointNode_id[0] == "L" and prev_pointNode_id[0] == "L":
                 curr_arrangement = self.treeL[pointNode_id].arrangement
                 prev_arrangement = self.treeL[prev_pointNode_id].arrangement
@@ -988,7 +1047,7 @@ class UltimateHeuristicPlanner(object):
             elif pointNode_id[0] == "R" and prev_pointNode_id[0] == "L":
                 curr_arrangement = self.treeR[pointNode_id].arrangement
                 prev_arrangement = self.treeL[prev_pointNode_id].arrangement
-                temp_object_ordering = self.treeR[pointNode_id].object_ordering                
+                temp_object_ordering = self.treeR[pointNode_id].object_ordering
             for obj_idx in temp_object_ordering:
                 self.final_order.append(obj_idx)
                 self.all_transitions.append([obj_idx, [prev_arrangement[obj_idx], curr_arrangement[obj_idx]]])
@@ -997,13 +1056,12 @@ class UltimateHeuristicPlanner(object):
         # for [obj_idx, obj_transition] in self.all_transitions:
         #     print(str(obj_idx) + ": " + str(obj_transition))
 
-
     def constructWholePath(self):
         curr_waypoint_id = "R0"
         childNode = self.treeR[curr_waypoint_id]
         parent_waypoint_id = childNode.parent_id
         parentNode = self.treeL[parent_waypoint_id]
-        
+
         temp_ppaths = self.getPaths(parentNode, childNode, "Bridge")
         self.whole_path.insert(0, [(parent_waypoint_id, curr_waypoint_id), temp_ppaths])
         curr_waypoint_id = self.treeR[curr_waypoint_id].parent_id
@@ -1017,17 +1075,14 @@ class UltimateHeuristicPlanner(object):
             curr_waypoint_id = self.treeL[curr_waypoint_id].parent_id
 
 
-
-
 class ArrNode(object):
     def __init__(self, arrangement, node_id, cost_to_come, object_ordering, path_option, parent_id):
         self.arrangement = arrangement
         self.node_id = node_id
         self.cost_to_come = cost_to_come
-        self.object_ordering = object_ordering ### a ordered list of object indices
-        self.path_option = path_option ### a dict {obj_idx: path_idx}
+        self.object_ordering = object_ordering  ### a ordered list of object indices
+        self.path_option = path_option  ### a dict {obj_idx: path_idx}
         self.parent_id = parent_id
-
 
     def updateCostToCome(self, cost_to_come):
         self.cost_to_come = cost_to_come
@@ -1040,6 +1095,3 @@ class ArrNode(object):
 
     def updateParent(self, parent_id):
         self.parent_id = parent_id
-
-
-
