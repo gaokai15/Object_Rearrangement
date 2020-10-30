@@ -549,6 +549,28 @@ class UltimateHeuristicPlanner(object):
         #                     ### the objects have not yet moved to the goal on the current arrangement
         #                     objects2buffers.append([obj, buff])
 
+        shortestPath = {}
+        for obj_test in range(self.numObjs):
+            obj_pose = curr_arrangement[obj_test]
+            if obj_pose % 2 == 1:
+                continue
+
+            goal_pose = 2 * obj_test + 1
+            obs_poses = set(curr_arrangement).difference([obj_pose, goal_pose])
+
+            def condition(x):
+                # print("Test: ", x, obs_poses)
+                return len(obs_poses.intersection(x[:-1])) == 0
+
+            path = BFS(
+                self.RGAdj,
+                self.pose2reg[obj_pose],
+                self.pose2reg[goal_pose],
+                condition,
+            )
+
+            shortestPath[obj_test] = path
+
         buff_ranks = {}
         for obj in object_ranking:
             feasible_poses = set(self.allPoses).difference(curr_arrangement)
@@ -570,23 +592,25 @@ class UltimateHeuristicPlanner(object):
                     if obj == obj_test or obj_pose % 2 == 1:
                         continue
 
-                    goal_pose = 2 * obj + 1
-                    obs_poses = set(curr_arrangement).difference([obj_pose, goal_pose])
+                    # goal_pose = 2 * obj_test + 1
+                    # obs_poses = set(curr_arrangement).difference([obj_pose, goal_pose])
 
-                    def condition(x):
-                        # print("Test: ", x, obs_poses)
-                        return len(obs_poses.intersection(x[:-1])) == 0
+                    # def condition(x):
+                    #     # print("Test: ", x, obs_poses)
+                    #     return len(obs_poses.intersection(x[:-1])) == 0
 
-                    path = BFS(
-                        self.RGAdj,
-                        self.pose2reg[obj_pose],
-                        self.pose2reg[goal_pose],
-                        condition,
-                    )
+                    # path = BFS(
+                    #     self.RGAdj,
+                    #     self.pose2reg[obj_pose],
+                    #     self.pose2reg[goal_pose],
+                    #     condition,
+                    # )
 
+                    path = shortestPath[obj_test]
                     # for rid in self.shortestPath[obj]:
                     for rid in path:
                         if buff in rid[:-1]:
+                            # rank -= 1
                             rank += self.numObjs
                             break
                 pose_ranks[buff] = rank
@@ -595,6 +619,7 @@ class UltimateHeuristicPlanner(object):
             # print(buff_ranks)
 
             ### object priority
+            # poses_ranked = sorted(pose_ranks, key=lambda x: pose_ranks[x], reverse=True)
             poses_ranked = sorted(pose_ranks, key=lambda x: pose_ranks[x])
             for buff in poses_ranked[:num_buffers]:
                 objects2buffers.append([obj, buff])
