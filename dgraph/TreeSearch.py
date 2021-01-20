@@ -10,17 +10,17 @@ from random import sample
 from dspace import *
 from DG_Space import set_max_memory
 
-from BiDirDPPlanner import BiDirDPPlanner as Planner
+# from BiDirDPPlanner import BiDirDPPlanner as Planner
 # from BiDirDPPlanner_dyn import BiDirDPPlanner as Planner
 # from BiDirDPPlanner_dyn_rand import BiDirDPPlanner as Planner
 
 # from FastHeuristicDPPlanner import FastHeuristicDPPlanner as Planner
 # from FastHeuristicDPPlanner_dyn import FastHeuristicDPPlanner as Planner
-# from UltimateHeuristicPlanner import UltimateHeuristicPlanner as Planner
+from UltimateHeuristicPlanner import UltimateHeuristicPlanner as Planner
 
 # VISUALIZE = False
 VISUALIZE = True
-num_buffers = 100
+num_buffers = 10
 
 
 class Experiments(object):

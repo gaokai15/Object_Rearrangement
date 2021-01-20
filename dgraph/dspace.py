@@ -7,6 +7,7 @@ from klampt.vis.glprogram import GLProgram
 from klampt.math import vectorops
 
 import sys
+import json
 from time import time
 from itertools import combinations
 from random import random, seed, choice
@@ -230,6 +231,31 @@ class DiskCSpace(CSpace):
         self.regions = None
         self.pose2reg = None
         self.rGraph = None
+
+    @staticmethod
+    def from_json(filename):
+        # {
+        #   "n": <number of objects>,
+        #   "radius": <disk radius>,
+        #   "height": <environment height>,
+        #   "width": <environment width>,
+        #   "starts": [[x0,y0], [x1,y1], ..., [xn,yn]],  # array of coordinates indexed by object number
+        #   "goals": [[x0,y0], [x1,y1], ..., [xn,yn]],  # array of coordinates indexed by object number
+        #   "obstacles": [ # array of obstacles each specified as a counter clockwise polygon point array
+        #     [[x0,y0]...],
+        #     [[x0,y0],...],
+        #     ...
+        #   ]
+        # }
+        with open(filename) as f:
+            data = json.load(f)
+
+            posemap = {'S' + str(i): Circle(p[0], p[1], data['radius']) for i, p in enumerate(data['starts'])}
+            posemap.update({'G' + str(i): Circle(p[0], p[1], data['radius']) for i, p in enumerate(data['goals'])})
+            # print(posemap)
+            return DiskCSpace(
+                data['radius'], posemap, [Poly(poly) for poly in data['obstacles']], data['height'], data['width']
+            )
 
     def setRobotRad(self, rad):
         self.robot.radius = rad

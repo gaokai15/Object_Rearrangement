@@ -531,16 +531,19 @@ class UltimateHeuristicPlanner(object):
         buff_ranks = {}
         for obj in object_ranking:
             feasible_poses = set(self.space.poseMap.keys()).difference(curr_arrangement)
-            for pose in list(feasible_poses):
-                if not self.pose_reachable(obj, curr_arrangement, pose):
-                    feasible_poses.remove(pose)
+            # for pose in list(feasible_poses):
+            #     if not self.pose_reachable(obj, curr_arrangement, pose):
+            #         feasible_poses.remove(pose)
 
             # feasible_poses = list(feasible_poses)[:5]
             # for buff in feasible_poses:
             #     objects2buffers.append([obj, buff])
             pose_ranks = {}
             for buff in feasible_poses:
-                rank = self.numObjs
+                # rank = self.numObjs
+                rank = self.pose_reachable(obj, curr_arrangement, buff)
+                if rank == 0: continue
+
                 for obj_test in range(self.numObjs):
                     obj_pose = curr_arrangement[obj_test]
                     if obj == obj_test or obj_pose[0] == 'G':
@@ -563,13 +566,13 @@ class UltimateHeuristicPlanner(object):
                     # for rid in self.shortestPath[obj]:
                     for rid in path:
                         if buff in rid[:-1]:
-                            rank -= 1
+                            rank += self.numObjs
                             break
                 pose_ranks[buff] = rank
             buff_ranks[obj] = pose_ranks
 
             ### object priority
-            poses_ranked = sorted(pose_ranks, key=lambda x: pose_ranks[x], reverse=True)
+            poses_ranked = sorted(pose_ranks, key=lambda x: pose_ranks[x])
             for buff in poses_ranked[:5]:
                 objects2buffers.append([obj, buff])
 
