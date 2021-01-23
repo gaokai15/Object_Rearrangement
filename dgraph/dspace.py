@@ -427,9 +427,10 @@ class DiskCSpace(CSpace):
                 regions[rid_n] = poly
 
                 for i, p in self.poseMap.items():
-                    # print(i, p)
                     # if pc.PointInPolygon(p.center, cont):
                     if findNearest(p.center, EPSILON, lambda x: pc.PointInPolygon(x, cont)):
+                        # print(i, p)
+                        # print(rid_n)
                         obj2reg[i] = rid_n
 
             del regions[rid]
@@ -449,6 +450,7 @@ class DiskCSpace(CSpace):
 
         self.regions = regions
         self.pose2reg = obj2reg
+        # print(self.regions)
         # for rid, r in regions.items():
         #     print(rid, r.type, r.points)
 
