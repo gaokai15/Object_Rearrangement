@@ -49,5 +49,9 @@
   ], 
   "obstacles": [], 
   "is_monotone": true, 
+<<<<<<< HEAD
   "computation_time": 0.010745048522949219
+=======
+  "computation_time": 0.008871078491210938
+>>>>>>> 01f30ca08325ccf2ba6e34d188d720d84cd974bd
 }
