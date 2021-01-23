@@ -2,6 +2,7 @@ import sys
 import glob
 import time
 import json
+import signal
 from multiprocessing import Pool, cpu_count
 from collections import OrderedDict
 
@@ -67,8 +68,19 @@ def label_challenge1(directory):
     #     trial = int(trial.split('.')[0])
     #     print(D, n, trial)
     #     label_isMonotone(filename)
-    p = Pool(cpu_count)
-    p.map(label_isMonotone, glob.glob(directory + '/*/*/*.json'))
+    original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+    pool = Pool(cpu_count())
+    signal.signal(signal.SIGINT, original_sigint_handler)
+    try:
+        pool.map_async(label_isMonotone, glob.glob(directory + '/*/*/*.json')).get(60)
+    except KeyboardInterrupt:
+        print('\nQuitting!')
+        pool.terminate()
+        sys.exit(0)
+    else:
+        print('Done!')
+        pool.close()
+    pool.join()
 
 
 def prettyfy(directory):
