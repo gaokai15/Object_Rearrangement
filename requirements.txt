@@ -1,5 +1,6 @@
 numpy
 klampt
+PyOpenGL
 gurobipy
 Polygon2
 pyclipper
