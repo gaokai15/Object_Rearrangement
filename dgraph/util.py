@@ -3,6 +3,7 @@
 import colorsys
 from math import *
 from itertools import product
+from collections import deque
 
 import pyclipper as pc
 from klampt.math import vectorops
@@ -113,6 +114,20 @@ def polyTOUCH(poly1, poly2):
     return c > 0
 
 
+def polySEGCLIP(seg, poly):
+    if not (seg and poly):
+        return []
+
+    clip = pc.Pyclipper()
+    clip.AddPath(seg, pc.PT_SUBJECT, False)
+    if type(poly[0][0]) == list:
+        clip.AddPaths(poly, pc.PT_CLIP, True)
+    else:
+        clip.AddPath(poly, pc.PT_CLIP, True)
+
+    return clip.Execute2(pc.CT_INTERSECTION, pc.PFT_NONZERO, pc.PFT_NONZERO)
+
+
 def findNearest(point, rad, testfunc):
     for disp in sorted(product(range(-rad, rad + 1), repeat=2), key=lambda x: vectorops.distanceSquared(x, (0, 0))):
         testPoint = vectorops.add(point, disp)
@@ -129,6 +144,28 @@ def checkBitStatusAtPos(n, k):
     #This code is contributed by Gitanjali (GeeksforGeeks)
     new_num = n >> k
     return (new_num & 1)
+
+
+def BFS(graphAdj, start, goal, condition=lambda x: True):
+    path = []
+    backtrace = {start: start}
+    explore = deque([start])
+    while goal not in backtrace:
+        if len(explore) > 0:
+            u = explore.pop()
+        else:
+            return []
+        for v in filter(condition, graphAdj[u]):
+            if v not in backtrace:
+                backtrace[v] = u
+                explore.appendleft(v)
+
+    path.append(goal)
+    while backtrace[path[-1]] != path[-1]:
+        path.append(backtrace[path[-1]])
+    path.reverse()
+
+    return path
 
 
 def circle_intersections(x0, y0, r0, x1, y1, r1):

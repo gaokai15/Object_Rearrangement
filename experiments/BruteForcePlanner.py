@@ -41,8 +41,12 @@ class Non_Monotone_Solver_General(object):
                 return
             print "number of objects that use buffers", obj_num
             for obj_set in combinations(self.start_poses.keys(), obj_num): # which objs need buffers
-                for buffer_set in product(sorted(self.obj_locations.keys(), reverse=False), repeat=obj_num): # which poses are buffers
+                if time.clock() - start_time > time_allowed:
+                    ### time exceed, solution not found
+                    return
+                for buffer_set in product(sorted(self.obj_locations.keys(), reverse=True), repeat=obj_num): # which poses are buffers
                     if time.clock() - start_time > time_allowed:
+                        ### time exceed, solution not found
                         return
                     obj_buffer_dict = {}
                     Degrade = False # when an object uses its own start or goal pose as a buffer, Degrade = True.

@@ -1,7 +1,8 @@
 from __future__ import division
 
 
-from DPLocalSolver import DFS_Rec_for_Monotone_General
+# from DPLocalSolver import DFS_Rec_for_Monotone_General
+from mRS import MRS_for_Non_Monotone
 from util import *
 import os
 import copy
@@ -9,10 +10,21 @@ import IPython
 import time
 import random
 import numpy as np
+import math
 from random import sample
 from collections import OrderedDict
+import sys
+import os
 
-class BiDirDPPlanner(object):
+# Disable
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
+
+class UniDir_mRS_Planner(object):
     ### Input:
     ### (1) initial_arrangement (a list of pose_ids, each of which indicating the initial pose for an object)
     ### (2) final_arrangement (a list of pose_ids, each of which indicating the final pose for an object)
@@ -88,10 +100,10 @@ class BiDirDPPlanner(object):
 
         ### initial connection attempt
         self.growSubTree(self.treeL["L0"], self.treeR["R0"], "Left")
-        if (self.isConnected != True):
-            self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
+        # if (self.isConnected != True):
+        #     self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
-        totalTime_allowed = 10*self.numObjs ### allow 500s for the total search tree construction
+        totalTime_allowed = 20*self.numObjs ### allow 500s for the total search tree construction
         start_time = time.clock()        
 
         while (self.isConnected != True and time.clock() - start_time < totalTime_allowed):
@@ -99,14 +111,16 @@ class BiDirDPPlanner(object):
             newChild_nodeID = self.mutateLeftChild()
             if newChild_nodeID != None:
                 self.growSubTree(self.treeL[newChild_nodeID], self.treeR["R0"], "Left")
-            if (self.isConnected != True):
-                newChild_nodeID = self.mutateRightChild()
-                if newChild_nodeID != None:
-                    self.growSubTree(self.treeR[newChild_nodeID], self.treeL["L0"], "Right")
+
+            # if (self.isConnected != True and time.clock() - start_time < totalTime_allowed):
+            #     newChild_nodeID = self.mutateRightChild()
+            #     if newChild_nodeID != None:
+            #         self.growSubTree(self.treeR[newChild_nodeID], self.treeL["L0"], "Right")
 
 
         if self.isConnected:
-            return
+            # self.getSolutionStats()
+            return 
 
         ### handle failure
         if self.isConnected == False:
@@ -141,8 +155,11 @@ class BiDirDPPlanner(object):
         for i in range(len(new_arrangement)):
             goal_poses[i] = new_arrangement[i]
         # time_monotoneCall = time.clock()
-        subTree = DFS_Rec_for_Monotone_General(
-            start_poses, goal_poses, self.dependency_dict, self.path_dict, \
+        # subTree = DFS_Rec_for_Monotone_General(
+        #     start_poses, goal_poses, self.dependency_dict, self.path_dict, \
+        #     self.pose_locations, self.linked_list, self.region_dict)
+        subTree = MRS_for_Non_Monotone(
+            start_poses, goal_poses, \
             self.pose_locations, self.linked_list, self.region_dict)
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
@@ -228,9 +245,12 @@ class BiDirDPPlanner(object):
         for i in range(len(new_arrangement)):
             goal_poses[i] = new_arrangement[i]
         # time_monotoneCall = time.clock()
-        subTree = DFS_Rec_for_Monotone_General(
-            start_poses, goal_poses, self.dependency_dict, self.path_dict, \
-            self.pose_locations, self.linked_list, self.region_dict)
+        # subTree = DFS_Rec_for_Monotone_General(
+        #     start_poses, goal_poses, self.dependency_dict, self.path_dict, \
+        #     self.pose_locations, self.linked_list, self.region_dict)
+        subTree = MRS_for_Non_Monotone(
+            start_poses, goal_poses, \
+            self.pose_locations, self.linked_list, self.region_dict)        
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
@@ -297,8 +317,11 @@ class BiDirDPPlanner(object):
             goal_poses[i] = goalNode.arrangement[i]
 
         # time_monotoneCall = time.clock()
-        subTree = DFS_Rec_for_Monotone_General(
-            start_poses, goal_poses, self.dependency_dict, self.path_dict, \
+        # subTree = DFS_Rec_for_Monotone_General(
+        #     start_poses, goal_poses, self.dependency_dict, self.path_dict, \
+        #     self.pose_locations, self.linked_list, self.region_dict)
+        subTree = MRS_for_Non_Monotone(
+            start_poses, goal_poses, \
             self.pose_locations, self.linked_list, self.region_dict)
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
@@ -784,10 +807,12 @@ class BiDirDPPlanner(object):
             curr_waypoint_id = self.treeR[curr_waypoint_id].parent_id
             self.simplePath.append(curr_waypoint_id)
 
+        enablePrint()
         print("path: " + str(self.simplePath))
         self.totalActions = len(self.simplePath) - 1
         print("total action: " + str(self.totalActions))
         print("solution cost: " + str(self.best_solution_cost))
+        # blockPrint()
 
         time_computeOrdering = time.clock()
         ### add ordering here

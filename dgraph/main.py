@@ -10,7 +10,7 @@ from dspace import *
 from DG_Space import set_max_memory, DFS_Rec_for_Monotone_General, linked_list_conversion
 from TreeSearch import Experiments
 
-num_buffers = 0
+num_buffers = 100
 
 
 def isMonotone(space):
@@ -148,22 +148,26 @@ if __name__ == "__main__":
         EXP = Experiments()
         set_max_memory(1.3 * 2**(34))  #2**34=16G
         with open(out_file, 'w') as outfile:
-            print('name, num_objs, radius, trial, actions, time', file=outfile)
+            print('name, num_objs, radius, trial, actions, time, iterations', file=outfile)
             for env_file in glob(tests_glob):
                 name = env_file.split('/')[-1].split('.')[0]
                 space = loadEnv(env_file)
                 space.regionGraph()
                 if num_buffers > 0:
                     seed(env_file)
-                    genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 50)
+                    genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 1)
                     # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+                    # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_boundary')
+                    # genBuffers(num_buffers, space, [], 'greedy_free')
+                    # genBuffers(num_buffers, space, [], 'greedy_boundary')
                     # genBuffers(num_buffers, space, [], 'boundary_random', 50)
                     # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random')
                     space.regionGraph()
                 try:
-                    actions, runtime = EXP.single_instance(space, False)
+                    actions, runtime, iters = EXP.single_instance(space, False)
                 except Exception as e:
                     actions = -1
-                    runtime = repr(e)
+                    runtime = -1
+                    iters = repr(e).replace(',', '.')
 
-                print(','.join(name.split('_') + [str(actions), str(runtime)]), file=outfile)
+                print(','.join(name.split('_') + [str(actions), str(runtime), str(iters)]), file=outfile)

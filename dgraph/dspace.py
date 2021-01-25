@@ -7,6 +7,7 @@ from klampt.vis.glprogram import GLProgram
 from klampt.math import vectorops
 
 import sys
+import json
 from time import time
 from itertools import combinations
 from random import random, seed, choice
@@ -16,7 +17,7 @@ import pyclipper as pc
 
 from util import *
 
-num_buffers = 0
+num_buffers = 100
 EPSILON = 1
 
 
@@ -118,7 +119,7 @@ class Poly:
                         c -= 1
             return c > 0
         elif self.type == 'S_Poly':
-            return pc.PointInPolygon(point, self.points)
+            return bool(pc.PointInPolygon(point, self.points))
 
     def quasiCenter(self):
         center = (0, 0)
@@ -153,10 +154,33 @@ class Poly:
             if poly:
                 return poly.sample(random)
         elif self.type == 'S_Poly':
-            if reachable_to is None or pc.PointInPolygon(reachable_to, cont):
+            if reachable_to is None or pc.PointInPolygon(reachable_to, self.points):
                 poly = pn.Polygon(self.points)
                 return poly.sample(random)
         return False
+
+    def pathConnected(self, u, v):
+        if self.type == 'C_Poly':
+            c = 0
+            d = 0
+            cu = 0
+            cv = 0
+            for cont in self.points:
+                uinc = pc.PointInPolygon(u, cont)
+                vinc = pc.PointInPolygon(v, cont)
+                # print("in", uinc, vinc)
+                if uinc:
+                    cu += 1
+                if vinc:
+                    cv += 1
+                if uinc and vinc:
+                    c += 1
+                    d += 1 if pc.Orientation(cont) else -1
+            # print("==", d, cu, cv, c)
+            return (d > 0) and (cu == cv == c)
+        elif self.type == 'S_Poly':
+            # print("==", bool(pc.PointInPolygon(u, self.points)) and bool(pc.PointInPolygon(v, self.points)))
+            return bool(pc.PointInPolygon(u, self.points)) and bool(pc.PointInPolygon(v, self.points))
 
     def drawGL(self, color=(0.5, 0.5, 0.5)):
         if self.type == 'C_Poly':
@@ -207,6 +231,31 @@ class DiskCSpace(CSpace):
         self.regions = None
         self.pose2reg = None
         self.rGraph = None
+
+    @staticmethod
+    def from_json(filename):
+        # {
+        #   "n": <number of objects>,
+        #   "radius": <disk radius>,
+        #   "height": <environment height>,
+        #   "width": <environment width>,
+        #   "starts": [[x0,y0], [x1,y1], ..., [xn,yn]],  # array of coordinates indexed by object number
+        #   "goals": [[x0,y0], [x1,y1], ..., [xn,yn]],  # array of coordinates indexed by object number
+        #   "obstacles": [ # array of obstacles each specified as a counter clockwise polygon point array
+        #     [[x0,y0]...],
+        #     [[x0,y0],...],
+        #     ...
+        #   ]
+        # }
+        with open(filename) as f:
+            data = json.load(f)
+
+            posemap = {'S' + str(i): Circle(p[0], p[1], data['radius']) for i, p in enumerate(data['starts'])}
+            posemap.update({'G' + str(i): Circle(p[0], p[1], data['radius']) for i, p in enumerate(data['goals'])})
+            # print(posemap)
+            return DiskCSpace(
+                data['radius'], posemap, [Poly(poly) for poly in data['obstacles']], data['height'], data['width']
+            )
 
     def setRobotRad(self, rad):
         self.robot.radius = rad
@@ -378,9 +427,10 @@ class DiskCSpace(CSpace):
                 regions[rid_n] = poly
 
                 for i, p in self.poseMap.items():
-                    # print(i, p)
                     # if pc.PointInPolygon(p.center, cont):
                     if findNearest(p.center, EPSILON, lambda x: pc.PointInPolygon(x, cont)):
+                        # print(i, p)
+                        # print(rid_n)
                         obj2reg[i] = rid_n
 
             del regions[rid]
@@ -400,6 +450,7 @@ class DiskCSpace(CSpace):
 
         self.regions = regions
         self.pose2reg = obj2reg
+        # print(self.regions)
         # for rid, r in regions.items():
         #     print(rid, r.type, r.points)
 
@@ -573,6 +624,11 @@ class DiskCSpaceProgram(GLProgram):
             self.space.restoreObstacles(self.staticObs)
             self.space.computeMinkObs()
             self.path = None
+            # print(self.space.pose2reg['S1'])
+            # print(self.space.pose2reg['G1'])
+            # path = BFS(self.space.RGAdj, self.space.pose2reg['S1'], self.space.pose2reg['G1'])
+            # self.path = [self.space.regions[p].quasiCenter() for p in path]
+            # print(self.path)
             self.G = None
             self.planner = None
             self.index = -1
@@ -748,6 +804,38 @@ def genBuffers(n, space, occupied, method='random', param1=0, param2=[], count=0
             if space.mink_obs.type != 'Empty':
                 # point = space.mink_obs.sample()
                 point = findNearest([int(xy) for xy in space.mink_obs.sample()], EPSILON, space.mink_obs.contains)
+            else:
+                print("No free space!")
+                break
+            space.addPose('B' + str(i + count) + suffix, Circle(point[0], point[1], space.robot.radius))
+            space.addObstacle(Circle(point[0], point[1], space.robot.radius))
+            num_generated += 1
+
+    ### Greedy Boundary Sampling ###
+    elif method == 'greedy_boundary':
+        for pid in occupied:
+            p = space.poseMap[pid]
+            space.addObstacle(p)
+
+        space.setRobotRad(space.robot.radius + 5)
+        space.computeMinkObs()
+        space.setRobotRad(space.robot.radius - 5)
+
+        for i in range(n):
+            space.computeMinkObs()
+            if space.mink_obs.type != 'Empty':
+                # point = space.mink_obs.sample()
+                # point = findNearest([int(xy) for xy in space.mink_obs.sample()], EPSILON, space.mink_obs.contains)
+                if space.mink_obs.type == 'S_Poly':
+                    b_points = space.mink_obs.points
+                elif space.mink_obs.type == 'C_Poly':
+                    b_points = choice(space.mink_obs.points)
+                ind = choice(range(-1, len(b_points) - 1))
+                p1 = b_points[ind]
+                p2 = b_points[ind + 1]
+                point = findNearest(
+                    [int(xy) for xy in vectorops.interpolate(p1, p2, random())], EPSILON, space.mink_obs.contains
+                )
             else:
                 print("No free space!")
                 break
@@ -935,10 +1023,13 @@ if __name__ == '__main__':
 
     space.regionGraph()
     if num_buffers > 0:
-        genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 50)
+        genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 1)
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
-        # genBuffers(num_buffers, space, [], 'boundary_random', 50)
-        # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random')
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_boundary')
+        # genBuffers(num_buffers, space, [], 'greedy_free')
+        # genBuffers(num_buffers, space, [], 'greedy_boundary')
+        # genBuffers(num_buffers, space, [], 'boundary_random', 1)
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'boundary_random', 2)
         # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'boundary_feasible', 'G1')
         # genBuffers(num_buffers, space, filter(lambda x: x[0] == 'S', space.poseMap.keys()), 'object_feasible', 'G1')
         space.regionGraph()

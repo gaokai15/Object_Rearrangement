@@ -7,7 +7,7 @@ from random import sample, choice
 from collections import OrderedDict
 
 from dspace import genBuffers
-from util import checkBitStatusAtPos
+from util import checkBitStatusAtPos, BFS
 from DG_Space import DFS_Rec_for_Monotone_General, linked_list_conversion
 
 
@@ -26,6 +26,13 @@ class BiDirDPPlanner(object):
         self.numObjs = len(self.initial_arrangement)
         self.numBuffers = max(len(filter(lambda x: x[0] == 'B', self.space.poseMap.keys())), 1)
         print("Number of Buffers: ", self.numBuffers)
+
+        self.shortestPath = {}
+        for obj in range(self.numObjs):
+            self.shortestPath[obj] = BFS(
+                self.space.RGAdj, self.space.pose2reg['S' + str(obj)], self.space.pose2reg['G' + str(obj)]
+            )
+            # print(obj, self.shortestPath[obj])
 
         def init():
             ### initialize dependency_dict and path_dict as empty dict
@@ -79,10 +86,11 @@ class BiDirDPPlanner(object):
                 self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
         init()
-        print(self.space.poseMap.keys())
-        print(self.space.regions.keys())
+        # print(self.space.poseMap.keys())
+        # print(self.space.regions.keys())
         self.totalTime_allowed = 30 * self.numObjs  ### allow 30s per object for the total search
         self.restartTime = 200 * self.numObjs  ### allow 2s per object for the search before restarting
+        self.iterations = 0
         start_time = time.clock()
 
         while (self.isConnected != True and time.clock() - start_time < self.totalTime_allowed):
@@ -98,24 +106,121 @@ class BiDirDPPlanner(object):
                 # genBuffers(self.numBuffers, self.space, self.space.poseMap.keys(), 'greedy_free')
                 genBuffers(self.numBuffers, self.space, self.space.poseMap.keys(), 'random', 50)
                 self.space.regionGraph()
-                print(self.space.poseMap.keys())
-                print(self.space.regions.keys())
+                # print(self.space.poseMap.keys())
+                # print(self.space.regions.keys())
                 init()
 
             ### otherwise continue growing
             newChild_nodeID = self.mutateLeftChild()
+            self.iterations += 1
             if newChild_nodeID != None:
                 self.growSubTree(self.treeL[newChild_nodeID], self.treeR["R0"], "Left")
+                self.iterations += 1
             if (self.isConnected != True):
                 newChild_nodeID = self.mutateRightChild()
+                self.iterations += 1
                 if newChild_nodeID != None:
                     self.growSubTree(self.treeR[newChild_nodeID], self.treeL["L0"], "Right")
+                    self.iterations += 1
 
         # if self.isConnected:
         #     self.getTheStat()
 
         # if self.isConnected == False:
         #     print("failed to find a solution within " + str(self.totalTime_allowed) + " seconds...")
+
+    def pose_reachable(self, obj_idx, mutated_arrangement, pose_idx):
+        obj_pose = mutated_arrangement[obj_idx]
+        obs_poses = set(mutated_arrangement).difference([obj_pose, pose_idx])
+
+        # staticObstacles = self.space.saveObstacles()
+        # for pid in obs_poses:
+        #     p = self.space.poseMap[pid]
+        #     self.space.addObstacle(p)
+        # self.space.computeMinkObs()
+        # self.space.restoreObstacles(staticObstacles)
+        # return self.space.mink_obs.pathConnected(
+        #     self.space.poseMap[obj_pose].center, self.space.poseMap[pose_idx].center
+        # )
+
+        def condition(x):
+            # print("Test: ", x, obs_poses)
+            return len(obs_poses.intersection(x[:-1])) == 0
+
+        path = BFS(self.space.RGAdj, self.space.pose2reg[obj_pose], self.space.pose2reg[pose_idx], condition)
+        # print(path)
+        return len(path)
+
+    def choose_pose(self, obj_idx, mutated_arrangement):
+        # cur_pose = mutated_arrangement[obj_idx]
+        # hard_poses = set(mutated_arrangement)
+        # free_poses = set(self.space.poseMap.keys()) - hard_poses
+        # buffs = {b: set() for b in filter(lambda x: x[0] == 'B', free_poses)}
+        # for b in buffs.keys():
+        #     path = BFS(self.space.RGAdj, self.space.pose2reg[cur_pose], self.space.pose2reg[b])
+        #     for rid in path:
+        #         buffs[b].update(rid[:-1])
+        #     # print(b, buffs[b].intersection(hard_poses))
+        #     # print(b, buffs[b].intersection(soft_poses))
+        #     # buffs[b].intersection_update(mutated_arrangement)
+
+        # # buff_ranking = sorted(buffs.keys(), key=lambda x: len(buffs[x].intersection(hard_poses)))
+        # # for b in buff_ranking:
+        # #     print(b, buffs[b].intersection(hard_poses), len(hard_poses)-len(buffs[b].intersection(hard_poses)))
+        # poses = sum([[x] * (len(hard_poses) - len(buffs[x].intersection(hard_poses))) for x in buffs.keys()], [])
+
+        feasible_poses = set(self.space.poseMap.keys()).difference(mutated_arrangement)
+
+        # print(len(feasible_poses))
+        # t0 = time.time()
+        for pose in list(feasible_poses):
+            if not self.pose_reachable(obj_idx, mutated_arrangement, pose):
+                feasible_poses.remove(pose)
+        # print(time.time() - t0, len(feasible_poses))
+
+        # t0 = time.time()
+        pose_ranks = {}
+        for buff in feasible_poses:
+            rank = self.numObjs
+            for obj in range(self.numObjs):
+                obj_pose = mutated_arrangement[obj]
+                if obj == obj_idx or obj_pose[0] == 'G':
+                    continue
+
+                goal_pose = 'G' + str(obj)
+                obs_poses = set(mutated_arrangement).difference([obj_pose, goal_pose])
+
+                def condition(x):
+                    # print("Test: ", x, obs_poses)
+                    return len(obs_poses.intersection(x[:-1])) == 0
+
+                path = BFS(
+                    self.space.RGAdj,
+                    self.space.pose2reg[obj_pose],
+                    self.space.pose2reg[goal_pose],
+                    condition,
+                )
+
+                # for rid in self.shortestPath[obj]:
+                for rid in path:
+                    if buff in rid[:-1]:
+                        rank -= 1
+                        break
+            pose_ranks[buff] = rank
+
+        # poses_ranked = sorted(pose_ranks, key=lambda x: pose_ranks[x])
+        # poses = sum([[x] * poses_ranked.index(x) for x in poses_ranked], [])
+        poses = sum([[x] * pose_ranks[x] for x in pose_ranks], [])
+        # print(time.time() - t0)
+
+        # poses = list(feasible_poses)
+        # poses = self.space.poseMap.keys()
+
+        # print(poses)
+        if not poses:
+            return False
+        pose = choice(poses)
+        return pose
 
     def mutateRightChild(self):
         ### first choose a node to mutate
@@ -125,7 +230,10 @@ class BiDirDPPlanner(object):
         ### choose an object to move
         obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = choice(self.space.poseMap.keys())
+        # pose_idx = choice(self.space.poseMap.keys())
+        pose_idx = self.choose_pose(obj_idx, mutated_arrangement)
+        if not pose_idx:
+            return None
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
@@ -139,43 +247,50 @@ class BiDirDPPlanner(object):
             # print("The mutation makes a duplicate")
             return None
         ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
-        start_poses = {}
-        goal_poses = {}
-        for i in range(len(mutated_arrangement)):
-            start_poses[i] = mutated_arrangement[i]
-        for i in range(len(new_arrangement)):
-            goal_poses[i] = new_arrangement[i]
-        subTree = DFS_Rec_for_Monotone_General(
-            start_poses,
-            goal_poses,
-            self.dependency_dict,
-            self.path_dict,
-            self.object_locations,
-            self.linked_list,
-            self.region_dict,
+        # start_poses = {}
+        # goal_poses = {}
+        # for i in range(len(mutated_arrangement)):
+        #     start_poses[i] = mutated_arrangement[i]
+        # for i in range(len(new_arrangement)):
+        #     goal_poses[i] = new_arrangement[i]
+        # subTree = DFS_Rec_for_Monotone_General(
+        #     start_poses,
+        #     goal_poses,
+        #     self.dependency_dict,
+        #     self.path_dict,
+        #     self.object_locations,
+        #     self.linked_list,
+        #     self.region_dict,
+        # )
+        # ### update dependency_dict and path_dict
+        # self.dependency_dict = subTree.dependency_dict
+        # self.path_dict = subTree.path_dict
+        # if subTree.isMonotone == False:
+        #     # print("the mutation node cannot be connected")
+        #     return None
+        # else:
+
+        # t0 = time.time()
+        # pose_reachable = self.pose_reachable(obj_idx, mutated_arrangement, pose_idx)
+        # print(time.time() - t0)
+        # if not pose_reachable:
+        #     return None
+
+        ### we reach here since it is a duplicate and it can be connected
+        ### welcome this new arrangement
+        # print("the new arrangement after mutation has been accepted")
+        temp_transition = [new_arrangement[obj_idx], mutated_arrangement[obj_idx]]
+        temp_object_idx = obj_idx
+        temp_path_option = -1  #subTree.path_option[subTree.parent.keys()[0]]
+        temp_parent_cost = self.treeR[mutate_id].cost_to_come
+        self.treeR["R" + str(self.right_idx)] = ArrNode(
+            new_arrangement, "R" + str(self.right_idx), temp_transition, temp_object_idx, temp_path_option,
+            temp_parent_cost + 1, mutate_id
         )
-        ### update dependency_dict and path_dict
-        self.dependency_dict = subTree.dependency_dict
-        self.path_dict = subTree.path_dict
-        if subTree.isMonotone == False:
-            # print("the mutation node cannot be connected")
-            return None
-        else:
-            ### we reach here since it is a duplicate and it can be connected
-            ### welcome this new arrangement
-            # print("the new arrangement after mutation has been accepted")
-            temp_transition = [new_arrangement[obj_idx], mutated_arrangement[obj_idx]]
-            temp_object_idx = obj_idx
-            temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
-            temp_parent_cost = self.treeR[mutate_id].cost_to_come
-            self.treeR["R" + str(self.right_idx)] = ArrNode(
-                new_arrangement, "R" + str(self.right_idx), temp_transition, temp_object_idx, temp_path_option,
-                temp_parent_cost + 1, mutate_id
-            )
-            self.arrRightRegistr.append(new_arrangement)
-            self.idRightRegistr.append("R" + str(self.right_idx))
-            self.right_idx += 1
-            return self.idRightRegistr[self.arrRightRegistr.index(new_arrangement)]
+        self.arrRightRegistr.append(new_arrangement)
+        self.idRightRegistr.append("R" + str(self.right_idx))
+        self.right_idx += 1
+        return self.idRightRegistr[self.arrRightRegistr.index(new_arrangement)]
 
     def mutateLeftChild(self):
         ### first choose a node to mutate
@@ -185,7 +300,10 @@ class BiDirDPPlanner(object):
         ### choose an object to move
         obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
-        pose_idx = choice(self.space.poseMap.keys())
+        # pose_idx = choice(self.space.poseMap.keys())
+        pose_idx = self.choose_pose(obj_idx, mutated_arrangement)
+        if not pose_idx:
+            return None
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
@@ -199,43 +317,50 @@ class BiDirDPPlanner(object):
             # print("The mutation makes a duplicate")
             return None
         ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
-        start_poses = {}
-        goal_poses = {}
-        for i in range(len(mutated_arrangement)):
-            start_poses[i] = mutated_arrangement[i]
-        for i in range(len(new_arrangement)):
-            goal_poses[i] = new_arrangement[i]
-        subTree = DFS_Rec_for_Monotone_General(
-            start_poses,
-            goal_poses,
-            self.dependency_dict,
-            self.path_dict,
-            self.object_locations,
-            self.linked_list,
-            self.region_dict,
+        # start_poses = {}
+        # goal_poses = {}
+        # for i in range(len(mutated_arrangement)):
+        #     start_poses[i] = mutated_arrangement[i]
+        # for i in range(len(new_arrangement)):
+        #     goal_poses[i] = new_arrangement[i]
+        # subTree = DFS_Rec_for_Monotone_General(
+        #     start_poses,
+        #     goal_poses,
+        #     self.dependency_dict,
+        #     self.path_dict,
+        #     self.object_locations,
+        #     self.linked_list,
+        #     self.region_dict,
+        # )
+        # ### update dependency_dict and path_dict
+        # self.dependency_dict = subTree.dependency_dict
+        # self.path_dict = subTree.path_dict
+        # if subTree.isMonotone == False:
+        #     # print("the mutation node cannot be connected")
+        #     return None
+        # else:
+
+        # t0 = time.time()
+        # pose_reachable = self.pose_reachable(obj_idx, mutated_arrangement, pose_idx)
+        # print(time.time() - t0)
+        # if not pose_reachable:
+        #     return None
+
+        ### we reach here since it is a duplicate and it can be connected
+        ### welcome this new arrangement
+        # print("the new arrangement after mutation has been accepted")
+        temp_transition = [mutated_arrangement[obj_idx], new_arrangement[obj_idx]]
+        temp_object_idx = obj_idx
+        temp_path_option = -1  # subTree.path_option[subTree.parent.keys()[0]]
+        temp_parent_cost = self.treeL[mutate_id].cost_to_come
+        self.treeL["L" + str(self.left_idx)] = ArrNode(
+            new_arrangement, "L" + str(self.left_idx), temp_transition, temp_object_idx, temp_path_option,
+            temp_parent_cost + 1, mutate_id
         )
-        ### update dependency_dict and path_dict
-        self.dependency_dict = subTree.dependency_dict
-        self.path_dict = subTree.path_dict
-        if subTree.isMonotone == False:
-            # print("the mutation node cannot be connected")
-            return None
-        else:
-            ### we reach here since it is a duplicate and it can be connected
-            ### welcome this new arrangement
-            # print("the new arrangement after mutation has been accepted")
-            temp_transition = [mutated_arrangement[obj_idx], new_arrangement[obj_idx]]
-            temp_object_idx = obj_idx
-            temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
-            temp_parent_cost = self.treeL[mutate_id].cost_to_come
-            self.treeL["L" + str(self.left_idx)] = ArrNode(
-                new_arrangement, "L" + str(self.left_idx), temp_transition, temp_object_idx, temp_path_option,
-                temp_parent_cost + 1, mutate_id
-            )
-            self.arrLeftRegistr.append(new_arrangement)
-            self.idLeftRegistr.append("L" + str(self.left_idx))
-            self.left_idx += 1
-            return self.idLeftRegistr[self.arrLeftRegistr.index(new_arrangement)]
+        self.arrLeftRegistr.append(new_arrangement)
+        self.idLeftRegistr.append("L" + str(self.left_idx))
+        self.left_idx += 1
+        return self.idLeftRegistr[self.arrLeftRegistr.index(new_arrangement)]
 
     def growSubTree(self, initNode, goalNode, treeSide):
         ### construct start_poses and goal_poses

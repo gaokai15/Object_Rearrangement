@@ -1,7 +1,7 @@
 from __future__ import division
 
 
-from DPLocalSolver import DFS_Rec_for_Monotone_General
+from DPLocalSolver import DFS_Rec_for_Monotone_General, DFS_Rec_for_Non_Monotone_General
 from util import *
 import os
 import copy
@@ -12,7 +12,7 @@ import numpy as np
 from random import sample
 from collections import OrderedDict
 
-class BiDirDPPlanner(object):
+class UniDir_leafNode_DPPlanner(object):
     ### Input:
     ### (1) initial_arrangement (a list of pose_ids, each of which indicating the initial pose for an object)
     ### (2) final_arrangement (a list of pose_ids, each of which indicating the final pose for an object)
@@ -88,21 +88,19 @@ class BiDirDPPlanner(object):
 
         ### initial connection attempt
         self.growSubTree(self.treeL["L0"], self.treeR["R0"], "Left")
-        if (self.isConnected != True):
-            self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
+
+        # IPython.embed()
 
         totalTime_allowed = 10*self.numObjs ### allow 500s for the total search tree construction
         start_time = time.clock()        
 
         while (self.isConnected != True and time.clock() - start_time < totalTime_allowed):
             ### The problem is not monotone
-            newChild_nodeID = self.mutateLeftChild()
-            if newChild_nodeID != None:
-                self.growSubTree(self.treeL[newChild_nodeID], self.treeR["R0"], "Left")
-            if (self.isConnected != True):
-                newChild_nodeID = self.mutateRightChild()
-                if newChild_nodeID != None:
-                    self.growSubTree(self.treeR[newChild_nodeID], self.treeL["L0"], "Right")
+            temp_task = self.mutateLeftChild_onlyLeaf()
+            if temp_task != None:
+                self.growSubTree_pertubationTask(temp_task, self.treeR["R0"], "Left")
+            # print("print leaves after each iterations: ")
+            # print(self.leftLeaves)
 
 
         if self.isConnected:
@@ -112,178 +110,61 @@ class BiDirDPPlanner(object):
         if self.isConnected == False:
             print("fail the find a solution within " + str(totalTime_allowed) + " seconds...")
 
-    def mutateRightChild(self):
-        ### first choose a node to mutate
-        # print("Right mutation")
-        mutate_id = "R" + str(random.choice(range(len(self.treeR))))
-        mutated_arrangement = self.treeR[mutate_id].arrangement
-        ### choose an object to move
-        obj_idx = random.choice(range(self.numObjs))
-        ### choose a slot to put the object
-        pose_idx = random.choice(self.allPoses)
-        # print("mutated_arrangement: " + str(mutated_arrangement))
-        # print("obj_idx: " + str(obj_idx))
-        # print("pose_idx: " + str(pose_idx))
-
-        ### get new arrangement
-        new_arrangement = copy.deepcopy(mutated_arrangement)
-        new_arrangement[obj_idx] = pose_idx
-        # print("new_arrangement: " + str(new_arrangement))
-        ### Let's check if it is already in the current tree
-        if new_arrangement in self.arrRightRegistr:
-            # print("The mutation makes a duplicate")
-            return None
-        ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
-        start_poses = {}
-        goal_poses = {}
-        for i in range(len(mutated_arrangement)):
-            start_poses[i] = mutated_arrangement[i]
-        for i in range(len(new_arrangement)):
-            goal_poses[i] = new_arrangement[i]
-        # time_monotoneCall = time.clock()
-        subTree = DFS_Rec_for_Monotone_General(
-            start_poses, goal_poses, self.dependency_dict, self.path_dict, \
-            self.pose_locations, self.linked_list, self.region_dict)
-        ### update dependency_dict and path_dict
-        self.dependency_dict = subTree.dependency_dict
-        self.path_dict = subTree.path_dict
-        # print("time_monotoneCall: " + str(time.clock() - time_monotoneCall))
-        if subTree.isMonotone == False:
-            # print("the mutation node cannot be connected")
-            return None
-        else:
-            ### we reach here since it is not a duplicate and it can be connected
-            temp_transition = [new_arrangement[obj_idx], mutated_arrangement[obj_idx]]
-            temp_object_idx = obj_idx
-            temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
-            ### first check if it directly mutated to a node on the other side
-            if new_arrangement in self.arrLeftRegistr:
-                ### a bridge has been found
-                # print("a bridge has been found during mutation!")
-                self.isConnected = True
-                ### check if it leads to a better solution
-                temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(new_arrangement)]
-                temp_rightKey = self.idRightRegistr[self.arrRightRegistr.index(mutated_arrangement)]
-                temp_cost = self.treeL[temp_leftKey].cost_to_come + self.treeR[temp_rightKey].cost_to_come + 1
-                # print("its cost is: " + str(temp_cost))
-                if temp_cost < self.best_solution_cost:
-                    ### This is a better solution
-                    self.best_solution_cost = temp_cost
-                    ### let's update the bridge
-                    self.leftKey = temp_leftKey
-                    self.rightKey = temp_rightKey
-                    self.bridge_transition = temp_transition
-                    self.bridge_objectMoved = temp_object_idx
-                    self.bridge_path_option = temp_path_option
-                    self.bridge = [self.leftKey, self.rightKey, self.bridge_transition, \
-                                            self.bridge_objectMoved, self.bridge_path_option]
-                    # print("best solution cost so far: " + str(self.best_solution_cost))
-                return None
-
-            else:
-                ### This is a new arrangement, welcome!
-                # print("the new arrangement after mutation has been accepted")
-                temp_parent_cost = self.treeR[mutate_id].cost_to_come
-                self.treeR["R"+str(self.right_idx)] = ArrNode(
-                            new_arrangement, "R"+str(self.right_idx), \
-                            temp_transition, temp_object_idx, temp_path_option, temp_parent_cost+1, mutate_id)
-                self.arrRightRegistr.append(new_arrangement)
-                self.idRightRegistr.append("R"+str(self.right_idx))
-                ### visualize the newly-added branch
-                # self.visualizeLocalBranch("R"+str(self.right_idx), mutate_id, "R,R")
-                self.right_idx += 1
-
-                self.mutation += 1
-                # print("mutation: " + str(self.mutation))
-                return self.idRightRegistr[self.arrRightRegistr.index(new_arrangement)]
 
 
-
-    def mutateLeftChild(self):
-        ### first choose a node to mutate
+    def mutateLeftChild_onlyLeaf(self):
+        ### first choose a perturbation_node to mutate
         # print("Left mutation")
-        mutate_id = "L" + str(random.choice(range(len(self.treeL))))
+        mutate_id = random.choice(self.leftLeaves)
         mutated_arrangement = self.treeL[mutate_id].arrangement
         ### choose an object to move
         obj_idx = random.choice(range(self.numObjs))
         ### choose a slot to put the object
         pose_idx = random.choice(self.allPoses)
+        while (pose_idx == self.treeR["R0"].arrangement[obj_idx] or pose_idx == mutated_arrangement[obj_idx]):
+            ### if the chosen object is to move to the goal or stay in the current position
+            ### this is not considered as pertubation
+            pose_idx = random.choice(self.allPoses)
         # print("mutated_arrangement: " + str(mutated_arrangement))
         # print("obj_idx: " + str(obj_idx))
         # print("pose_idx: " + str(pose_idx))
+        # print("mutate_id: " + str(mutate_id))
 
-        ### get new arrangement
-        new_arrangement = copy.deepcopy(mutated_arrangement)
-        new_arrangement[obj_idx] = pose_idx
-        # print("new_arrangement: " + str(new_arrangement))
-        ### Let's check if it is already in the current tree
-        if new_arrangement in self.arrLeftRegistr:
-            # print("The mutation makes a duplicate")
-            return None
-        ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
+        ### we now only return a task
+        return [obj_idx, pose_idx, mutate_id]
+
+
+    def growSubTree_pertubationTask(self, temp_task, goalNode, treeSide):
+        temp_obj_idx = temp_task[0]
+        temp_buff_idx = temp_task[1]
+        initNode_id = temp_task[2]
+
+        n = len(self.treeL[initNode_id].arrangement)
+        obj_buffer_dict = {}
+        obj_buffer_dict[temp_obj_idx] = (n, temp_buff_idx)
+
+        ### construct start_poses and goal_poses
         start_poses = {}
         goal_poses = {}
-        for i in range(len(mutated_arrangement)):
-            start_poses[i] = mutated_arrangement[i]
-        for i in range(len(new_arrangement)):
-            goal_poses[i] = new_arrangement[i]
-        # time_monotoneCall = time.clock()
-        subTree = DFS_Rec_for_Monotone_General(
-            start_poses, goal_poses, self.dependency_dict, self.path_dict, \
-            self.pose_locations, self.linked_list, self.region_dict)
+        for i in range(len(self.treeL[initNode_id].arrangement)):
+            start_poses[i] = self.treeL[initNode_id].arrangement[i]
+        for i in range(len(goalNode.arrangement)):
+            goal_poses[i] = goalNode.arrangement[i]
+        
+        # time_nonMonotoneCall = time.clock()
+        subTree = DFS_Rec_for_Non_Monotone_General(
+            start_poses, goal_poses, self.dependency_dict, self.path_dict,
+            self.pose_locations, self.linked_list, self.region_dict,
+            obj_buffer_dict)
         ### update dependency_dict and path_dict
         self.dependency_dict = subTree.dependency_dict
         self.path_dict = subTree.path_dict
-        # print("time_monotoneCall: " + str(time.clock() - time_monotoneCall))
-        if subTree.isMonotone == False:
-            # print("the mutation node cannot be connected")
-            return None
+        # print("time_nonMonotoneCall: " + str(time.clock() - time_nonMonotoneCall))
+
+        if treeSide == "Left":
+            self.engraftingLeftTree_pertubationTask(subTree, temp_task, self.treeL[initNode_id], goalNode)
         else:
-            ### we reach here since it is not a duplicate and it can be connected
-            temp_transition = [mutated_arrangement[obj_idx], new_arrangement[obj_idx]]
-            temp_object_idx = obj_idx
-            temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
-            ### first check if it directly mutated to a node on the other side
-            if new_arrangement in self.arrRightRegistr:
-                ### a bridge has been found
-                # print("a bridge has been found during mutation!")
-                self.isConnected = True
-                ### check if it leads to a better solution
-                temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(mutated_arrangement)]
-                temp_rightKey = self.idRightRegistr[self.arrRightRegistr.index(new_arrangement)]
-                temp_cost = self.treeL[temp_leftKey].cost_to_come + self.treeR[temp_rightKey].cost_to_come + 1
-                # print("its cost is: " + str(temp_cost))
-                if temp_cost < self.best_solution_cost:
-                    ### This is a better solution
-                    self.best_solution_cost = temp_cost
-                    ### let's update the bridge
-                    self.leftKey = temp_leftKey
-                    self.rightKey = temp_rightKey
-                    self.bridge_transition = temp_transition
-                    self.bridge_objectMoved = temp_object_idx
-                    self.bridge_path_option = temp_path_option
-                    self.bridge = [self.leftKey, self.rightKey, self.bridge_transition, \
-                                            self.bridge_objectMoved, self.bridge_path_option]
-                    # print("best solution cost so far: " + str(self.best_solution_cost))
-                return None
-
-            else:            
-                ### This is a new arrangement, welcome!
-                # print("the new arrangement after mutation has been accepted")
-                temp_parent_cost = self.treeL[mutate_id].cost_to_come
-                self.treeL["L"+str(self.left_idx)] = ArrNode(
-                            new_arrangement, "L"+str(self.left_idx), \
-                            temp_transition, temp_object_idx, temp_path_option, temp_parent_cost+1, mutate_id)
-                self.arrLeftRegistr.append(new_arrangement)
-                self.idLeftRegistr.append("L"+str(self.left_idx))
-                ### visualize the newly-added branch
-                # self.visualizeLocalBranch("L"+str(self.left_idx), mutate_id, "L,L")
-                self.left_idx += 1
-
-                self.mutation += 1
-                # print("mutation: " + str(self.mutation))
-                return self.idLeftRegistr[self.arrLeftRegistr.index(new_arrangement)]
-
+            print("should not reach here for unidirectional search")
 
 
 
@@ -308,17 +189,20 @@ class BiDirDPPlanner(object):
         if treeSide == "Left":
             self.engraftingLeftTree(subTree, initNode, goalNode)
         else:
-            self.engraftingRightTree(subTree, initNode, goalNode)
+            print("should not reach here for unidirectional search")
 
 
 
-    def engraftingRightTree(self, subTree, rootNode, goalNode):
-        # print("Right tree")
+    def engraftingLeftTree_pertubationTask(self, subTree, temp_task, rootNode, goalNode):
+        # print("Left tree")
         # print(subTree.parent)
 
         if len(subTree.parent) == 0:
             ### The tree does not exist
             return
+
+        temp_pertubation_obj = temp_task[0]
+        temp_pertubation_buff = temp_task[1]
 
         ### first construct a child dict
         child_dict = {}
@@ -331,42 +215,47 @@ class BiDirDPPlanner(object):
         queue = [0]
         while(len(queue) != 0):
             parent_id = queue.pop()
-            parent_arrangement = self.encodeArrangement(parent_id, rootNode.arrangement, goalNode.arrangement)
-            parent_nodeID = self.idRightRegistr[self.arrRightRegistr.index(parent_arrangement)]
+            parent_arrangement = self.decodeArrangement_withBuffer(
+                parent_id, rootNode.arrangement, goalNode.arrangement, temp_pertubation_obj, temp_pertubation_buff)
+            parent_nodeID = self.idLeftRegistr[self.arrLeftRegistr.index(parent_arrangement)]
             ### get all the children of this parent node
             if parent_id not in child_dict.keys():
                 children_ids = []
             else:
                 children_ids = child_dict[parent_id]
             for child_id in children_ids:
-                child_arrangement = self.encodeArrangement(child_id, rootNode.arrangement, goalNode.arrangement)
-                temp_object_idx = self.getTheObjectMoved(child_id, parent_id)
+                child_arrangement = self.decodeArrangement_withBuffer(
+                    child_id, rootNode.arrangement, goalNode.arrangement, temp_pertubation_obj, temp_pertubation_buff)
+                # print("parent_id: " + str(parent_id))
+                # print("child_id: " + str(child_id))
+                temp_object_idx = self.getTheObjectMoved_pertubation(parent_arrangement, child_arrangement)
+                # print("parent arrangement: " + str(parent_arrangement))
+                # print("child arrangement: " + str(child_arrangement))
+                # print("temp_object_idx: " + str(temp_object_idx))
                 temp_path_option = subTree.path_option[child_id]
-                temp_transition = [child_arrangement[temp_object_idx], parent_arrangement[temp_object_idx]]
-
-
+                temp_transition = [parent_arrangement[temp_object_idx], child_arrangement[temp_object_idx]]        
                 ### check if this child arrangement has already in the tree
-                if child_arrangement is self.arrRightRegistr:
+                if child_arrangement is self.arrLeftRegistr:
                     ### we don't add duplicate nodes BUT we may rewire it to a better parent
-                    child_nodeID = self.idRightRegistr[self.arrRightRegistr.index(child_arrangement)]
-                    if self.treeR[parent_nodeID].cost_to_come + 1 < self.treeR[child_nodeID].cost_to_come:
-                        ### It indicates that the current parent is a better parent since it costs less
+                    child_nodeID = self.idLeftRegistr[self.arrLeftRegistr.index(child_arrangement)]
+                    if self.treeL[parent_nodeID].cost_to_come + 1 < self.treeL[child_nodeID].cost_to_come:
+                        ### It indicates that the current checked parent is a better parent since it costs less
                         ### update the corresponding infos for the child node
-                        self.treeR[child_nodeID].updateParent(parent_nodeID)
-                        self.treeR[child_nodeID].updateObjectTransition(temp_transition)
-                        self.treeR[child_nodeID].updateObjectMoved(temp_object_idx)
-                        self.treeR[child_nodeID].updatePathOption(temp_path_option)
-                        self.treeR[child_nodeID].updateCostToCome(self.treeR[parent_nodeID].cost_to_come + 1)
+                        self.treeL[child_nodeID].updateParent(parent_nodeID)
+                        self.treeL[child_nodeID].updateObjectTransition(temp_transition)
+                        self.treeL[child_nodeID].updateObjectMoved(temp_object_idx)
+                        self.treeL[child_nodeID].updatePathOption(temp_path_option)
+                        self.treeL[child_nodeID].updateCostToCome(self.treeL[parent_nodeID].cost_to_come + 1)
 
-                elif child_arrangement in self.arrLeftRegistr:
+                elif child_arrangement in self.arrRightRegistr:
                     ### this is a sign that two trees are connected
                     ### check if it is really a bridge
-                    if parent_arrangement not in self.arrLeftRegistr:
-                        # print("a bridge is found")
+                    if parent_arrangement not in self.arrRightRegistr:
+                        print("a bridge is found in non-monotone engrafting")
                         self.isConnected = True
                         ### check if it leads to a better solution
-                        temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(child_arrangement)]
-                        temp_rightKey = self.idRightRegistr[self.arrRightRegistr.index(parent_arrangement)]
+                        temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(parent_arrangement)]
+                        temp_rightKey = self.idRightRegistr[self.arrRightRegistr.index(child_arrangement)]
                         temp_cost = self.treeL[temp_leftKey].cost_to_come + self.treeR[temp_rightKey].cost_to_come + 1
                         # print("its cost is: " + str(temp_cost))
                         if temp_cost < self.best_solution_cost:
@@ -384,20 +273,23 @@ class BiDirDPPlanner(object):
 
                 else:
                     ### This is a brand new arrangement, let's add to the tree
-                    temp_cost_to_come = self.treeR[parent_nodeID].cost_to_come + 1
-                    self.treeR["R"+str(self.right_idx)] = ArrNode(
-                        child_arrangement, "R"+str(self.right_idx), \
+                    temp_cost_to_come = self.treeL[parent_nodeID].cost_to_come + 1
+                    self.treeL["L"+str(self.left_idx)] = ArrNode(
+                        child_arrangement, "L"+str(self.left_idx), \
                         temp_transition, temp_object_idx, temp_path_option, temp_cost_to_come, parent_nodeID)
-                    self.arrRightRegistr.append(child_arrangement)
-                    self.idRightRegistr.append("R"+str(self.right_idx))
-                    ### visualize the newly-added branch
-                    # self.visualizeLocalBranch("R"+str(self.right_idx), parent_nodeID, "R,R")
-                    self.right_idx += 1
-                    ### add this child node into queue
-                    queue.insert(0, child_id)
+                    self.arrLeftRegistr.append(child_arrangement)
+                    self.idLeftRegistr.append("L"+str(self.left_idx))
 
-        # if self.isConnected == True:
-        #     self.visualizeLocalBranch(self.leftKey, self.rightKey, "L,R")
+                    ### NEW: now before moving on, see if this is a perturbation node
+                    if (temp_object_idx == temp_pertubation_obj and temp_transition[1] == temp_pertubation_buff):
+                        # print("this is a perturbation node: " + "L"+str(self.left_idx))
+                        self.leftLeaves.append("L"+str(self.left_idx))
+
+                    ### visualize the newly-added branch
+                    # self.visualizeLocalBranch("L"+str(self.left_idx), parent_nodeID, "L,L")
+                    self.left_idx += 1
+                    ### add this child node into the queue(BFS)
+                    queue.insert(0, child_id)
 
 
     def engraftingLeftTree(self, subTree, rootNode, goalNode):
@@ -487,6 +379,14 @@ class BiDirDPPlanner(object):
         #     self.visualizeLocalBranch(self.leftKey, self.rightKey, "L,R")
 
 
+    def getTheObjectMoved_pertubation(self, parent_arrangement, child_arrangement):
+        for i in range(len(parent_arrangement)):
+            if (parent_arrangement[i] != child_arrangement[i]):
+                ### since we know currently it will be just one object
+                return i
+
+        return None
+
 
     def getTheObjectMoved(self, child_id, parent_id):
         for i in range(self.numObjs):
@@ -511,6 +411,29 @@ class BiDirDPPlanner(object):
             else:
                 ### add the initial pose index
                 new_arrangement.append(init_arrangement[i])
+
+        return new_arrangement
+
+
+    def decodeArrangement_withBuffer(self, node_id, init_arrangement, goal_arrangement, obj_idx, buff_idx):
+        new_arrangement = []
+        for i in range(self.numObjs):
+            isThatObjectInGoal = checkBitStatusAtPos(node_id, i)
+            if isThatObjectInGoal:
+                if i == obj_idx:
+                    new_arrangement.append(buff_idx)
+                else:
+                    ### add the goal pose index
+                    new_arrangement.append(goal_arrangement[i])
+            else:
+                ### add the initial pose index
+                new_arrangement.append(init_arrangement[i])
+
+        ### look at the additional bit
+        i = self.numObjs
+        isThatObjectInGoal = checkBitStatusAtPos(node_id, i)
+        if isThatObjectInGoal:
+            new_arrangement[obj_idx] = goal_arrangement[obj_idx]
 
         return new_arrangement
 
@@ -738,7 +661,7 @@ class BiDirDPPlanner(object):
     def constructWholePath(self):
         ### from leftKey, back track to left root via parent search (get all paths from the left tree)
         curr_waypoint = self.leftKey
-        print("construct the path on the left tree")
+        # print("construct the path on the left tree")
         while curr_waypoint != "L0":
             temp_parent = self.treeL[curr_waypoint].parent_id
             result_path = self.getPath(curr_waypoint, temp_parent, "Left")
@@ -747,13 +670,13 @@ class BiDirDPPlanner(object):
             curr_waypoint = self.treeL[curr_waypoint].parent_id
 
         ### Now add the bridge to the whole path
-        print("building the bridge betwen left tree and right tree")
+        # print("building the bridge betwen left tree and right tree")
         result_path = self.getPath(self.leftKey, self.rightKey, "Bridge")
         self.whole_path.append([(self.leftKey, self.rightKey), result_path])
 
         ### from rightKey, back track to right root via parent search (get all paths from the right tree)
         curr_waypoint = self.rightKey
-        print("construct the path on the right tree")
+        # print("construct the path on the right tree")
         while curr_waypoint != "R0":
             temp_parent = self.treeR[curr_waypoint].parent_id
             result_path = self.getPath(curr_waypoint, temp_parent, "Right")
@@ -784,10 +707,10 @@ class BiDirDPPlanner(object):
             curr_waypoint_id = self.treeR[curr_waypoint_id].parent_id
             self.simplePath.append(curr_waypoint_id)
 
-        print("path: " + str(self.simplePath))
+        # print("path: " + str(self.simplePath))
         self.totalActions = len(self.simplePath) - 1
-        print("total action: " + str(self.totalActions))
-        print("solution cost: " + str(self.best_solution_cost))
+        # print("total action: " + str(self.totalActions))
+        # print("solution cost: " + str(self.best_solution_cost))
 
         time_computeOrdering = time.clock()
         ### add ordering here
@@ -814,8 +737,8 @@ class BiDirDPPlanner(object):
                     self.bridge[3], self.bridge[2]]
 
         print("object_ordering: " + str(self.object_ordering))
-        for transition, obj_pose in self.actions.items():
-            print(transition + ": " + str(obj_pose))
+        # for transition, obj_pose in self.actions.items():
+        #     print(transition + ": " + str(obj_pose))
 
         self.totalActions = 1
         for oo in range(1, len(self.object_ordering)):
@@ -872,3 +795,265 @@ class ArrNode(object):
 
         return parent_arr
 
+
+
+    # def mutateRightChild(self):
+    #     ### first choose a node to mutate
+    #     # print("Right mutation")
+    #     mutate_id = "R" + str(random.choice(range(len(self.treeR))))
+    #     mutated_arrangement = self.treeR[mutate_id].arrangement
+    #     ### choose an object to move
+    #     obj_idx = random.choice(range(self.numObjs))
+    #     ### choose a slot to put the object
+    #     pose_idx = random.choice(self.allPoses)
+    #     # print("mutated_arrangement: " + str(mutated_arrangement))
+    #     # print("obj_idx: " + str(obj_idx))
+    #     # print("pose_idx: " + str(pose_idx))
+
+    #     ### get new arrangement
+    #     new_arrangement = copy.deepcopy(mutated_arrangement)
+    #     new_arrangement[obj_idx] = pose_idx
+    #     # print("new_arrangement: " + str(new_arrangement))
+    #     ### Let's check if it is already in the current tree
+    #     if new_arrangement in self.arrRightRegistr:
+    #         # print("The mutation makes a duplicate")
+    #         return None
+    #     ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
+    #     start_poses = {}
+    #     goal_poses = {}
+    #     for i in range(len(mutated_arrangement)):
+    #         start_poses[i] = mutated_arrangement[i]
+    #     for i in range(len(new_arrangement)):
+    #         goal_poses[i] = new_arrangement[i]
+    #     # time_monotoneCall = time.clock()
+    #     subTree = DFS_Rec_for_Monotone_General(
+    #         start_poses, goal_poses, self.dependency_dict, self.path_dict, \
+    #         self.pose_locations, self.linked_list, self.region_dict)
+    #     ### update dependency_dict and path_dict
+    #     self.dependency_dict = subTree.dependency_dict
+    #     self.path_dict = subTree.path_dict
+    #     # print("time_monotoneCall: " + str(time.clock() - time_monotoneCall))
+    #     if subTree.isMonotone == False:
+    #         # print("the mutation node cannot be connected")
+    #         return None
+    #     else:
+    #         ### we reach here since it is not a duplicate and it can be connected
+    #         temp_transition = [new_arrangement[obj_idx], mutated_arrangement[obj_idx]]
+    #         temp_object_idx = obj_idx
+    #         temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
+    #         ### first check if it directly mutated to a node on the other side
+    #         if new_arrangement in self.arrLeftRegistr:
+    #             ### a bridge has been found
+    #             # print("a bridge has been found during mutation!")
+    #             self.isConnected = True
+    #             ### check if it leads to a better solution
+    #             temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(new_arrangement)]
+    #             temp_rightKey = self.idRightRegistr[self.arrRightRegistr.index(mutated_arrangement)]
+    #             temp_cost = self.treeL[temp_leftKey].cost_to_come + self.treeR[temp_rightKey].cost_to_come + 1
+    #             # print("its cost is: " + str(temp_cost))
+    #             if temp_cost < self.best_solution_cost:
+    #                 ### This is a better solution
+    #                 self.best_solution_cost = temp_cost
+    #                 ### let's update the bridge
+    #                 self.leftKey = temp_leftKey
+    #                 self.rightKey = temp_rightKey
+    #                 self.bridge_transition = temp_transition
+    #                 self.bridge_objectMoved = temp_object_idx
+    #                 self.bridge_path_option = temp_path_option
+    #                 self.bridge = [self.leftKey, self.rightKey, self.bridge_transition, \
+    #                                         self.bridge_objectMoved, self.bridge_path_option]
+    #                 # print("best solution cost so far: " + str(self.best_solution_cost))
+    #             return None
+
+    #         else:
+    #             ### This is a new arrangement, welcome!
+    #             # print("the new arrangement after mutation has been accepted")
+    #             temp_parent_cost = self.treeR[mutate_id].cost_to_come
+    #             self.treeR["R"+str(self.right_idx)] = ArrNode(
+    #                         new_arrangement, "R"+str(self.right_idx), \
+    #                         temp_transition, temp_object_idx, temp_path_option, temp_parent_cost+1, mutate_id)
+    #             self.arrRightRegistr.append(new_arrangement)
+    #             self.idRightRegistr.append("R"+str(self.right_idx))
+    #             ### visualize the newly-added branch
+    #             # self.visualizeLocalBranch("R"+str(self.right_idx), mutate_id, "R,R")
+    #             self.right_idx += 1
+
+    #             self.mutation += 1
+    #             # print("mutation: " + str(self.mutation))
+    #             return self.idRightRegistr[self.arrRightRegistr.index(new_arrangement)]
+
+
+
+    # def mutateLeftChild(self):
+    #     ### first choose a node to mutate
+    #     # print("Left mutation")
+    #     mutate_id = "L" + str(random.choice(range(len(self.treeL))))
+    #     mutated_arrangement = self.treeL[mutate_id].arrangement
+    #     ### choose an object to move
+    #     obj_idx = random.choice(range(self.numObjs))
+    #     ### choose a slot to put the object
+    #     pose_idx = random.choice(self.allPoses)
+    #     # print("mutated_arrangement: " + str(mutated_arrangement))
+    #     # print("obj_idx: " + str(obj_idx))
+    #     # print("pose_idx: " + str(pose_idx))
+
+    #     ### get new arrangement
+    #     new_arrangement = copy.deepcopy(mutated_arrangement)
+    #     new_arrangement[obj_idx] = pose_idx
+    #     # print("new_arrangement: " + str(new_arrangement))
+    #     ### Let's check if it is already in the current tree
+    #     if new_arrangement in self.arrLeftRegistr:
+    #         # print("The mutation makes a duplicate")
+    #         return None
+    #     ### Otherwise it is a new arrangement, check if it can be connected to the mutated_arrangement
+    #     start_poses = {}
+    #     goal_poses = {}
+    #     for i in range(len(mutated_arrangement)):
+    #         start_poses[i] = mutated_arrangement[i]
+    #     for i in range(len(new_arrangement)):
+    #         goal_poses[i] = new_arrangement[i]
+    #     # time_monotoneCall = time.clock()
+    #     subTree = DFS_Rec_for_Monotone_General(
+    #         start_poses, goal_poses, self.dependency_dict, self.path_dict, \
+    #         self.pose_locations, self.linked_list, self.region_dict)
+    #     ### update dependency_dict and path_dict
+    #     self.dependency_dict = subTree.dependency_dict
+    #     self.path_dict = subTree.path_dict
+    #     # print("time_monotoneCall: " + str(time.clock() - time_monotoneCall))
+    #     if subTree.isMonotone == False:
+    #         # print("the mutation node cannot be connected")
+    #         return None
+    #     else:
+    #         ### we reach here since it is not a duplicate and it can be connected
+
+    #         ### first check if it directly mutated to a node on the other side
+    #         if new_arrangement in self.arrRightRegistr:
+    #             ### a bridge has been found
+    #             # print("a bridge has been found during mutation!")
+    #             self.isConnected = True
+    #             ### check if it leads to a better solution
+    #             temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(mutated_arrangement)]
+    #             temp_rightKey = self.idRightRegistr[self.arrRightRegistr.index(new_arrangement)]
+    #             temp_cost = self.treeL[temp_leftKey].cost_to_come + self.treeR[temp_rightKey].cost_to_come + 1
+    #             # print("its cost is: " + str(temp_cost))
+    #             if temp_cost < self.best_solution_cost:
+    #                 ### This is a better solution
+    #                 self.best_solution_cost = temp_cost
+    #                 ### let's update the bridge
+    #                 self.leftKey = temp_leftKey
+    #                 self.rightKey = temp_rightKey
+    #                 self.bridge_transition = temp_transition
+    #                 self.bridge_objectMoved = temp_object_idx
+    #                 self.bridge_path_option = temp_path_option
+    #                 self.bridge = [self.leftKey, self.rightKey, self.bridge_transition, \
+    #                                         self.bridge_objectMoved, self.bridge_path_option]
+    #                 # print("best solution cost so far: " + str(self.best_solution_cost))
+    #             return None
+
+    #         else:            
+    #             ### This is a new arrangement, welcome!
+    #             # print("the new arrangement after mutation has been accepted")
+    #             temp_transition = [mutated_arrangement[obj_idx], new_arrangement[obj_idx]]
+    #             temp_object_idx = obj_idx
+    #             temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
+    #             temp_parent_cost = self.treeL[mutate_id].cost_to_come
+    #             self.treeL["L"+str(self.left_idx)] = ArrNode(
+    #                         new_arrangement, "L"+str(self.left_idx), \
+    #                         temp_transition, temp_object_idx, temp_path_option, temp_parent_cost+1, mutate_id)
+    #             self.arrLeftRegistr.append(new_arrangement)
+    #             self.idLeftRegistr.append("L"+str(self.left_idx))
+    #             ### visualize the newly-added branch
+    #             # self.visualizeLocalBranch("L"+str(self.left_idx), mutate_id, "L,L")
+    #             self.left_idx += 1
+
+    #             self.mutation += 1
+    #             # print("mutation: " + str(self.mutation))
+    #             return self.idLeftRegistr[self.arrLeftRegistr.index(new_arrangement)]
+
+
+    # def engraftingRightTree(self, subTree, rootNode, goalNode):
+    #     # print("Right tree")
+    #     # print(subTree.parent)
+
+    #     if len(subTree.parent) == 0:
+    #         ### The tree does not exist
+    #         return
+
+    #     ### first construct a child dict
+    #     child_dict = {}
+    #     for child_id, parent_id in subTree.parent.items():
+    #         if parent_id not in child_dict.keys():
+    #             child_dict[parent_id] = []
+    #         child_dict[parent_id].append(child_id)
+
+    #     ### use a BFS to add the subTree to the entire tree structure
+    #     queue = [0]
+    #     while(len(queue) != 0):
+    #         parent_id = queue.pop()
+    #         parent_arrangement = self.encodeArrangement(parent_id, rootNode.arrangement, goalNode.arrangement)
+    #         parent_nodeID = self.idRightRegistr[self.arrRightRegistr.index(parent_arrangement)]
+    #         ### get all the children of this parent node
+    #         if parent_id not in child_dict.keys():
+    #             children_ids = []
+    #         else:
+    #             children_ids = child_dict[parent_id]
+    #         for child_id in children_ids:
+    #             child_arrangement = self.encodeArrangement(child_id, rootNode.arrangement, goalNode.arrangement)
+    #             temp_object_idx = self.getTheObjectMoved(child_id, parent_id)
+    #             temp_path_option = subTree.path_option[child_id]
+    #             temp_transition = [child_arrangement[temp_object_idx], parent_arrangement[temp_object_idx]]
+
+
+    #             ### check if this child arrangement has already in the tree
+    #             if child_arrangement is self.arrRightRegistr:
+    #                 ### we don't add duplicate nodes BUT we may rewire it to a better parent
+    #                 child_nodeID = self.idRightRegistr[self.arrRightRegistr.index(child_arrangement)]
+    #                 if self.treeR[parent_nodeID].cost_to_come + 1 < self.treeR[child_nodeID].cost_to_come:
+    #                     ### It indicates that the current parent is a better parent since it costs less
+    #                     ### update the corresponding infos for the child node
+    #                     self.treeR[child_nodeID].updateParent(parent_nodeID)
+    #                     self.treeR[child_nodeID].updateObjectTransition(temp_transition)
+    #                     self.treeR[child_nodeID].updateObjectMoved(temp_object_idx)
+    #                     self.treeR[child_nodeID].updatePathOption(temp_path_option)
+    #                     self.treeR[child_nodeID].updateCostToCome(self.treeR[parent_nodeID].cost_to_come + 1)
+
+    #             elif child_arrangement in self.arrLeftRegistr:
+    #                 ### this is a sign that two trees are connected
+    #                 ### check if it is really a bridge
+    #                 if parent_arrangement not in self.arrLeftRegistr:
+    #                     # print("a bridge is found")
+    #                     self.isConnected = True
+    #                     ### check if it leads to a better solution
+    #                     temp_leftKey = self.idLeftRegistr[self.arrLeftRegistr.index(child_arrangement)]
+    #                     temp_rightKey = self.idRightRegistr[self.arrRightRegistr.index(parent_arrangement)]
+    #                     temp_cost = self.treeL[temp_leftKey].cost_to_come + self.treeR[temp_rightKey].cost_to_come + 1
+    #                     # print("its cost is: " + str(temp_cost))
+    #                     if temp_cost < self.best_solution_cost:
+    #                         ### This is a better solution
+    #                         self.best_solution_cost = temp_cost
+    #                         ### let's update the bridge
+    #                         self.leftKey = temp_leftKey
+    #                         self.rightKey = temp_rightKey
+    #                         self.bridge_transition = temp_transition
+    #                         self.bridge_objectMoved = temp_object_idx
+    #                         self.bridge_path_option = temp_path_option
+    #                         self.bridge = [self.leftKey, self.rightKey, self.bridge_transition, \
+    #                                                 self.bridge_objectMoved, self.bridge_path_option]
+    #                         # print("best solution cost so far: " + str(self.best_solution_cost))
+
+    #             else:
+    #                 ### This is a brand new arrangement, let's add to the tree
+    #                 temp_cost_to_come = self.treeR[parent_nodeID].cost_to_come + 1
+    #                 self.treeR["R"+str(self.right_idx)] = ArrNode(
+    #                     child_arrangement, "R"+str(self.right_idx), \
+    #                     temp_transition, temp_object_idx, temp_path_option, temp_cost_to_come, parent_nodeID)
+    #                 self.arrRightRegistr.append(child_arrangement)
+    #                 self.idRightRegistr.append("R"+str(self.right_idx))
+    #                 ### visualize the newly-added branch
+    #                 # self.visualizeLocalBranch("R"+str(self.right_idx), parent_nodeID, "R,R")
+    #                 self.right_idx += 1
+    #                 ### add this child node into queue
+    #                 queue.insert(0, child_id)
+
+    #     # if self.isConnected == True:
+    #     #     self.visualizeLocalBranch(self.leftKey, self.rightKey, "L,R")

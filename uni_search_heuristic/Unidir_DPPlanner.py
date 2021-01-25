@@ -12,7 +12,7 @@ import numpy as np
 from random import sample
 from collections import OrderedDict
 
-class BiDirDPPlanner(object):
+class Unidir_DPPlanner(object):
     ### Input:
     ### (1) initial_arrangement (a list of pose_ids, each of which indicating the initial pose for an object)
     ### (2) final_arrangement (a list of pose_ids, each of which indicating the final pose for an object)
@@ -88,8 +88,6 @@ class BiDirDPPlanner(object):
 
         ### initial connection attempt
         self.growSubTree(self.treeL["L0"], self.treeR["R0"], "Left")
-        if (self.isConnected != True):
-            self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
         totalTime_allowed = 10*self.numObjs ### allow 500s for the total search tree construction
         start_time = time.clock()        
@@ -99,10 +97,6 @@ class BiDirDPPlanner(object):
             newChild_nodeID = self.mutateLeftChild()
             if newChild_nodeID != None:
                 self.growSubTree(self.treeL[newChild_nodeID], self.treeR["R0"], "Left")
-            if (self.isConnected != True):
-                newChild_nodeID = self.mutateRightChild()
-                if newChild_nodeID != None:
-                    self.growSubTree(self.treeR[newChild_nodeID], self.treeL["L0"], "Right")
 
 
         if self.isConnected:
@@ -240,9 +234,7 @@ class BiDirDPPlanner(object):
             return None
         else:
             ### we reach here since it is not a duplicate and it can be connected
-            temp_transition = [mutated_arrangement[obj_idx], new_arrangement[obj_idx]]
-            temp_object_idx = obj_idx
-            temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
+
             ### first check if it directly mutated to a node on the other side
             if new_arrangement in self.arrRightRegistr:
                 ### a bridge has been found
@@ -270,6 +262,9 @@ class BiDirDPPlanner(object):
             else:            
                 ### This is a new arrangement, welcome!
                 # print("the new arrangement after mutation has been accepted")
+                temp_transition = [mutated_arrangement[obj_idx], new_arrangement[obj_idx]]
+                temp_object_idx = obj_idx
+                temp_path_option = subTree.path_option[subTree.parent.keys()[0]]
                 temp_parent_cost = self.treeL[mutate_id].cost_to_come
                 self.treeL["L"+str(self.left_idx)] = ArrNode(
                             new_arrangement, "L"+str(self.left_idx), \
@@ -786,8 +781,8 @@ class BiDirDPPlanner(object):
 
         print("path: " + str(self.simplePath))
         self.totalActions = len(self.simplePath) - 1
-        print("total action: " + str(self.totalActions))
-        print("solution cost: " + str(self.best_solution_cost))
+        # print("total action: " + str(self.totalActions))
+        # print("solution cost: " + str(self.best_solution_cost))
 
         time_computeOrdering = time.clock()
         ### add ordering here
@@ -814,8 +809,8 @@ class BiDirDPPlanner(object):
                     self.bridge[3], self.bridge[2]]
 
         print("object_ordering: " + str(self.object_ordering))
-        for transition, obj_pose in self.actions.items():
-            print(transition + ": " + str(obj_pose))
+        # for transition, obj_pose in self.actions.items():
+        #     print(transition + ": " + str(obj_pose))
 
         self.totalActions = 1
         for oo in range(1, len(self.object_ordering)):

@@ -82,17 +82,22 @@ class BiDirDPPlanner(object):
             self.growSubTree(self.treeR["R0"], self.treeL["L0"], "Right")
 
         self.totalTime_allowed = 30 * self.numObjs  ### allow 30s per object for the total search
+        self.iterations = 0
         start_time = time.clock()
 
         while (self.isConnected != True and time.clock() - start_time < self.totalTime_allowed):
             ### The problem is not monotone
             newChild_nodeID = self.mutateLeftChild()
+            self.iterations += 1
             if newChild_nodeID != None:
                 self.growSubTree(self.treeL[newChild_nodeID], self.treeR["R0"], "Left")
+                self.iterations += 1
             if (self.isConnected != True):
                 newChild_nodeID = self.mutateRightChild()
+                self.iterations += 1
                 if newChild_nodeID != None:
                     self.growSubTree(self.treeR[newChild_nodeID], self.treeL["L0"], "Right")
+                    self.iterations += 1
 
         # if self.isConnected:
         #     self.getTheStat()
@@ -181,7 +186,7 @@ class BiDirDPPlanner(object):
         arc_setSize, arcs, path_selection, object_ordering, DG, dependencyEdge_paths = IP_arc_buffers.optimum
         object_ranking = self.rankObjects(DG)
         # object_ranking = list(reversed(self.rankObjects(DG)))
-        print("RANK: ", object_ranking)
+        # print("RANK: ", object_ranking)
         # return weighted ranking
         return sum([[x] * (len(object_ranking) - object_ranking.index(x)) for x in object_ranking], [])
 
@@ -236,7 +241,7 @@ class BiDirDPPlanner(object):
         deps_thusfar = self.treeR[mutate_id].dependency_dict
         ### choose an object to move
         objs = self.choose_object(mutated_arrangement, self.initial_arrangement, deps_thusfar)
-        print(objs)
+        # print(objs)
         obj_idx = choice(objs)  # choose from weighted list
         # obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
@@ -303,7 +308,7 @@ class BiDirDPPlanner(object):
         deps_thusfar = self.treeL[mutate_id].dependency_dict
         ### choose an object to move
         objs = self.choose_object(mutated_arrangement, self.final_arrangement, deps_thusfar)
-        print(objs)
+        # print(objs)
         obj_idx = choice(objs)
         # obj_idx = choice(range(self.numObjs))
         ### choose a slot to put the object
