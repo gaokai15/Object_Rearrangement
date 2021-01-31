@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import sys
 import glob
 import time
@@ -43,7 +45,9 @@ def isMonotone(space, ignored=set()):
 def updateJson(filename, jsonData):
     with open(filename) as f:
         data = json.load(f, object_pairs_hook=OrderedDict)
+    # print(data, jsonData, filename)
     data.update(jsonData)
+    # print(data)
     with open(filename, 'w') as f:
         json.dump(data, f, indent=2)
 
@@ -62,7 +66,7 @@ def label_isMonotone(filename):
     comp_time = time.clock() - t0
     data = (('is_monotone', is_monotone), ('computation_time', comp_time))
     print(filename, comp_time)
-    return data
+    return filename, data
 
 
 def label_perturbable(filename):
@@ -79,7 +83,7 @@ def label_perturbable(filename):
     comp_time = time.clock() - t0
     data = (('is_perturbable', objIsPert), ('computation_time', comp_time))
     print(filename, comp_time)
-    return data
+    return filename, data
 
 
 def label_challenge(directory, function, on_timeout):
@@ -97,8 +101,8 @@ def label_challenge(directory, function, on_timeout):
     results = []
     for filename in sorted(glob.glob(directory + '/*/*/*.json')):
 
-        def fileUpdate(data):
-            updateJson(filename, data)
+        def fileUpdate(filename_and_data):
+            updateJson(*filename_and_data)
 
         results.append((filename, pool.apply_async(function, (filename, ), callback=fileUpdate)))
     try:
