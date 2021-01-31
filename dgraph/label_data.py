@@ -86,7 +86,7 @@ def label_perturbable(filename):
     return filename, data
 
 
-def label_challenge(directory, function, on_timeout):
+def label_challenge(directory, function, on_timeout, start_index=None, end_index=None):
     print(directory + '/*/*/*.json')
     # for filename in sorted(glob.glob(directory + '/*/*/*.json')):
     #     D, n, trial = filename.split('/')[2:]
@@ -99,7 +99,7 @@ def label_challenge(directory, function, on_timeout):
     pool = Pool(cpu_count())
     signal.signal(signal.SIGINT, original_sigint_handler)
     results = []
-    for filename in sorted(glob.glob(directory + '/*/*/*.json')):
+    for filename in sorted(glob.glob(directory + '/*/*/*.json'))[start_index:end_index]:
 
         def fileUpdate(filename_and_data):
             updateJson(*filename_and_data)
@@ -144,14 +144,31 @@ def clean(directory):
 
 if __name__ == "__main__":
     # clean(sys.argv[1])
+    si = None
+    ei = None
+    print(len(sys.argv))
+    if len(sys.argv) > 2:
+        si = int(sys.argv[2])
+    if len(sys.argv) > 3:
+        ei = int(sys.argv[3])
 
     ### Challenge 1 ###
     # print(label_isMonotone(sys.argv[1]))
-    label_challenge(sys.argv[1], label_isMonotone, (('is_monotone', "Timeout"), ('computation_time', TIMEOUT)))
+    label_challenge(
+        sys.argv[1], label_isMonotone, (
+            ('is_monotone', "Timeout"),
+            ('computation_time', TIMEOUT),
+        ), si, ei
+    )
 
     ### Challenge 2 ###
     # print(label_perturbable(sys.argv[1]))
-    # label_challenge(sys.argv[1], label_perturbable, (('is_perturbable', "Timeout"), ('computation_time', TIMEOUT)))
+    # label_challenge(
+    #     sys.argv[1], label_perturbable, (
+    #         ('is_perturbable', "Timeout"),
+    #         ('computation_time', TIMEOUT),
+    #     ), si, ei
+    # )
 
     # sys.exit(0)
 
