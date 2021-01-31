@@ -152,23 +152,24 @@ if __name__ == "__main__":
     if len(sys.argv) > 3:
         ei = int(sys.argv[3])
 
-    ### Challenge 1 ###
-    # print(label_isMonotone(sys.argv[1]))
-    label_challenge(
-        sys.argv[1], label_isMonotone, (
-            ('is_monotone', "Timeout"),
-            ('computation_time', TIMEOUT),
-        ), si, ei
-    )
-
-    ### Challenge 2 ###
-    # print(label_perturbable(sys.argv[1]))
-    # label_challenge(
-    #     sys.argv[1], label_perturbable, (
-    #         ('is_perturbable', "Timeout"),
-    #         ('computation_time', TIMEOUT),
-    #     ), si, ei
-    # )
+    if sys.argv[1][-1] == '1':
+        ### Challenge 1 ###
+        # print(label_isMonotone(sys.argv[1]))
+        label_challenge(
+            sys.argv[1], label_isMonotone, (
+                ('is_monotone', "Timeout"),
+                ('computation_time', TIMEOUT),
+            ), si, ei
+        )
+    elif sys.argv[1][-1] == '2':
+        ### Challenge 2 ###
+        # print(label_perturbable(sys.argv[1]))
+        label_challenge(
+            sys.argv[1], label_perturbable, (
+                ('is_perturbable', "Timeout"),
+                ('computation_time', TIMEOUT),
+            ), si, ei
+        )
 
     # sys.exit(0)
 
