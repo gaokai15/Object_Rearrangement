@@ -3,26 +3,28 @@ import glob
 import time
 import json
 import signal
-from multiprocessing import Pool, cpu_count
 from collections import OrderedDict
+from multiprocessing import Pool, cpu_count, TimeoutError
 
 from dspace import DiskCSpace, DiskCSpaceProgram
 from DG_Space import DFS_Rec_for_Monotone_General, linked_list_conversion
 
-Visualize = True
+Visualize = False
+TIMEOUT = 3600  # Timeout in seconds
 
 
-def isMonotone(space):
+def isMonotone(space, ignored=set()):
     space.regionGraph()
     start_poses = {}
     goal_poses = {}
     for pid in space.poseMap:
-        dd = str(pid).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
+        dd = int(str(pid).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'))
         sd = str(pid).strip('0123456789')
-        if 'S' in sd:
-            start_poses[int(dd)] = pid
-        elif 'G' in sd:
-            goal_poses[int(dd)] = pid
+        if dd not in ignored:
+            if 'S' in sd:
+                start_poses[dd] = pid
+            elif 'G' in sd:
+                goal_poses[dd] = pid
 
     region_dict, linked_list = linked_list_conversion(space.RGAdj)
     object_locations = space.pose2reg
@@ -46,20 +48,41 @@ def updateJson(filename, jsonData):
         json.dump(data, f, indent=2)
 
 
+class KeyboardInterruptError(Exception):
+    pass
+
+
 def label_isMonotone(filename):
-    print(filename)
     space = DiskCSpace.from_json(filename)
-    t0 = time.time()
+    t0 = time.clock()
     try:
         is_monotone = isMonotone(space)
     except Exception:
         is_monotone = "Error"
-    comp_time = time.time() - t0
-    data = OrderedDict([('is_monotone', is_monotone), ('computation_time', comp_time)])
-    updateJson(filename, data)
+    comp_time = time.clock() - t0
+    data = (('is_monotone', is_monotone), ('computation_time', comp_time))
+    print(filename, comp_time)
+    return data
 
 
-def label_challenge1(directory):
+def label_perturbable(filename):
+    space = DiskCSpace.from_json(filename)
+    objIsPert = {}
+    t0 = time.clock()
+    for pobj in filter(lambda x: x[0] == 'S', space.poseMap.keys()):
+        obj = int(str(pobj).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'))
+        try:
+            is_monotone = isMonotone(space, set([obj]))
+        except Exception:
+            is_monotone = "Error"
+        objIsPert[obj] = is_monotone
+    comp_time = time.clock() - t0
+    data = (('is_perturbable', objIsPert), ('computation_time', comp_time))
+    print(filename, comp_time)
+    return data
+
+
+def label_challenge(directory, function, on_timeout):
     print(directory + '/*/*/*.json')
     # for filename in sorted(glob.glob(directory + '/*/*/*.json')):
     #     D, n, trial = filename.split('/')[2:]
@@ -71,19 +94,31 @@ def label_challenge1(directory):
     original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     pool = Pool(cpu_count())
     signal.signal(signal.SIGINT, original_sigint_handler)
+    results = []
+    for filename in sorted(glob.glob(directory + '/*/*/*.json')):
+
+        def fileUpdate(data):
+            updateJson(filename, data)
+
+        results.append((filename, pool.apply_async(function, (filename, ), callback=fileUpdate)))
     try:
-        pool.map_async(label_isMonotone, glob.glob(directory + '/*/*/*.json')).get(60)
+        for filename, result in results:
+            try:
+                result.get(TIMEOUT)
+            except TimeoutError:
+                print('\nTimeout!')
+                updateJson(filename, on_timeout)
+                print(filename, TIMEOUT)
     except KeyboardInterrupt:
         print('\nQuitting!')
         pool.terminate()
         sys.exit(0)
-    else:
-        print('Done!')
-        pool.close()
+    print('Done!')
+    pool.close()
     pool.join()
 
 
-def prettyfy(directory):
+def clean(directory):
     for filename in sorted(glob.glob(directory + '/*/*/*/*.json')):
         print(filename)
         with open(filename) as f:
@@ -104,19 +139,25 @@ def prettyfy(directory):
 
 
 if __name__ == "__main__":
-    label_challenge1(sys.argv[1])
-    # label_isMonotone(sys.argv[1])
-    # prettyfy(sys.argv[1])
-    sys.exit(0)
+    # clean(sys.argv[1])
 
-    space = DiskCSpace.from_json(sys.argv[1])
+    ### Challenge 1 ###
+    # print(label_isMonotone(sys.argv[1]))
+    label_challenge(sys.argv[1], label_isMonotone, (('is_monotone', "Timeout"), ('computation_time', TIMEOUT)))
 
-    space.regionGraph()
-    # print(space.poseMap)
-    print(isMonotone(space))
+    ### Challenge 2 ###
+    # print(label_perturbable(sys.argv[1]))
+    # label_challenge(sys.argv[1], label_perturbable, (('is_perturbable', "Timeout"), ('computation_time', TIMEOUT)))
 
-    if Visualize:
-        program = DiskCSpaceProgram(space)
-        program.view.w = program.view.h = 1080
-        program.name = "Motion planning test"
-        program.run()
+    # sys.exit(0)
+
+    ### Compute On One ###
+    # space = DiskCSpace.from_json(sys.argv[1])
+    # space.regionGraph()
+    # print(isMonotone(space))
+
+    # if Visualize:
+    #     program = DiskCSpaceProgram(space)
+    #     program.view.w = program.view.h = 1080
+    #     program.name = "Motion planning test"
+    #     program.run()
