@@ -87,7 +87,7 @@ print(
     len(df2),
     file=sys.stderr,
 )
-df2 = df2.query("num_pert>0 and num_pert<2")
+df2 = df2.query("num_pert>=0 and num_pert<2")
 print("Not non-2tone: ", len(df2))
 df2 = df2.groupby(['density', 'number', 'num_pert']).agg({
     'trial': lambda x: np.log2(len(x) + 1),
@@ -105,7 +105,10 @@ fig = px.scatter_3d(
     # log_x=True,
     # log_y=True,
     log_z=True,
-    # color_continuous_scale=px.colors.colorscale_to_colors(colorscale),
+    color_discrete_map={
+        True: 'blue',
+        False: 'red'
+    },
     hover_data=['density', 'number', 'time', 'monotone'],
     labels={
         'density': '2*n*pi/(w*h)',
@@ -133,7 +136,7 @@ fig = px.scatter_3d(
     # log_y=True,
     log_z=True,
     # color_continuous_scale=((0.0, 'blue'), (0.51, 'red'), (0.51, 'green'), (1.0, 'green')),
-    color_continuous_scale=((0.0, 'blue'), (1.0, 'red')),
+    color_continuous_scale=((0.0, 'black'), (0.001, 'black'), (0.001, 'red'), (1.0, 'blue')),
     hover_data=['density', 'number', 'time', 'num_pert'],
     labels={
         'density': '2*n*pi/(w*h)',

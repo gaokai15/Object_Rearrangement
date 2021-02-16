@@ -5,6 +5,8 @@ import glob
 import time
 import json
 import signal
+import timeout_decorator
+
 from collections import OrderedDict
 from multiprocessing import Pool, cpu_count, TimeoutError
 
@@ -56,34 +58,54 @@ class KeyboardInterruptError(Exception):
     pass
 
 
-def label_isMonotone(filename):
-    space = DiskCSpace.from_json(filename)
-    t0 = time.clock()
+@timeout_decorator.timeout(TIMEOUT)
+def label_isMonotone(filename, on_timeout):
     try:
-        is_monotone = isMonotone(space)
-    except Exception:
-        is_monotone = "Error"
-    comp_time = time.clock() - t0
-    data = (('is_monotone', is_monotone), ('computation_time', comp_time))
-    print(filename, comp_time)
-    return filename, data
-
-
-def label_perturbable(filename):
-    space = DiskCSpace.from_json(filename)
-    objIsPert = {}
-    t0 = time.clock()
-    for pobj in filter(lambda x: x[0] == 'S', space.poseMap.keys()):
-        obj = int(str(pobj).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'))
+        space = DiskCSpace.from_json(filename)
+        t0 = time.clock()
+        t1 = time.time()
         try:
-            is_monotone = isMonotone(space, set([obj]))
+            is_monotone = isMonotone(space)
+        except timeout_decorator.timeout_decorator.TimeoutError:
+            print(filename, 'Timeout!')
+            return filename, on_timeout
         except Exception:
             is_monotone = "Error"
-        objIsPert[obj] = is_monotone
-    comp_time = time.clock() - t0
-    data = (('is_perturbable', objIsPert), ('computation_time', comp_time))
-    print(filename, comp_time)
-    return filename, data
+        comp_time = time.clock() - t0
+        comp_time1 = time.time() - t1
+        data = (('is_monotone', is_monotone), ('computation_time', comp_time), ('computation_time_wall', comp_time1))
+        print(filename, comp_time)
+        return filename, data
+    except timeout_decorator.timeout_decorator.TimeoutError:
+        print(filename, 'Timeout!')
+        return filename, on_timeout
+
+
+@timeout_decorator.timeout(TIMEOUT)
+def label_perturbable(filename, on_timeout):
+    try:
+        space = DiskCSpace.from_json(filename)
+        objIsPert = {}
+        t0 = time.clock()
+        t1 = time.time()
+        for pobj in filter(lambda x: x[0] == 'S', space.poseMap.keys()):
+            obj = int(str(pobj).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'))
+            try:
+                is_monotone = isMonotone(space, set([obj]))
+            except timeout_decorator.timeout_decorator.TimeoutError:
+                print(filename, 'Timeout!')
+                return filename, on_timeout
+            except Exception:
+                is_monotone = "Error"
+            objIsPert[obj] = is_monotone
+        comp_time = time.clock() - t0
+        comp_time1 = time.time() - t1
+        data = (('is_perturbable', objIsPert), ('computation_time', comp_time), ('computation_time_wall', comp_time1))
+        print(filename, comp_time)
+        return filename, data
+    except timeout_decorator.timeout_decorator.TimeoutError:
+        print(filename, 'Timeout!')
+        return filename, on_timeout
 
 
 def label_challenge(directory, function, on_timeout, start_index=None, end_index=None):
@@ -104,15 +126,14 @@ def label_challenge(directory, function, on_timeout, start_index=None, end_index
         def fileUpdate(filename_and_data):
             updateJson(*filename_and_data)
 
-        results.append((filename, pool.apply_async(function, (filename, ), callback=fileUpdate)))
+        results.append((filename, pool.apply_async(function, (filename, on_timeout), callback=fileUpdate)))
     try:
         for filename, result in results:
             try:
-                result.get(TIMEOUT)
+                result.get(TIMEOUT * 2)
             except TimeoutError:
-                print('\nTimeout!')
+                print('\nTimeout: ', filename, '\n')
                 updateJson(filename, on_timeout)
-                print(filename, TIMEOUT)
     except KeyboardInterrupt:
         print('\nQuitting!')
         pool.terminate()
