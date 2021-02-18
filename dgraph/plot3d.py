@@ -68,13 +68,13 @@ print(
     len(df),
     file=sys.stderr,
 )
-df = df.query('monotone!="Timeout" and monotone!="Error"')
-df = df.groupby(['density', 'number',
-                 'monotone']).agg({
-                     # 'trial': lambda x: np.log(len(x)+1),
-                     'trial': lambda x: len(x),
-                     'time': 'mean'
-                 }).reset_index()
+df = df.query('monotone!="Error"')  # and monotone!="Timeout"')
+df = df.groupby(['density', 'number', 'monotone']
+                ).agg({
+                    # 'trial': lambda x: np.log(len(x)+1),
+                    'trial': lambda x: len(x),
+                    'time': 'mean',
+                }).reset_index()
 
 columns2 = ["density", "number", "trial", "num_pert", "time"]
 df2 = pd.DataFrame(data=dfdata2, columns=columns2)
@@ -87,11 +87,11 @@ print(
     len(df2),
     file=sys.stderr,
 )
-df2 = df2.query("num_pert>=0 and num_pert<2")
+df2 = df2.query("num_pert>=0")  # and num_pert<2")
 print("Not non-2tone: ", len(df2))
 df2 = df2.groupby(['density', 'number', 'num_pert']).agg({
     'trial': lambda x: np.log2(len(x) + 1),
-    'time': 'mean'
+    'time': 'mean',
 }).reset_index()
 
 fig = px.scatter_3d(
@@ -135,8 +135,8 @@ fig = px.scatter_3d(
     # log_x=True,
     # log_y=True,
     log_z=True,
-    # color_continuous_scale=((0.0, 'blue'), (0.51, 'red'), (0.51, 'green'), (1.0, 'green')),
-    color_continuous_scale=((0.0, 'black'), (0.001, 'black'), (0.001, 'red'), (1.0, 'blue')),
+    color_continuous_scale=((0.0, 'red'), (0.51, 'blue'), (0.51, 'green'), (1.0, 'green')),
+    # color_continuous_scale=((0.0, 'black'), (0.001, 'black'), (0.001, 'red'), (1.0, 'blue')),
     hover_data=['density', 'number', 'time', 'num_pert'],
     labels={
         'density': '2*n*pi/(w*h)',
