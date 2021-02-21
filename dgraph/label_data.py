@@ -168,7 +168,7 @@ def label_buffers(filename, on_timeout):
                     return filename, on_timeout
                 except Exception:
                     is_buffer_valid = "Error"
-                print(buff, obj, is_buffer_valid)
+                # print(buff, obj, is_buffer_valid)
                 bufferIsValid[buff] = is_buffer_valid
                 if is_buffer_valid is True:
                     break
