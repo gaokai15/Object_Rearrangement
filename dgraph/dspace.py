@@ -1023,7 +1023,18 @@ if __name__ == '__main__':
 
     space.regionGraph()
     if num_buffers > 0:
-        genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 1)
+        num_generated = genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+        print(num_generated)
+        num_generated = genBuffers(
+            num_buffers - num_generated,
+            space,
+            space.poseMap.keys(),
+            'random',
+            len(space.poseMap.keys()),
+            count=num_generated
+        )
+        print(num_generated)
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', len(space.poseMap.keys()))
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_boundary')
         # genBuffers(num_buffers, space, [], 'greedy_free')

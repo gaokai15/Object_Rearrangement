@@ -137,7 +137,17 @@ def label_perturbable(filename, on_timeout):
 def label_buffers(filename, on_timeout):
     try:
         space = DiskCSpace.from_json(filename)
-        genBuffers(10, space, [], 'greedy_free')
+        num_buffers = 10
+        space.computeMinkObs()
+        num_generated = genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+        num_generated = genBuffers(
+            num_buffers - num_generated,
+            space,
+            space.poseMap.keys(),
+            'random',
+            len(space.poseMap.keys()),
+            count=num_generated
+        )
         try:
             with open(filename) as f:
                 perturbed = sorted([int(x) for x, y in json.load(f)['is_perturbable'].items() if y])
