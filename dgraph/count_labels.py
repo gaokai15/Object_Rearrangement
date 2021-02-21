@@ -36,8 +36,10 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
         print("ch1:", cc1, "/", bcc1, "ch2 ", cc2, "/", bcc2, "ch3 ", cc3, "/", bcc3, file=sys.stderr)
         cc1 = 0
         cc2 = 0
+        cc3 = 0
         bcc1 = 0
         bcc2 = 0
+        bcc3 = 0
     progress += 1
     with open(filename) as f:
         data = json.load(f)
@@ -64,13 +66,12 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
             else:
                 vals = 2  # Timeout
             dfdata2.append([D, n, trial, vals, data['computation_time']])
-
     if 'ch3' in filename:
         bcc3 += 1
         if 'is_valid_buffer' in data:
             cc3 += 1
             tcc3 += 1
-            if data['is_valid_buffer'] != 'Timeout':
+            if data['is_valid_buffer'] not in ('Timeout', 'Bad instance'):
                 if 'Error' not in data['is_valid_buffer'].values():
                     vals = sum(data['is_valid_buffer'].values()) / int(n)
                 else:
@@ -106,7 +107,7 @@ print(
 )
 print("Not non-2tone: ", len(df2.query("num_pert>0")))
 columns3 = ["density", "number", "trial", "num_buff", "time"]
-df3 = pd.DataFrame(data=dfdata2, columns=columns2)
+df3 = pd.DataFrame(data=dfdata3, columns=columns3)
 print(
     '\nTimeouts: ',
     len(df3.query('num_buff==2')),

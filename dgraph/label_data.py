@@ -210,6 +210,8 @@ def label_challenge(directory, function, on_timeout, start_index=None, end_index
             except TimeoutError:
                 print('\nTimeout: ', filename, '\n')
                 updateJson(filename, on_timeout)
+            except Exception:
+                print("Error?: ", filename)
     except KeyboardInterrupt:
         print('\nQuitting!')
         pool.terminate()
