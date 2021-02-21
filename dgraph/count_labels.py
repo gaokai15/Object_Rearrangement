@@ -105,7 +105,7 @@ print(
     len(df2),
     file=sys.stderr,
 )
-print("Not non-2tone: ", len(df2.query("num_pert>0")))
+print("Not non-2-tone: ", len(df2.query("num_pert>0 and num_pert<2")), file=sys.stderr)
 columns3 = ["density", "number", "trial", "num_buff", "time"]
 df3 = pd.DataFrame(data=dfdata3, columns=columns3)
 print(
@@ -117,4 +117,4 @@ print(
     len(df3),
     file=sys.stderr,
 )
-print("Not non-2tone: ", len(df3.query("num_buff>0")))
+print("2-tone: ", len(df3.query("num_buff>0 and num_buff<2")), file=sys.stderr)

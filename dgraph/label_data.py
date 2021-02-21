@@ -157,9 +157,11 @@ def label_buffers(filename, on_timeout):
             print(filename, -1)
             return filename, data
         bufferIsValid = {}
+        buffer_coords = {}
         t0 = time.clock()
         t1 = time.time()
         for buff in filter(lambda x: x[0] == 'B', space.poseMap.keys()):
+            buffer_coords[buff] = space.poseMap[buff].center
             for obj in perturbed:
                 try:
                     is_buffer_valid = isSolution(space, obj, buff)
@@ -175,7 +177,10 @@ def label_buffers(filename, on_timeout):
         comp_time = time.clock() - t0
         comp_time1 = time.time() - t1
         data = (
-            ('is_valid_buffer', bufferIsValid), ('computation_time', comp_time), ('computation_time_wall', comp_time1)
+            ('buffers', buffer_coords),
+            ('is_valid_buffer', bufferIsValid),
+            ('computation_time', comp_time),
+            ('computation_time_wall', comp_time1),
         )
         print(filename, comp_time)
         return filename, data
