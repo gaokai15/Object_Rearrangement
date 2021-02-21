@@ -66,5 +66,24 @@ print("Total: ch1:", tcc1, "ch2", tcc2, file=sys.stderr)
 
 columns = ["density", "number", "trial", "monotone", "time"]
 df = pd.DataFrame(data=dfdata, columns=columns)
+print(
+    '\nTimeouts: ',
+    len(df.query('monotone=="Timeout"')),
+    '\nErrors: ',
+    len(df.query('monotone=="Error"')),
+    '\nTotal: ',
+    len(df),
+    file=sys.stderr,
+)
 columns2 = ["density", "number", "trial", "num_pert", "time"]
 df2 = pd.DataFrame(data=dfdata2, columns=columns2)
+print(
+    '\nTimeouts: ',
+    len(df2.query('num_pert==2')),
+    '\nErrors: ',
+    len(df2.query('num_pert==-1')),
+    '\nTotal: ',
+    len(df2),
+    file=sys.stderr,
+)
+print("Not non-2tone: ", len(df2.query("num_pert>0")))
