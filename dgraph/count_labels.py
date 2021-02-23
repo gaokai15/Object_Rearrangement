@@ -33,7 +33,7 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
     # print(D, n, trial)
 
     if progress % 1600 == 0 and progress > 0:
-        print("ch1:", cc1, "/", bcc1, "ch2 ", cc2, "/", bcc2, "ch3 ", cc3, "/", bcc3, file=sys.stderr)
+        print("ch1:", cc1, "/", bcc1, "ch2", cc2, "/", bcc2, "ch3", cc3, "/", bcc3, file=sys.stderr)
         cc1 = 0
         cc2 = 0
         cc3 = 0
@@ -81,7 +81,7 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
             dfdata3.append([D, n, trial, vals, data['computation_time']])
 
 pprint(toprint)
-print("Total: ch1:", tcc1, "ch2", tcc2, file=sys.stderr)
+print("Total: ch1:", tcc1, "ch2", tcc2, "ch3", tcc3, file=sys.stderr)
 
 columns = ["density", "number", "trial", "monotone", "time"]
 df = pd.DataFrame(data=dfdata, columns=columns)
