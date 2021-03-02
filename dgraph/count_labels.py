@@ -45,28 +45,36 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
         data = json.load(f)
     if 'ch1' in filename:
         bcc1 += 1
-        if 'is_monotone' in data:
+        if 'is_monotone' in data and data['is_monotone'] is not None:
             cc1 += 1
             tcc1 += 1
             dfdata.append([D, n, trial, data['is_monotone'], data['computation_time']])
-            if data['is_monotone']:
-                print(filename.replace('ch1', 'ch2'))
-                print(filename.replace('ch1', 'ch3'))
+            # if data['is_monotone']:
+            #     print(filename.replace('ch1', 'ch2'))
+            #     print(filename.replace('ch1', 'ch3'))
     if 'ch2' in filename:
         bcc2 += 1
         if 'is_perturbable' in data:
             cc2 += 1
             tcc2 += 1
-            if data['is_perturbable'] != 'Timeout':
-                if 'Error' not in data['is_perturbable'].values():
-                    vals = sum(data['is_perturbable'].values()) / int(n)
+            if type(data['is_perturbable']) == bool:
+                continue
+            if data['is_perturbable'] is not None:
+                if data['is_perturbable'] != 'Timeout':
+                    for obj, vals in data['is_perturbable'].items():
+                        dfdata2.append([D, n, trial + obj, vals, data['computation_time']])
                 else:
-                    vals = -1  # Error
-            else:
-                vals = 2  # Timeout
-            dfdata2.append([D, n, trial, vals, data['computation_time']])
-            if vals == 0:
-                print(filename.replace('ch2', 'ch3'))
+                    dfdata2.append([D, n, trial, 'Timeout', data['computation_time']])
+            # if data['is_perturbable'] != 'Timeout':
+            #     if 'Error' not in data['is_perturbable'].values():
+            #         vals = sum(data['is_perturbable'].values()) / int(n)
+            #     else:
+            #         vals = -1  # Error
+            # else:
+            #     vals = 2  # Timeout
+            # dfdata2.append([D, n, trial, vals, data['computation_time']])
+            # if vals == 0:
+            #     print(filename.replace('ch2', 'ch3'))
     if 'ch3' in filename:
         bcc3 += 1
         if 'is_valid_buffer' in data:
@@ -77,10 +85,12 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
             elif data['is_valid_buffer'] == 'Bad instance':
                 vals = -1  # Error
             else:
-                if 'Error' not in data['is_valid_buffer'].values():
-                    vals = sum(data['is_valid_buffer'].values()) / len(data['is_valid_buffer'])
-                else:
+                if 'Timeout' in data['is_valid_buffer'].values():
+                    vals = 2  # Timeout
+                elif 'Error' in data['is_valid_buffer'].values():
                     vals = -1  # Error
+                else:
+                    vals = sum(data['is_valid_buffer'].values()) / len(data['is_valid_buffer'])
             dfdata3.append([D, n, trial, vals, data['computation_time']])
 
 print("Total: ch1:", tcc1, "ch2", tcc2, "ch3", tcc3, file=sys.stderr)
@@ -96,18 +106,18 @@ print(
     len(df),
     file=sys.stderr,
 )
-columns2 = ["density", "number", "trial", "num_pert", "time"]
+columns2 = ["density", "number", "trial", "perturbable", "time"]
 df2 = pd.DataFrame(data=dfdata2, columns=columns2)
 print(
     '\nTimeouts: ',
-    len(df2.query('num_pert==2')),
+    len(df2.query('perturbable=="Timeout"')),
     '\nErrors: ',
-    len(df2.query('num_pert==-1')),
+    len(df2.query('perturbable=="Error"')),
     '\nTotal: ',
     len(df2),
     file=sys.stderr,
 )
-print("Not non-2-tone: ", len(df2.query("num_pert>0 and num_pert<2")), file=sys.stderr)
+print("Not non-2-tone: ", len(df2.query("perturbable==True")), file=sys.stderr)
 columns3 = ["density", "number", "trial", "num_buff", "time"]
 df3 = pd.DataFrame(data=dfdata3, columns=columns3)
 print(

@@ -7,6 +7,7 @@ import json
 import signal
 import timeout_decorator
 
+from random import seed
 from collections import OrderedDict
 from multiprocessing import Pool, cpu_count, TimeoutError
 
@@ -91,7 +92,7 @@ def updateJson(filename, jsonData):
 
 
 # @timeout_decorator.timeout(TIMEOUT)
-def label_isMonotone(filename, on_timeout):
+def label_isMonotone(filename):
     space = DiskCSpace.from_json(filename)
     t0 = time.clock()
     t1 = time.time()
@@ -101,85 +102,86 @@ def label_isMonotone(filename, on_timeout):
         is_monotone = "Error"
     comp_time = time.clock() - t0
     comp_time1 = time.time() - t1
-    data = (('is_monotone', is_monotone), ('computation_time', comp_time), ('computation_time_wall', comp_time1))
+    data = (
+        ('is_monotone', is_monotone),
+        ('computation_time', comp_time),
+        # ('computation_time_wall', comp_time1),
+    )
     print(filename, comp_time)
     return filename, data
 
 
 # @timeout_decorator.timeout(TIMEOUT)
-def label_perturbable(filename, on_timeout):
+def label_perturbable(filename):
     space = DiskCSpace.from_json(filename)
     objIsPert = {}
-    t0 = time.clock()
-    t1 = time.time()
+    comp_time = {}
+    comp_time1 = {}
     for pobj in filter(lambda x: x[0] == 'S', space.poseMap.keys()):
         obj = int(str(pobj).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'))
+        t0 = time.clock()
+        t1 = time.time()
         try:
             is_monotone = isMonotone(space, set([obj]))
         except Exception:
             is_monotone = "Error"
         objIsPert[obj] = is_monotone
-    comp_time = time.clock() - t0
-    comp_time1 = time.time() - t1
-    data = (('is_perturbable', objIsPert), ('computation_time', comp_time), ('computation_time_wall', comp_time1))
+        comp_time[obj] = time.clock() - t0
+        comp_time1[obj] = time.time() - t1
+    data = (
+        ('is_perturbable', objIsPert),
+        ('computation_time', comp_time),
+        # ('computation_time_wall', comp_time1),
+    )
     print(filename, comp_time)
     return filename, data
 
 
-@timeout_decorator.timeout(TIMEOUT)
-def label_buffers(filename, on_timeout):
+# @timeout_decorator.timeout(TIMEOUT)
+def label_buffers(filename):
+    space = DiskCSpace.from_json(filename)
+    num_buffers = 10
+    space.computeMinkObs()
+    seed(88)
+    num_generated = genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+    num_generated = genBuffers(
+        num_buffers - num_generated,
+        space,
+        space.poseMap.keys(),
+        'random',
+        len(space.poseMap.keys()),
+        count=num_generated
+    )
     try:
-        space = DiskCSpace.from_json(filename)
-        num_buffers = 10
-        space.computeMinkObs()
-        num_generated = genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
-        num_generated = genBuffers(
-            num_buffers - num_generated,
-            space,
-            space.poseMap.keys(),
-            'random',
-            len(space.poseMap.keys()),
-            count=num_generated
-        )
-        try:
-            with open(filename) as f:
-                perturbed = sorted([int(x) for x, y in json.load(f)['is_perturbable'].items() if y])
-            assert (len(perturbed) > 0)
-        except:
-            data = (('is_valid_buffer', 'Bad instance'), ('computation_time', -1))
-            print(filename, -1)
-            return filename, data
-        bufferIsValid = {}
-        buffer_coords = {}
-        t0 = time.clock()
-        t1 = time.time()
-        for buff in filter(lambda x: x[0] == 'B', space.poseMap.keys()):
-            buffer_coords[buff] = space.poseMap[buff].center
-            for obj in perturbed:
-                try:
-                    is_buffer_valid = isSolution(space, obj, buff)
-                except timeout_decorator.timeout_decorator.TimeoutError:
-                    print(filename, 'Timeout!')
-                    return filename, on_timeout
-                except Exception:
-                    is_buffer_valid = "Error"
-                # print(buff, obj, is_buffer_valid)
-                bufferIsValid[buff] = is_buffer_valid
-                if is_buffer_valid is True:
-                    break
-        comp_time = time.clock() - t0
-        comp_time1 = time.time() - t1
-        data = (
-            ('buffers', buffer_coords),
-            ('is_valid_buffer', bufferIsValid),
-            ('computation_time', comp_time),
-            ('computation_time_wall', comp_time1),
-        )
-        print(filename, comp_time)
+        with open(filename) as f:
+            # perturbed = sorted([int(x) for x, y in json.load(f)['is_perturbable'].items() if y])
+            obj = int(json.load(f)['object_selected'])
+    except:
+        data = (('is_valid_buffer', 'Bad instance'), ('computation_time', -1))
+        print(filename, -1)
         return filename, data
-    except timeout_decorator.timeout_decorator.TimeoutError:
-        print(filename, 'Timeout!')
-        return filename, on_timeout
+    bufferIsValid = {}
+    buffer_coords = {}
+    t0 = time.clock()
+    t1 = time.time()
+    for buff in filter(lambda x: x[0] == 'B', space.poseMap.keys()):
+        buffer_coords[buff] = space.poseMap[buff].center
+        try:
+            is_buffer_valid = isSolution(space, obj, buff)
+        except Exception:
+            is_buffer_valid = "Error"
+        # print(buff, obj, is_buffer_valid)
+        bufferIsValid[buff] = is_buffer_valid
+    comp_time = time.clock() - t0
+    comp_time1 = time.time() - t1
+    data = (
+        ('buffers', buffer_coords),
+        ('is_valid_buffer', bufferIsValid),
+        ('computation_time', comp_time),
+        # ('computation_time_wall', comp_time1),
+    )
+    print(filename, comp_time)
+    return filename, data
 
 
 def label_challenge(directory, function, on_timeout, start_index=None, end_index=None):
@@ -193,11 +195,11 @@ def label_challenge(directory, function, on_timeout, start_index=None, end_index
         def fileUpdate(filename_and_data):
             updateJson(*filename_and_data)
 
-        results.append((filename, pool.apply_async(function, (filename, on_timeout), callback=fileUpdate)))
+        results.append((filename, pool.apply_async(function, (filename, ), callback=fileUpdate)))
     try:
         for filename, result in results:
             try:
-                result.get(TIMEOUT * 2)
+                result.get(TIMEOUT * 60)
             except TimeoutError:
                 print('\nTimeout: ', filename, '\n')
                 updateJson(filename, on_timeout)
@@ -240,7 +242,11 @@ def split_challenge2(directory):
         c = 0
         if 'is_perturbable' not in data:
             continue
+        if data['is_perturbable'] is None:
+            continue
         perturb = data['is_perturbable']
+        comp_times = data['computation_time']
+        # comp_time1s = data['computation_time_wall']
         if type(perturb) is not OrderedDict:
             continue
 
@@ -249,15 +255,20 @@ def split_challenge2(directory):
                 newfile = filename[:-5] + '-' + obj + '.json'
                 data['object_selected'] = int(obj)
                 data['is_perturbable'] = is_pert
+                data['computation_time'] = comp_times[obj] if type(comp_times) != float else comp_times
+                # data['computation_time_wall'] = comp_time1s[obj] if type(comp_time1s) != float else comp_time1s
                 with open(newfile, 'w') as f:
                     json.dump(data, f, indent=2)
                 print(newfile, is_pert)
 
 
 if __name__ == "__main__":
-    split_challenge2(sys.argv[1])
-    sys.exit(0)
+
+    ### Misc Processing ###
+    # split_challenge2(sys.argv[1])
     # clean(sys.argv[1])
+    # sys.exit(0)
+
     si = None
     ei = None
     print(len(sys.argv))
@@ -272,7 +283,7 @@ if __name__ == "__main__":
         label_challenge(
             sys.argv[1], label_isMonotone, (
                 ('is_monotone', "Timeout"),
-                ('computation_time', TIMEOUT),
+                ('computation_time', TIMEOUT * 60),
             ), si, ei
         )
     elif sys.argv[1][-1] == '2':
@@ -281,7 +292,7 @@ if __name__ == "__main__":
         label_challenge(
             sys.argv[1], label_perturbable, (
                 ('is_perturbable', "Timeout"),
-                ('computation_time', TIMEOUT),
+                ('computation_time', TIMEOUT * 60),
             ), si, ei
         )
     elif sys.argv[1][-1] == '3':
@@ -290,7 +301,7 @@ if __name__ == "__main__":
         label_challenge(
             sys.argv[1], label_buffers, (
                 ('is_valid_buffer', "Timeout"),
-                ('computation_time', TIMEOUT),
+                ('computation_time', TIMEOUT * 60),
             ), si, ei
         )
 
