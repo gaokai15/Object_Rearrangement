@@ -21,15 +21,15 @@ cc3 = 0
 tcc3 = 0
 bcc3 = 0
 progress = 0
-toprint = []
 dfdata = []
 dfdata2 = []
 dfdata3 = []
+tocheck = set()
 for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
     D, n, trial = filename.split('/')[2:]
     D = float(D.split('=')[-1])
     n = int(n.split('=')[-1])
-    trial = int(trial.split('.')[0])
+    trial = trial.split('.')[0]
     # print(D, n, trial)
 
     if progress % 1600 == 0 and progress > 0:
@@ -50,9 +50,8 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
             tcc1 += 1
             dfdata.append([D, n, trial, data['is_monotone'], data['computation_time']])
             if data['is_monotone']:
-                toprint.append(filename)
-        # else:
-        #     toprint.append(filename)
+                print(filename.replace('ch1', 'ch2'))
+                print(filename.replace('ch1', 'ch3'))
     if 'ch2' in filename:
         bcc2 += 1
         if 'is_perturbable' in data:
@@ -66,21 +65,24 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
             else:
                 vals = 2  # Timeout
             dfdata2.append([D, n, trial, vals, data['computation_time']])
+            if vals == 0:
+                print(filename.replace('ch2', 'ch3'))
     if 'ch3' in filename:
         bcc3 += 1
         if 'is_valid_buffer' in data:
             cc3 += 1
             tcc3 += 1
-            if data['is_valid_buffer'] not in ('Timeout', 'Bad instance'):
+            if data['is_valid_buffer'] == 'Timeout':
+                vals = 2  # Timeout
+            elif data['is_valid_buffer'] == 'Bad instance':
+                vals = -1  # Error
+            else:
                 if 'Error' not in data['is_valid_buffer'].values():
-                    vals = sum(data['is_valid_buffer'].values()) / int(n)
+                    vals = sum(data['is_valid_buffer'].values()) / len(data['is_valid_buffer'])
                 else:
                     vals = -1  # Error
-            else:
-                vals = 2  # Timeout
             dfdata3.append([D, n, trial, vals, data['computation_time']])
 
-pprint(toprint)
 print("Total: ch1:", tcc1, "ch2", tcc2, "ch3", tcc3, file=sys.stderr)
 
 columns = ["density", "number", "trial", "monotone", "time"]

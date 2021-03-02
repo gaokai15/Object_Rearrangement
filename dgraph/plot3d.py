@@ -25,11 +25,12 @@ progress = 0
 dfdata = []
 dfdata2 = []
 dfdata3 = []
+toignore = {2: set(), 3: set()}
 for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
     D, n, trial = filename.split('/')[2:]
     D = float(D.split('=')[-1])
     n = int(n.split('=')[-1])
-    trial = int(trial.split('.')[0])
+    trial = trial.split('.')[0]
     # print(D, n, trial)
 
     if progress % 1600 == 0 and progress > 0:
@@ -49,6 +50,9 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
             cc1 += 1
             tcc1 += 1
             dfdata.append([D, n, trial, data['is_monotone'], data['computation_time']])
+            if data['is_monotone']:
+                toignore[2].add((D, n, trial))
+                toignore[3].add((D, n, trial))
     if 'ch2' in filename:
         bcc2 += 1
         if 'is_perturbable' in data:
@@ -61,7 +65,10 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
                     vals = -1  # Error
             else:
                 vals = 2  # Timeout
-            dfdata2.append([D, n, trial, vals, data['computation_time']])
+            if not (D, n, trial) in toignore[2]:
+                dfdata2.append([D, n, trial, vals, data['computation_time']])
+            if vals == 0:
+                toignore[3].add((D, n, trial))
     if 'ch3' in filename:
         bcc3 += 1
         if 'is_valid_buffer' in data:
@@ -76,7 +83,8 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
                     vals = sum(data['is_valid_buffer'].values()) / len(data['is_valid_buffer'])
                 else:
                     vals = -1  # Error
-            dfdata3.append([D, n, trial, vals, data['computation_time']])
+            if not (D, n, trial) in toignore[3]:
+                dfdata3.append([D, n, trial, vals, data['computation_time']])
 
 print("Total: ch1:", tcc1, "ch2", tcc2, "ch3", tcc3, file=sys.stderr)
 

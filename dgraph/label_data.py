@@ -15,62 +15,69 @@ from dspace import DiskCSpace, DiskCSpaceProgram, genBuffers
 from DPLocalSolver import DFS_Rec_for_Monotone_General, DFS_Rec_for_Non_Monotone_General
 
 Visualize = False
-TIMEOUT = 3600  # Timeout in seconds
+TIMEOUT = 600  # Timeout in seconds
 
 
+@timeout_decorator.timeout(TIMEOUT)
 def isMonotone(space, ignored=set()):
-    space.regionGraph()
-    start_poses = {}
-    goal_poses = {}
-    for pid in space.poseMap:
-        dd = int(str(pid).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'))
-        sd = str(pid).strip('0123456789')
-        if dd not in ignored:
+    try:
+        space.regionGraph()
+        start_poses = {}
+        goal_poses = {}
+        for pid in space.poseMap:
+            dd = int(str(pid).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'))
+            sd = str(pid).strip('0123456789')
+            if dd not in ignored:
+                if 'S' in sd:
+                    start_poses[dd] = pid
+                elif 'G' in sd:
+                    goal_poses[dd] = pid
+
+        region_dict, linked_list = linked_list_conversion(space.RGAdj)
+        object_locations = space.pose2reg
+        subTree = DFS_Rec_for_Monotone_General(
+            start_poses,
+            goal_poses,
+            {},
+            {},
+            object_locations,
+            linked_list,
+            region_dict,
+        )
+        return subTree.isMonotone
+    except timeout_decorator.timeout_decorator.TimeoutError:
+        return 'Timeout'
+
+
+@timeout_decorator.timeout(TIMEOUT)
+def isSolution(space, obj, buff):
+    try:
+        space.regionGraph(lambda x: x[0] != 'B' or x == buff)  # ignore buffers except buff
+        start_poses = {}
+        goal_poses = {}
+        for pid in space.poseMap:
+            dd = int(str(pid).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'))
+            sd = str(pid).strip('0123456789')
             if 'S' in sd:
                 start_poses[dd] = pid
             elif 'G' in sd:
                 goal_poses[dd] = pid
 
-    region_dict, linked_list = linked_list_conversion(space.RGAdj)
-    object_locations = space.pose2reg
-    subTree = DFS_Rec_for_Monotone_General(
-        start_poses,
-        goal_poses,
-        {},
-        {},
-        object_locations,
-        linked_list,
-        region_dict,
-    )
-    return subTree.isMonotone
-
-
-def isSolution(space, obj, buff):
-    space.regionGraph(lambda x: x[0] != 'B' or x == buff)  # ignore buffers except buff
-    start_poses = {}
-    goal_poses = {}
-    for pid in space.poseMap:
-        dd = int(str(pid).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'))
-        sd = str(pid).strip('0123456789')
-        if 'S' in sd:
-            start_poses[dd] = pid
-        elif 'G' in sd:
-            goal_poses[dd] = pid
-
-    region_dict, linked_list = linked_list_conversion(space.RGAdj)
-    object_locations = space.pose2reg
-    subTree = DFS_Rec_for_Non_Monotone_General(
-        start_poses,
-        goal_poses,
-        {},
-        {},
-        object_locations,
-        linked_list,
-        region_dict,
-        {obj: (len(start_poses), buff)},
-    )
-
-    return subTree.isMonotone
+        region_dict, linked_list = linked_list_conversion(space.RGAdj)
+        object_locations = space.pose2reg
+        subTree = DFS_Rec_for_Non_Monotone_General(
+            start_poses,
+            goal_poses,
+            {},
+            {},
+            object_locations,
+            linked_list,
+            region_dict,
+            {obj: (len(start_poses), buff)},
+        )
+        return subTree.isMonotone
+    except timeout_decorator.timeout_decorator.TimeoutError:
+        return 'Timeout'
 
 
 def updateJson(filename, jsonData):
@@ -83,54 +90,40 @@ def updateJson(filename, jsonData):
         json.dump(data, f, indent=2)
 
 
-@timeout_decorator.timeout(TIMEOUT)
+# @timeout_decorator.timeout(TIMEOUT)
 def label_isMonotone(filename, on_timeout):
+    space = DiskCSpace.from_json(filename)
+    t0 = time.clock()
+    t1 = time.time()
     try:
-        space = DiskCSpace.from_json(filename)
-        t0 = time.clock()
-        t1 = time.time()
+        is_monotone = isMonotone(space)
+    except Exception:
+        is_monotone = "Error"
+    comp_time = time.clock() - t0
+    comp_time1 = time.time() - t1
+    data = (('is_monotone', is_monotone), ('computation_time', comp_time), ('computation_time_wall', comp_time1))
+    print(filename, comp_time)
+    return filename, data
+
+
+# @timeout_decorator.timeout(TIMEOUT)
+def label_perturbable(filename, on_timeout):
+    space = DiskCSpace.from_json(filename)
+    objIsPert = {}
+    t0 = time.clock()
+    t1 = time.time()
+    for pobj in filter(lambda x: x[0] == 'S', space.poseMap.keys()):
+        obj = int(str(pobj).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'))
         try:
-            is_monotone = isMonotone(space)
-        except timeout_decorator.timeout_decorator.TimeoutError:
-            print(filename, 'Timeout!')
-            return filename, on_timeout
+            is_monotone = isMonotone(space, set([obj]))
         except Exception:
             is_monotone = "Error"
-        comp_time = time.clock() - t0
-        comp_time1 = time.time() - t1
-        data = (('is_monotone', is_monotone), ('computation_time', comp_time), ('computation_time_wall', comp_time1))
-        print(filename, comp_time)
-        return filename, data
-    except timeout_decorator.timeout_decorator.TimeoutError:
-        print(filename, 'Timeout!')
-        return filename, on_timeout
-
-
-@timeout_decorator.timeout(TIMEOUT)
-def label_perturbable(filename, on_timeout):
-    try:
-        space = DiskCSpace.from_json(filename)
-        objIsPert = {}
-        t0 = time.clock()
-        t1 = time.time()
-        for pobj in filter(lambda x: x[0] == 'S', space.poseMap.keys()):
-            obj = int(str(pobj).strip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'))
-            try:
-                is_monotone = isMonotone(space, set([obj]))
-            except timeout_decorator.timeout_decorator.TimeoutError:
-                print(filename, 'Timeout!')
-                return filename, on_timeout
-            except Exception:
-                is_monotone = "Error"
-            objIsPert[obj] = is_monotone
-        comp_time = time.clock() - t0
-        comp_time1 = time.time() - t1
-        data = (('is_perturbable', objIsPert), ('computation_time', comp_time), ('computation_time_wall', comp_time1))
-        print(filename, comp_time)
-        return filename, data
-    except timeout_decorator.timeout_decorator.TimeoutError:
-        print(filename, 'Timeout!')
-        return filename, on_timeout
+        objIsPert[obj] = is_monotone
+    comp_time = time.clock() - t0
+    comp_time1 = time.time() - t1
+    data = (('is_perturbable', objIsPert), ('computation_time', comp_time), ('computation_time_wall', comp_time1))
+    print(filename, comp_time)
+    return filename, data
 
 
 @timeout_decorator.timeout(TIMEOUT)
@@ -191,13 +184,6 @@ def label_buffers(filename, on_timeout):
 
 def label_challenge(directory, function, on_timeout, start_index=None, end_index=None):
     print(directory + '/*/*/*.json')
-    # for filename in sorted(glob.glob(directory + '/*/*/*.json')):
-    #     D, n, trial = filename.split('/')[2:]
-    #     D = float(D.split('=')[-1])
-    #     n = int(n.split('=')[-1])
-    #     trial = int(trial.split('.')[0])
-    #     print(D, n, trial)
-    #     label_isMonotone(filename)
     original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     pool = Pool(cpu_count())
     signal.signal(signal.SIGINT, original_sigint_handler)
@@ -246,7 +232,31 @@ def clean(directory):
             json.dump(data, f, indent=2)
 
 
+def split_challenge2(directory):
+    for filename in sorted(glob.glob(directory + '/*/*/*.json')):
+        with open(filename) as f:
+            data = json.load(f, object_pairs_hook=OrderedDict)
+
+        c = 0
+        if 'is_perturbable' not in data:
+            continue
+        perturb = data['is_perturbable']
+        if type(perturb) is not OrderedDict:
+            continue
+
+        for obj, is_pert in perturb.items():
+            if type(is_pert) == bool:
+                newfile = filename[:-5] + '-' + obj + '.json'
+                data['object_selected'] = int(obj)
+                data['is_perturbable'] = is_pert
+                with open(newfile, 'w') as f:
+                    json.dump(data, f, indent=2)
+                print(newfile, is_pert)
+
+
 if __name__ == "__main__":
+    split_challenge2(sys.argv[1])
+    sys.exit(0)
     # clean(sys.argv[1])
     si = None
     ei = None
