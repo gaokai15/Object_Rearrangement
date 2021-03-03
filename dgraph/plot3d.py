@@ -46,7 +46,7 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
         data = json.load(f)
     if 'ch1' in filename:
         bcc1 += 1
-        if 'is_monotone' in data:
+        if 'is_monotone' in data and data['is_monotone'] is not None:
             cc1 += 1
             tcc1 += 1
             dfdata.append([D, n, trial, data['is_monotone'], data['computation_time']])
@@ -55,23 +55,36 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
                 toignore[3].add((D, n, trial))
     if 'ch2' in filename:
         bcc2 += 1
-        if 'is_perturbable' in data:
+        if 'is_perturbable' in data and data['is_perturbable'] is not None:
             cc2 += 1
             tcc2 += 1
-            if data['is_perturbable'] != 'Timeout':
-                if 'Error' not in data['is_perturbable'].values():
-                    vals = sum(data['is_perturbable'].values()) / int(n)
+            if type(data['is_perturbable']) == bool:
+                continue
+            if (D, n, trial) in toignore[2]:
+                continue
+            if data['is_perturbable'] is not None:
+                if data['is_perturbable'] != 'Timeout':
+                    for obj, vals in data['is_perturbable'].items():
+                        dfdata2.append([D, n, trial + obj, vals, data['computation_time'][obj]])
+                        if not vals:
+                            toignore[3].add((D, n, trial + obj))
                 else:
-                    vals = -1  # Error
-            else:
-                vals = 2  # Timeout
-            if not (D, n, trial) in toignore[2]:
-                dfdata2.append([D, n, trial, vals, data['computation_time']])
-            if vals == 0:
-                toignore[3].add((D, n, trial))
+                    dfdata2.append([D, n, trial, 'Timeout', data['computation_time']])
+                    toignore[3].add((D, n, trial))
+            # if data['is_perturbable'] != 'Timeout':
+            #     if 'Error' not in data['is_perturbable'].values():
+            #         vals = sum(data['is_perturbable'].values()) / int(n)
+            #     else:
+            #         vals = -1  # Error
+            # else:
+            #     vals = 2  # Timeout
+            # if not (D, n, trial) in toignore[2]:
+            #     dfdata2.append([D, n, trial, vals, data['computation_time']])
+            # if vals == 0:
+            #     toignore[3].add((D, n, trial))
     if 'ch3' in filename:
         bcc3 += 1
-        if 'is_valid_buffer' in data:
+        if 'is_valid_buffer' in data and data['is_valid_buffer'] is not None:
             cc3 += 1
             tcc3 += 1
             if data['is_valid_buffer'] == 'Timeout':
@@ -79,11 +92,14 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
             elif data['is_valid_buffer'] == 'Bad instance':
                 vals = -1  # Error
             else:
-                if 'Error' not in data['is_valid_buffer'].values():
-                    vals = sum(data['is_valid_buffer'].values()) / len(data['is_valid_buffer'])
-                else:
+                if 'Timeout' in data['is_valid_buffer'].values():
+                    vals = 2  # Timeout
+                elif 'Error' in data['is_valid_buffer'].values():
                     vals = -1  # Error
-            if not (D, n, trial) in toignore[3]:
+                else:
+                    vals = sum(data['is_valid_buffer'].values()) / len(data['is_valid_buffer'])
+            obj = str(data['object_selected']) if 'object_selected' in data else ''
+            if not (D, n, trial + obj) in toignore[3]:
                 dfdata3.append([D, n, trial, vals, data['computation_time']])
 
 print("Total: ch1:", tcc1, "ch2", tcc2, "ch3", tcc3, file=sys.stderr)
@@ -100,18 +116,18 @@ print(
     len(df),
     file=sys.stderr,
 )
-columns2 = ["density", "number", "trial", "num_pert", "time"]
+columns2 = ["density", "number", "trial", "perturbable", "time"]
 df2 = pd.DataFrame(data=dfdata2, columns=columns2)
 print(
     '\nTimeouts: ',
-    len(df2.query('num_pert==2')),
+    len(df2.query('perturbable=="Timeout"')),
     '\nErrors: ',
-    len(df2.query('num_pert==-1')),
+    len(df2.query('perturbable=="Error"')),
     '\nTotal: ',
     len(df2),
     file=sys.stderr,
 )
-print("Not non-2-tone: ", len(df2.query("num_pert>0 and num_pert<2")), file=sys.stderr)
+print("Not non-2-tone: ", len(df2.query("perturbable==True")), file=sys.stderr)
 columns3 = ["density", "number", "trial", "num_buff", "time"]
 df3 = pd.DataFrame(data=dfdata3, columns=columns3)
 print(
@@ -134,13 +150,13 @@ df = df.groupby(['density', 'number', 'monotone']
                     'time': 'mean',
                 }).reset_index()
 
-df2 = df2.query("num_pert>=0")  # and num_pert<2")
-df2 = df2.groupby(['density', 'number', 'num_pert']).agg({
+df2 = df2.query('perturbable!="Error"')  # and perturbable<2")
+df2 = df2.groupby(['density', 'number', 'perturbable']).agg({
     'trial': lambda x: np.log2(len(x) + 1),
     'time': 'mean',
 }).reset_index()
 
-df3 = df3.query("num_buff>=0")  # and num_pert<2")
+df3 = df3.query("num_buff>=0")  # and num_buff<2")
 df3 = df3.groupby(['density', 'number', 'num_buff']).agg({
     'trial': lambda x: np.log2(len(x) + 1),
     'time': 'mean',
@@ -183,18 +199,23 @@ fig = px.scatter_3d(
     x='density',
     y='number',
     z='time',
-    color='num_pert',
+    color='perturbable',
     size='trial',
     size_max=30,
     log_z=True,
-    color_continuous_scale=((0.0, 'red'), (0.51, 'blue'), (0.51, 'grey'), (1.0, 'grey')),
+    # color_continuous_scale=((0.0, 'red'), (0.51, 'blue'), (0.51, 'grey'), (1.0, 'grey')),
     # color_continuous_scale=((0.0, 'black'), (0.001, 'black'), (0.001, 'red'), (1.0, 'blue')),
-    hover_data=['density', 'number', 'time', 'num_pert'],
+    color_discrete_map={
+        True: 'blue',
+        False: 'red',
+        'Timeout': 'grey',
+    },
+    hover_data=['density', 'number', 'time', 'perturbable'],
     labels={
         'density': '2*n*pi/(w*h)',
         'number': '# Obj',
         'time': 'Time (sec)',
-        'num_pert': '% Perturbable'
+        'perturbable': '% Perturbable'
     },
     title='Computation Time',
 )
