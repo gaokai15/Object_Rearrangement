@@ -262,12 +262,87 @@ def split_challenge2(directory):
                 print(newfile, is_pert)
 
 
+def format_data(directory, writetodir):
+    csvarr1 = []
+    csvarr2 = []
+    csvarr3 = []
+    for filename in sorted(glob.glob(directory + '/*/*/*/*.json')):
+        farr = filename.split('/')
+        cdir = writetodir + '/' + farr[1]
+        fcat = '_'.join(farr[2:]).replace('=', '-')
+        data = OrderedDict(
+            [
+                ("n", None),
+                ("radius", None),
+                ("width", None),
+                ("height", None),
+                ("starts", None),
+                ("goals", None),
+                ("obstacles", None),
+            ]
+        )
+        with open(filename) as f:
+            data.update(json.load(f))  #, object_pairs_hook=OrderedDict))
+
+        if 'ch1' in filename:
+            if 'is_monotone' in data and type(data['is_monotone']) == bool:
+                csvarr1.append('ch1/' + fcat + ',' + str(data['is_monotone']))
+                # print(csvarr1[-1])
+            else:
+                continue
+        elif 'ch2' in filename:
+            if 'is_perturbable' in data and type(data['is_perturbable']) == bool:
+                csvarr2.append('ch2/' + fcat + ',' + str(data['is_perturbable']))
+                # print(csvarr2[-1])
+                if 'is_monotone' in data:
+                    del data['is_monotone']
+            else:
+                continue
+        elif 'ch3' in filename:
+            if 'is_valid_buffer' in data and type(data['is_valid_buffer']) == dict:
+                if 'Timeout' in data['is_valid_buffer'].values() or 'Error' in data['is_valid_buffer'].values():
+                    continue
+                csvarr3.append(
+                    'ch3/' + fcat + ',' + ','.join([str(x[1]) for x in sorted(data['is_valid_buffer'].items())])
+                )
+                # print(csvarr3[-1])
+                if 'is_perturbable' in data:
+                    del data['is_perturbable']
+            else:
+                continue
+
+        data['difficulty'] = int(data['computation_time'] / 10)
+        del data['computation_time']
+        if 'computation_time_wall' in data:
+            del data['computation_time_wall']
+
+        print(cdir, fcat)
+        # print(data)
+
+        with open(cdir + '/' + fcat, 'w') as f:
+            json.dump(data, f, indent=2)
+
+    with open(writetodir + '/challenge1.csv', 'w') as f:
+        print('task_file,is_monotone', file=f)
+        for line in csvarr1:
+            print(line, file=f)
+    with open(writetodir + '/challenge2.csv', 'w') as f:
+        print('task_file,is_perturbable', file=f)
+        for line in csvarr2:
+            print(line, file=f)
+    with open(writetodir + '/challenge3.csv', 'w') as f:
+        print('task_file,B0,B1,B2,B3,B4,B5,B6,B7,B8,B9', file=f)
+        for line in csvarr3:
+            print(line, file=f)
+
+
 if __name__ == "__main__":
 
     ### Misc Processing ###
+    format_data(sys.argv[1], sys.argv[2])
     # split_challenge2(sys.argv[1])
     # clean(sys.argv[1])
-    # sys.exit(0)
+    sys.exit(0)
 
     si = None
     ei = None

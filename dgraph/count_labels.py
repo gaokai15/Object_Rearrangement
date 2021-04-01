@@ -26,7 +26,7 @@ dfdata2 = []
 dfdata3 = []
 tocheck = set()
 for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
-    D, n, trial = filename.split('/')[2:]
+    D, n, trial = filename.split('/')[-3:]
     D = float(D.split('=')[-1])
     n = int(n.split('=')[-1])
     trial = trial.split('.')[0]
@@ -92,6 +92,8 @@ for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*/*.json')):
                 else:
                     vals = sum(data['is_valid_buffer'].values()) / len(data['is_valid_buffer'])
             dfdata3.append([D, n, trial, vals, data['computation_time']])
+        # else:
+        #     print(filename)
 
 print("Total: ch1:", tcc1, "ch2", tcc2, "ch3", tcc3, file=sys.stderr)
 

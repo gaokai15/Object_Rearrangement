@@ -190,7 +190,7 @@ fig = px.scatter_3d(
 )
 fig.update_layout(
     scene_aspectmode='manual',
-    scene_aspectratio=dict(x=1, y=1, z=3),
+    scene_aspectratio=dict(x=1, y=1, z=1),
 )
 plot(fig, filename='challenge1.html')
 
@@ -221,7 +221,7 @@ fig = px.scatter_3d(
 )
 fig.update_layout(
     scene_aspectmode='manual',
-    scene_aspectratio=dict(x=1, y=1, z=3),
+    scene_aspectratio=dict(x=1, y=1, z=1),
 )
 plot(fig, filename='challenge2.html')
 
@@ -247,6 +247,6 @@ fig = px.scatter_3d(
 )
 fig.update_layout(
     scene_aspectmode='manual',
-    scene_aspectratio=dict(x=1, y=1, z=3),
+    scene_aspectratio=dict(x=1, y=1, z=1),
 )
 plot(fig, filename='challenge3.html')

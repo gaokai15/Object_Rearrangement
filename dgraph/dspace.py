@@ -17,7 +17,7 @@ import pyclipper as pc
 
 from util import *
 
-num_buffers = 100
+num_buffers = 0
 EPSILON = 1
 
 
@@ -252,6 +252,7 @@ class DiskCSpace(CSpace):
 
             posemap = {'S' + str(i): Circle(p[0], p[1], data['radius']) for i, p in enumerate(data['starts'])}
             posemap.update({'G' + str(i): Circle(p[0], p[1], data['radius']) for i, p in enumerate(data['goals'])})
+            posemap.update({key: Circle(p[0], p[1], data['radius']) for key, p in data['buffers'].items()})
             # print(posemap)
             return DiskCSpace(
                 data['radius'], posemap, [Poly(poly) for poly in data['obstacles']], data['height'], data['width']
@@ -702,8 +703,11 @@ class DiskCSpaceProgram(GLProgram):
 
 
 def loadEnv(filename):
-    with open(filename) as f:
-        return eval(f.read())
+    if filename[-4:] == 'json':
+        return DiskCSpace.from_json(filename)
+    else:
+        with open(filename) as f:
+            return eval(f.read())
 
 
 def genPoses(n, space):
