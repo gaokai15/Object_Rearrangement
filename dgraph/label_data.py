@@ -339,10 +339,13 @@ def format_data(directory, writetodir):
 if __name__ == "__main__":
 
     ### Misc Processing ###
-    format_data(sys.argv[1], sys.argv[2])
+    # format_data(sys.argv[1], sys.argv[2])
     # split_challenge2(sys.argv[1])
     # clean(sys.argv[1])
-    sys.exit(0)
+
+    # for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*.json')):
+    #     print(filename)
+    # sys.exit(0)
 
     si = None
     ei = None
