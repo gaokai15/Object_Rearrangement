@@ -165,43 +165,48 @@ class Experiments(object):
         # plt.show()
 
     def density_test(self, numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index):
-        D_list = [0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1.0, 1.15, 1.3]
+        # D_list = [0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1.0, 1.15, 1.3]
+        D_list = [0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1.0]
         Trial_Times = 50
         Data = {}
-        for D in D_list:
-            Data[D] = [0,0,0]
-            RAD_edited = int(math.sqrt(D*HEIGHT * WIDTH / float(2*numObjs*math.pi)))
-            print "RAD", RAD_edited
-            for trial in xrange(Trial_Times):
-                try:
-                    result = self.single_instance(numObjs, RAD_edited, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-                    if result == -1:
-                        Data[D][0] += 1
-                    elif result == 1:
-                        Data[D][1] += 1
-                    else:
-                        print "Unexpected!"
-                        exit(0)
-                except Exception:
-                    Data[D][2] += 1
-        for key in Data.keys():
-            print key
-            print Data[key]
-        with open(os.path.join(my_path, "DensityExperiments_n"+str(numObjs)+"_0624.pkl"), 'wb') as output:
-            pickle.dump(Data, output, pickle.HIGHEST_PROTOCOL)
-        # with open(os.path.join(my_path, "DensityExperiments_n"+str(numObjs)+"_0624.pkl"), 'rb') as input:
-        #     Data = pickle.load(input)
-
+        # for D in D_list:
+        #     Data[D] = [0,0,0]
+        #     RAD_edited = int(math.sqrt(D*HEIGHT * WIDTH / float(2*numObjs*math.pi)))
+        #     print "RAD", RAD_edited
+        #     for trial in xrange(Trial_Times):
+        #         try:
+        #             result = self.single_instance(numObjs, RAD_edited, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        #             if result == -1:
+        #                 Data[D][0] += 1
+        #             elif result == 1:
+        #                 Data[D][1] += 1
+        #             else:
+        #                 print "Unexpected!"
+        #                 exit(0)
+        #         except Exception:
+        #             Data[D][2] += 1
+        # for key in Data.keys():
+        #     print key
+        #     print Data[key]
+        # with open(os.path.join(my_path, "DensityExperiments_n"+str(numObjs)+"_0624.pkl"), 'wb') as output:
+        #     pickle.dump(Data, output, pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(my_path, "DensityExperiments_n"+str(numObjs)+"_0624.pkl"), 'rb') as input:
+            Data = pickle.load(input)
+        FS = 18
         width = 0.12
         fig, ax = plt.subplots()
-        p = ax.bar([x for x in D_list], [Data[x][0] for x in D_list], width, label='Fail to Generate An instance')
-        p = ax.bar([x for x in D_list], [Data[x][1] for x in D_list], width, bottom=[Data[x][0] for x in D_list],label='monotone')
-        p = ax.bar([x for x in D_list], [Data[x][2] for x in D_list], width, bottom=[Data[x][0]+Data[x][1] for x in D_list],label='non-monotone')
+        p = ax.bar([x for x in D_list], [Data[x][0] for x in D_list], width, color='steelblue', label='Failure')
+        p = ax.bar([x for x in D_list], [Data[x][1] for x in D_list], width, color='darkorange', bottom=[Data[x][0] for x in D_list],label='Monotone')
+        p = ax.bar([x for x in D_list], [Data[x][2] for x in D_list], width, color='forestgreen', bottom=[Data[x][0]+Data[x][1] for x in D_list],label='Non-Monotone')
         plt.xticks(D_list)
-        ax.set_ylim([0, 65])
-        plt.legend()
-        plt.xlabel('D(n='+str(numObjs)+')')
-        plt.ylabel('number of instances')
+        ax.set_xticklabels([str(x/2.0) for x in D_list], fontsize=FS)
+        ax.set_ylim([0, 53])
+        plt.yticks(range(10, 51, 10), fontsize=FS)
+        # ax.set_yticklabels([x/50.0 for x in range(10, 51, 10)], fontsize=FS)
+        # plt.legend(ncol=3, fontsize=12)
+        # plt.xlabel('D(n='+str(numObjs)+')', fontsize=22)
+        # plt.ylabel('number of instances', fontsize=22)
+        plt.savefig("Density_n10.eps", dpi=1200, bbox_inches="tight")
         plt.show()
 
 
@@ -1433,6 +1438,6 @@ if __name__ == "__main__":
     if loadfile:
         EXP.load_instance(savefile, True, display, displayMore)
     else:
-        # EXP.density_test(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        EXP.density_test(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
         # EXP.multi_instances(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
-        EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)
+        # EXP.single_instance(numObjs, RAD, HEIGHT, WIDTH, display, displayMore, savefile, saveimage, example_index)

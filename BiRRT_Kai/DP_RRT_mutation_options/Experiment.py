@@ -8,23 +8,34 @@ import copy
 from random import sample
 from util import *
 import cPickle as pickle
+import resource
 
 from InstanceGenerator import InstanceGenerator
 from Visualizer import Visualizer
 from RegionGraphGenerator import RegionGraphGenerator
 from DensePathGenerator import DensePathGenerator
-from BiRRTPlanner import BiRRTPlanner
-from BiRRTStarPlanner import BiRRTStarPlanner
-from BiRRT_tester import BiRRT_tester
-from BiRRTstar_tester import BiRRTstar_tester
-from BiDirDPPlanner import BiDirDPPlanner, BiDirDPPlanner_A_star_furthest, BiDirDPPlanner_A_star_nearest, BiDirDPPlanner_suboptimal_furthest, BiDirDPPlanner_Random_Range, BiDirDPPlanner_Random_Nearest, BiDirDPPlanner_Leaf_Root, BiDirDPPlanner_Leaf_Root_Improved_Mutation, BiDirDPPlanner_Leaf_Small_Range,  BiDirDPPlanner_Leaf_Large_Range, BiDirDPPlanner_Leaf_Nearest
+from BiDirDPPlanner1 import BiDirDPPlanner_Leaf_Root
 from DPBruteForce import Non_Monotone_Solver_General, Generalized_Brute_force
 from FVS import feekback_vertex_ILP
+from FastHeuristicDPPlanner import FastHeuristicDPPlanner
+from BiDir_fmRS_Planner import BiDir_fmRS_Planner
+from BiDir_mRS_Planner import BiDir_mRS_Planner
+from partial_fmRS import partial_fmRS
 
 # timeout version function
-from Timeout_Functions import timeout_BiDirDPPlanner, timeout_BiDirDPPlanner_A_star_furthest, timeout_BiDirDPPlanner_A_star_nearest, timeout_BiDirDPPlanner_suboptimal_furthest, timeout_BiDirDPPlanner_Random_Range, timeout_BiDirDPPlanner_Random_Nearest, timeout_BiDirDPPlanner_Leaf_Root, timeout_BiDirDPPlanner_Leaf_Root_Improved_Mutation, timeout_BiDirDPPlanner_Leaf_Small_Range, timeout_BiDirDPPlanner_Leaf_Large_Range, timeout_BiDirDPPlanner_Leaf_Nearest, timeout_BiRRTPlanner, timeout_BiRRTStarPlanner, timeout_DensePathGenerator, timeout_Non_Monotone_Solver_General, timeout_Generalized_Brute_force
+from Timeout_Functions import timeout_Fast_heuristic, \
+    timeout_BiDirDPPlanner_Leaf_Root, \
+    timeout_DensePathGenerator, \
+    timeout_Non_Monotone_Solver_General, \
+    timeout_Generalized_Brute_force, \
+    timeout_BiDir_fmRS_Planner, \
+    timeout_BiDir_mRS_Planner
 
 my_path = os.path.abspath(os.path.dirname(__file__))
+
+def set_max_memory(MAX):
+    soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+    resource.setrlimit(resource.RLIMIT_AS, (MAX, hard))
 
 # Disable
 def blockPrint():
@@ -70,7 +81,7 @@ class Experiment(object):
         self.visualTool = Visualizer(self.HEIGHT, self.WIDTH, self.numObjs, self.wall_pts, \
                                             self.display, self.displayMore, self.saveimage, self.data_path)
         self.instance.genBuffers(self.HEIGHT, self.WIDTH, self.numObjs)
-        self.visualTool.drawProblem(self.instance.objects, self.instance.points, self.instance.buffers)
+        # self.visualTool.drawProblem(self.instance.objects, self.instance.points, self.instance.buffers)
         print("finishing generating the instance and the buffers")
         ### index the arrangement
         self.initial_arrangement = [i for i in range(0, 2*numObjs, 2)]
@@ -79,146 +90,84 @@ class Experiment(object):
         print "final_arrangement: " + str(self.final_arrangement)
 
         ### Now let's generate the region graph and build its connection
-        # self.regionGraph = RegionGraphGenerator(self.instance, self.visualTool, self.wall_mink)
-        # with open(os.path.join(my_path, "instance00.pkl"),
-        #             'wb') as output:
-        #     pickle.dump((self.regionGraph, self.instance), output, pickle.HIGHEST_PROTOCOL)
+        self.regionGraph = RegionGraphGenerator(self.instance, self.visualTool, self.wall_mink)
+        with open(os.path.join(my_path, "instance00.pkl"),
+                    'wb') as output:
+            pickle.dump((self.regionGraph, self.instance), output, pickle.HIGHEST_PROTOCOL)
 
         # with open(os.path.join(my_path, "instance00.pkl"), 'rb') as input:
         #     (self.regionGraph, self.instance) = pickle.load(input)
-        ### get the region dict and LL from the graph
-        region_dict, linked_list = self.linked_list_conversion(self.regionGraph.graph)
 
-        ###############################################
-        self.genSolutionFailure_DP_local = False
+        # method: fmRS
+        self.genSolutionFailure_fmRS = False
         start_time = time.clock()
         try:
-            print Intentional_Error
-            self.plan_DP_local = timeout_BiDirDPPlanner(
-                self.initial_arrangement, self.final_arrangement, self.instance,  
-                self.regionGraph.obj2reg, region_dict, linked_list, 
-                self.visualTool)
-            if self.plan_DP_local.isConnected == False:
+            self.gpd = DensePathGenerator(self.regionGraph.graph, self.regionGraph.obj2reg)
+            self.new_paths = {}
+            for r1, r2 in self.regionGraph.paths.keys():
+                self.new_paths[(self.gpd.region_dict[r1], self.gpd.region_dict[r2])] = \
+                                                copy.deepcopy(self.regionGraph.paths[(r1, r2)])
+            self.plan_fmRS = timeout_BiDir_fmRS_Planner(
+                self.initial_arrangement, self.final_arrangement, self.instance, self.gpd, self.new_paths, \
+                self.polygon, self.RAD, self.visualTool)
+            if self.plan_fmRS.isConnected == False:
                 ### the solution is not found
-                self.genSolutionFailure_DP_local = True
+                self.genSolutionFailure_fmRS = True
             else:
-                self.totalActions_DP_local = self.plan_DP_local.totalActions
+                self.totalActions_fmRS = self.plan_fmRS.totalActions
+        except Warning:
+            self.genSolutionFailure_fmRS = True
+        self.comTime_fmRS = time.clock() - start_time
+        print "Time to perform BiDirectional search with fmRS local solver: " + str(self.comTime_fmRS)
+
+        # method: mRS
+        self.genSolutionFailure_mRS = False
+        start_time = time.clock()
+        try:
+            self.gpd = DensePathGenerator(self.regionGraph.graph, self.regionGraph.obj2reg)
+            self.new_paths = {}
+            for r1, r2 in self.regionGraph.paths.keys():
+                self.new_paths[(self.gpd.region_dict[r1], self.gpd.region_dict[r2])] = \
+                                                copy.deepcopy(self.regionGraph.paths[(r1, r2)])
+            self.plan_mRS = timeout_BiDir_mRS_Planner(
+                self.initial_arrangement, self.final_arrangement, self.instance, self.gpd, self.new_paths, \
+                self.polygon, self.RAD, self.visualTool)
+            if self.plan_mRS.isConnected == False:
+                ### the solution is not found
+                self.genSolutionFailure_mRS = True
+            else:
+                self.totalActions_mRS = self.plan_mRS.totalActions
+        except Warning:
+            self.genSolutionFailure_mRS = True
+        self.comTime_mRS = time.clock() - start_time
+        print "Time to perform BiDirectional search with mRS local solver: " + str(self.comTime_mRS)
+
+        # method 3: DP with fast heuristic
+        self.genSolutionFailure_Fast_heuristic = False
+        start_time = time.clock()
+        try:
+            self.gpd = DensePathGenerator(self.regionGraph.graph, self.regionGraph.obj2reg)
+            self.new_paths = {}
+            for r1, r2 in self.regionGraph.paths.keys():
+                self.new_paths[(self.gpd.region_dict[r1], self.gpd.region_dict[r2])] = \
+                                                copy.deepcopy(self.regionGraph.paths[(r1, r2)])
+            self.plan_Fast_heuristic = timeout_Fast_heuristic(
+                self.initial_arrangement, self.final_arrangement, self.instance, self.gpd, self.new_paths, \
+                self.polygon, self.visualTool)
+            if self.plan_Fast_heuristic.isConnected == False:
+                ### the solution is not found
+                self.genSolutionFailure_Fast_heuristic = True
+            else:
+                self.plan_Fast_heuristic.getSolutionStats()
+                # self.writeStat(self.plan_DP.simplePath, self.plan_DP.totalActions, self.comTime_DP)
+                # self.copyBranchSolution(self.plan_DP.simplePath)
+                self.plan_Fast_heuristic.constructWholePath()
+                self.totalActions_Fast_heuristic = self.plan_Fast_heuristic.totalActions
         except Exception:
-            self.genSolutionFailure_DP_local = True
-        self.comTime_DP_local = time.clock() - start_time
-        print "Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_local)
+            self.genSolutionFailure_Fast_heuristic = True
+        self.comTime_Fast_heuristic = time.clock() - start_time
+        print "Time to perform search with DP_Fast_heuristic solver: " + str(self.comTime_Fast_heuristic)
         
-
-
-        ##############################################
-        self.genSolutionFailure_DP_local_A_star_furthest = False
-        start_time = time.clock()
-        try:
-            print Intentional_Error
-            self.plan_DP_local_A_star_furthest = timeout_BiDirDPPlanner_A_star_furthest(
-                self.initial_arrangement, self.final_arrangement, self.instance,  
-                self.regionGraph.obj2reg, region_dict, linked_list, self.instance.points+self.instance.buffer_points, RAD,
-                self.visualTool)
-            if self.plan_DP_local_A_star_furthest.isConnected == False:
-                ### the solution is not found
-                self.genSolutionFailure_DP_local_A_star_furthest = True
-            else:
-                self.totalActions_DP_local_A_star_furthest = self.plan_DP_local_A_star_furthest.totalActions
-            enablePrint()
-            print "# nodes: ", len(self.plan_DP_local_A_star_furthest.treeL)+len(self.plan_DP_local_A_star_furthest.treeR)
-            blockPrint()
-        except Exception:
-            self.genSolutionFailure_DP_local_A_star_furthest = True
-        self.comTime_DP_local_A_star_furthest = time.clock() - start_time
-        print "Time to perform BiDirectional search with DP local A_star_furthest solver: " + str(self.comTime_DP_local_A_star_furthest)
-
-
-
-        ##############################################
-        self.genSolutionFailure_DP_local_A_star_nearest = False
-        start_time = time.clock()
-        try:
-            print Intentional_Error
-            self.plan_DP_local_A_star_nearest = timeout_BiDirDPPlanner_A_star_nearest(
-                self.initial_arrangement, self.final_arrangement, self.instance,  
-                self.regionGraph.obj2reg, region_dict, linked_list, self.instance.points+self.instance.buffer_points, RAD,
-                self.visualTool)
-            if self.plan_DP_local_A_star_nearest.isConnected == False:
-                ### the solution is not found
-                self.genSolutionFailure_DP_local_A_star_nearest = True
-            else:
-                self.totalActions_DP_local_A_star_nearest = self.plan_DP_local_A_star_nearest.totalActions
-            enablePrint()
-            print "# nodes: ", len(self.plan_DP_local_A_star_nearest.treeL)+len(self.plan_DP_local_A_star_nearest.treeR)
-            blockPrint()
-        except Exception:
-            self.genSolutionFailure_DP_local_A_star_nearest = True
-        self.comTime_DP_local_A_star_nearest = time.clock() - start_time
-        print "Time to perform BiDirectional search with DP local A_star_nearest solver: " + str(self.comTime_DP_local_A_star_nearest)
-
-
-        ##############################################
-        self.genSolutionFailure_DP_local_suboptimal_furthest = False
-        start_time = time.clock()
-        try:
-            print Intentional_Error
-            self.plan_DP_local_suboptimal_furthest = timeout_BiDirDPPlanner_suboptimal_furthest(
-                self.initial_arrangement, self.final_arrangement, self.instance,  
-                self.regionGraph.obj2reg, region_dict, linked_list, self.instance.points+self.instance.buffer_points, RAD,
-                self.visualTool)
-            if self.plan_DP_local_suboptimal_furthest.isConnected == False:
-                ### the solution is not found
-                self.genSolutionFailure_DP_local_suboptimal_furthest = True
-            else:
-                self.totalActions_DP_local_suboptimal_furthest = self.plan_DP_local_suboptimal_furthest.totalActions
-            enablePrint()
-            print "# nodes: ", len(self.plan_DP_local_suboptimal_furthest.treeL)+len(self.plan_DP_local_suboptimal_furthest.treeR)
-            blockPrint()
-        except Exception:
-            self.genSolutionFailure_DP_local_suboptimal_furthest = True
-        self.comTime_DP_local_suboptimal_furthest = time.clock() - start_time
-        print "Time to perform BiDirectional search with DP local suboptimal_furthest solver: " + str(self.comTime_DP_local_suboptimal_furthest)
-
-
-
-        ##############################################
-        self.genSolutionFailure_DP_local_random_range = False
-        start_time = time.clock()
-        try:
-            print Intentional_Error
-            self.plan_DP_local_random_range = timeout_BiDirDPPlanner_Random_Range(
-                self.initial_arrangement, self.final_arrangement, self.instance,  
-                self.regionGraph.obj2reg, region_dict, linked_list, 
-                self.visualTool)
-            if self.plan_DP_local_random_range.isConnected == False:
-                ### the solution is not found
-                self.genSolutionFailure_DP_local_random_range = True
-            else:
-                self.totalActions_DP_local_random_range = self.plan_DP_local_random_range.totalActions
-        except Exception:
-            self.genSolutionFailure_DP_local_random_range = True
-        self.comTime_DP_local_random_range = time.clock() - start_time
-        print "Time to perform BiDirectional search with DP local_random_range solver: " + str(self.comTime_DP_local_random_range)
-        
-        ########################################################
-        self.genSolutionFailure_DP_local_random_nearest = False
-        start_time = time.clock()
-        try:
-            print Intentional_Error
-            self.plan_DP_local_random_nearest = timeout_BiDirDPPlanner_Random_Nearest(
-                self.initial_arrangement, self.final_arrangement, self.instance,  
-                self.regionGraph.obj2reg, region_dict, linked_list, 
-                self.visualTool)
-            if self.plan_DP_local_random_nearest.isConnected == False:
-                ### the solution is not found
-                self.genSolutionFailure_DP_local_random_nearest = True
-            else:
-                self.totalActions_DP_local_random_nearest = self.plan_DP_local_random_nearest.totalActions
-        except Exception:
-            self.genSolutionFailure_DP_local_random_nearest = True
-        self.comTime_DP_local_random_nearest = time.clock() - start_time
-        print "Time to perform BiDirectional search with DP local_random_nearest solver: " + str(self.comTime_DP_local_random_nearest)
-
         #########################################################
         self.genSolutionFailure_DP_local_leaf_root = False
         start_time = time.clock()
@@ -233,7 +182,7 @@ class Experiment(object):
             else:
                 self.totalActions_DP_local_leaf_root = self.plan_DP_local_leaf_root.totalActions
             enablePrint()
-            print "# nodes: ", len(self.plan_DP_local_leaf_root.treeL)+len(self.plan_DP_local_leaf_root.treeR)
+            # print "# nodes: ", len(self.plan_DP_local_leaf_root.treeL)+len(self.plan_DP_local_leaf_root.treeR)
             blockPrint()
         except Exception:
             self.genSolutionFailure_DP_local_leaf_root = True
@@ -241,95 +190,10 @@ class Experiment(object):
         print "Time to perform BiDirectional search with DP local_leaf_root solver: " + str(self.comTime_DP_local_leaf_root)
 
 
-
-        ########################################################
-        self.genSolutionFailure_DP_local_leaf_root_Improved_Mutation = False
-        start_time = time.clock()
-        try:
-            print Intentional_Error
-            self.plan_DP_local_leaf_root_Improved_Mutation = timeout_BiDirDPPlanner_Leaf_Root_Improved_Mutation(
-                self.initial_arrangement, self.final_arrangement, self.instance,  
-                self.regionGraph.obj2reg, region_dict, linked_list, self.instance.points+self.instance.buffer_points, RAD,
-                self.visualTool)
-            if self.plan_DP_local_leaf_root_Improved_Mutation.isConnected == False:
-                ### the solution is not found
-                self.genSolutionFailure_DP_local_leaf_root_Improved_Mutation = True
-            else:
-                self.totalActions_DP_local_leaf_root_Improved_Mutation = self.plan_DP_local_leaf_root_Improved_Mutation.totalActions
-            enablePrint()
-            print "# nodes: ", len(self.plan_DP_local_leaf_root_Improved_Mutation.treeL)+len(self.plan_DP_local_leaf_root_Improved_Mutation.treeR)
-            blockPrint()
-        except Exception:
-            self.genSolutionFailure_DP_local_leaf_root_Improved_Mutation = True
-        self.comTime_DP_local_leaf_root_Improved_Mutation = time.clock() - start_time
-        print "Time to perform BiDirectional search with DP local_leaf_root_Improved_Mutation solver: " + str(self.comTime_DP_local_leaf_root_Improved_Mutation)
-
-
-
-        ######################################################
-        self.genSolutionFailure_DP_local_leaf_small_range = False
-        start_time = time.clock()
-        try:
-            print Intentional_Error
-            self.plan_DP_local_leaf_small_range = timeout_BiDirDPPlanner_Leaf_Small_Range(
-                self.initial_arrangement, self.final_arrangement, self.instance,  
-                self.regionGraph.obj2reg, region_dict, linked_list, 
-                self.visualTool)
-            if self.plan_DP_local_leaf_small_range.isConnected == False:
-                ### the solution is not found
-                self.genSolutionFailure_DP_local_leaf_small_range = True
-            else:
-                self.totalActions_DP_local_leaf_small_range = self.plan_DP_local_leaf_small_range.totalActions
-        except Exception:
-            self.genSolutionFailure_DP_local_leaf_small_range = True
-        self.comTime_DP_local_leaf_small_range = time.clock() - start_time
-        print "Time to perform BiDirectional search with DP local_leaf_small_range solver: " + str(self.comTime_DP_local_leaf_small_range)
-        
-
-        ######################################################
-        self.genSolutionFailure_DP_local_leaf_large_range = False
-        start_time = time.clock()
-        try:
-            print Intentional_Error
-            self.plan_DP_local_leaf_large_range = timeout_BiDirDPPlanner_Leaf_Large_Range(
-                self.initial_arrangement, self.final_arrangement, self.instance,  
-                self.regionGraph.obj2reg, region_dict, linked_list, 
-                self.visualTool)
-            if self.plan_DP_local_leaf_large_range.isConnected == False:
-                ### the solution is not found
-                self.genSolutionFailure_DP_local_leaf_large_range = True
-            else:
-                self.totalActions_DP_local_leaf_large_range = self.plan_DP_local_leaf_large_range.totalActions
-        except Exception:
-            self.genSolutionFailure_DP_local_leaf_large_range = True
-        self.comTime_DP_local_leaf_large_range = time.clock() - start_time
-        print "Time to perform BiDirectional search with DP local_leaf_large_range solver: " + str(self.comTime_DP_local_leaf_large_range)
-
-
-        #####################################################
-        self.genSolutionFailure_DP_local_leaf_nearest = False
-        start_time = time.clock()
-        try:
-            print Intentional_Error
-            self.plan_DP_local_leaf_nearest = timeout_BiDirDPPlanner_Leaf_Nearest(
-                self.initial_arrangement, self.final_arrangement, self.instance,  
-                self.regionGraph.obj2reg, region_dict, linked_list, 
-                self.visualTool)
-            if self.plan_DP_local_leaf_nearest.isConnected == False:
-                ### the solution is not found
-                self.genSolutionFailure_DP_local_leaf_nearest = True
-            else:
-                self.totalActions_DP_local_leaf_nearest = self.plan_DP_local_leaf_nearest.totalActions
-        except Exception:
-            self.genSolutionFailure_DP_local_leaf_nearest = True
-        self.comTime_DP_local_leaf_nearest = time.clock() - start_time
-        print "Time to perform BiDirectional search with DP local_leaf_nearest solver: " + str(self.comTime_DP_local_leaf_nearest)
-
         ##################################################
         self.genSolutionFailure_DP_BruteForce = False
         start_time = time.clock()
         try:
-            # print Intentional_Error
             start_poses = {}
             goal_poses = {}
             for i in range(len(self.initial_arrangement)):
@@ -346,7 +210,7 @@ class Experiment(object):
             ### the solution is not found
             self.genSolutionFailure_DP_BruteForce = True
         self.comTime_DP_BruteForce = time.clock() - start_time
-        print "Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_local)
+        print "Time to perform BiDirectional search with DP local solver: " + str(self.comTime_DP_BruteForce)
 
 
 
@@ -354,7 +218,7 @@ class Experiment(object):
         self.genSolutionFailure_Generalized_BruteForce = False
         start_time = time.clock()
         try:
-            # print Intentional_Error
+            print Intentional_Error
             start_poses = {}
             goal_poses = {}
             for i in range(len(self.initial_arrangement)):
@@ -372,9 +236,8 @@ class Experiment(object):
             self.genSolutionFailure_Generalized_BruteForce = True
         self.comTime_Generalized_BruteForce = time.clock() - start_time
         print "Time to perform Generalized Brute Force solver: " + str(self.comTime_Generalized_BruteForce)
-        
 
-        
+
 
 
         # ### Now let's generate the region graph and build its connection
@@ -397,8 +260,8 @@ class Experiment(object):
         print "total time for path generation: " + str(self.comTime_PathOptions)
         # print "total path connections: " + str(len(self.gpd.dependency_dict))
 
-        IP = feekback_vertex_ILP(self.gpd.dependency_dict, numObjs)
-        self.totalActions_FVS = numObjs + IP.optimum
+        # IP = feekback_vertex_ILP(self.gpd.dependency_dict, numObjs)
+        # self.totalActions_FVS = numObjs + IP.optimum
 
         self.new_paths = {}
         for r1, r2 in self.regionGraph.paths.keys():
@@ -418,43 +281,7 @@ class Experiment(object):
         self.comTime_SampleArrangements = time.clock()-start_time
 
 
-        self.genSolutionFailure_biRRT = False
-        start_time = time.clock()
-        try:
-            print Intentional_Error
-            self.plan_biRRT = timeout_BiRRTPlanner(self.initial_arrangement, self.final_arrangement, \
-                                        self.gpd, self.instance, self.new_paths, self.visualTool)
-            if self.plan_biRRT.isConnected == False: 
-                self.genSolutionFailure_biRRT = True
-            else:
-                self.plan_biRRT.constructWholePath()
-                self.plan_biRRT.getSolutionStats()
-                self.totalActions_biRRT = self.plan_biRRT.totalActions
-        except Exception:
-            self.genSolutionFailure_biRRT = True
-
-        self.comTime_biRRT = time.clock()-start_time
-        print "Time to perform arrangement biRRT is: " + str(self.comTime_biRRT)
         
-
-        self.genSolutionFailure_biRRTstar = False
-        start_time = time.clock()
-        try:
-            print Intentional_Error
-            self.plan_biRRTstar = BiRRTStarPlanner(self.initial_arrangement, self.final_arrangement, \
-                                        self.gpd, self.instance, self.new_paths, self.visualTool)
-            if self.plan_biRRTstar.isConnected == False: 
-                self.genSolutionFailure_biRRTstar = True
-            else:
-                self.plan_biRRTstar.constructWholePath()
-                self.plan_biRRTstar.getSolutionStats()
-                self.totalActions_biRRTstar = self.plan_biRRTstar.totalActions
-        except Exception:
-            self.genSolutionFailure_biRRTstar = True
-        self.comTime_biRRTstar = time.clock()-start_time
-        print "Time to perform arrangement biRRT* is: " + str(self.comTime_biRRTstar)
-        
-
 
 
         if self.saveimage or self.display:

@@ -4,65 +4,29 @@ import os
 from os import sys, path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
-from BiRRTPlanner import BiRRTPlanner
-from BiRRTStarPlanner import BiRRTStarPlanner
-from BiDirDPPlanner import BiDirDPPlanner, BiDirDPPlanner_A_star_furthest, BiDirDPPlanner_A_star_nearest, BiDirDPPlanner_suboptimal_furthest, BiDirDPPlanner_Random_Range, BiDirDPPlanner_Random_Nearest, BiDirDPPlanner_Leaf_Root, BiDirDPPlanner_Leaf_Root_Improved_Mutation, BiDirDPPlanner_Leaf_Large_Range, BiDirDPPlanner_Leaf_Small_Range, BiDirDPPlanner_Leaf_Nearest
+from BiDirDPPlanner1 import  BiDirDPPlanner_Leaf_Root
 from DPBruteForce import Non_Monotone_Solver_General, Generalized_Brute_force
 from DensePathGenerator import DensePathGenerator
+from FastHeuristicDPPlanner import FastHeuristicDPPlanner
+from BiDir_fmRS_Planner import BiDir_fmRS_Planner
+from BiDir_mRS_Planner import BiDir_mRS_Planner
 
-TimeLimit = 1000
+TimeLimit = 500000
+@timeout_decorator.timeout(TimeLimit)
+def timeout_BiDir_mRS_Planner(*args, **kwargs):
+    return BiDir_mRS_Planner(*args, **kwargs)
 
 @timeout_decorator.timeout(TimeLimit)
-def timeout_BiDirDPPlanner_Leaf_Nearest(*args, **kwargs):
-    return BiDirDPPlanner_Leaf_Nearest(*args, **kwargs)
+def timeout_BiDir_fmRS_Planner(*args, **kwargs):
+    return BiDir_fmRS_Planner(*args, **kwargs)
 
 @timeout_decorator.timeout(TimeLimit)
-def timeout_BiDirDPPlanner_Leaf_Large_Range(*args, **kwargs):
-    return BiDirDPPlanner_Leaf_Large_Range(*args, **kwargs)
-
-@timeout_decorator.timeout(TimeLimit)
-def timeout_BiDirDPPlanner_Leaf_Small_Range(*args, **kwargs):
-    return BiDirDPPlanner_Leaf_Small_Range(*args, **kwargs)
-
-@timeout_decorator.timeout(TimeLimit)
-def timeout_BiDirDPPlanner_Leaf_Root_Improved_Mutation(*args, **kwargs):
-    return BiDirDPPlanner_Leaf_Root_Improved_Mutation(*args, **kwargs)
+def timeout_Fast_heuristic(*args, **kwargs):
+    return FastHeuristicDPPlanner(*args, **kwargs)
 
 @timeout_decorator.timeout(TimeLimit)
 def timeout_BiDirDPPlanner_Leaf_Root(*args, **kwargs):
     return BiDirDPPlanner_Leaf_Root(*args, **kwargs)
-
-@timeout_decorator.timeout(TimeLimit)
-def timeout_BiDirDPPlanner_Random_Nearest(*args, **kwargs):
-    return BiDirDPPlanner_Random_Nearest(*args, **kwargs)
-
-@timeout_decorator.timeout(TimeLimit)
-def timeout_BiDirDPPlanner_Random_Range(*args, **kwargs):
-    return BiDirDPPlanner_Random_Range(*args, **kwargs)
-
-@timeout_decorator.timeout(TimeLimit)
-def timeout_BiDirDPPlanner_suboptimal_furthest(*args, **kwargs):
-    return BiDirDPPlanner_suboptimal_furthest(*args, **kwargs)
-
-@timeout_decorator.timeout(TimeLimit)
-def timeout_BiDirDPPlanner_A_star_nearest(*args, **kwargs):
-    return BiDirDPPlanner_A_star_nearest(*args, **kwargs)
-
-@timeout_decorator.timeout(TimeLimit)
-def timeout_BiDirDPPlanner_A_star_furthest(*args, **kwargs):
-    return BiDirDPPlanner_A_star_furthest(*args, **kwargs)
-
-@timeout_decorator.timeout(TimeLimit)
-def timeout_BiDirDPPlanner(*args, **kwargs):
-    return BiDirDPPlanner(*args, **kwargs)
-
-@timeout_decorator.timeout(TimeLimit)
-def timeout_BiRRTPlanner(*args, **kwargs):
-    return BiRRTPlanner(*args, **kwargs)
-
-@timeout_decorator.timeout(TimeLimit)
-def timeout_BiRRTStarPlanner(*args, **kwargs):
-    return BiRRTStarPlanner(*args, **kwargs)
 
 @timeout_decorator.timeout(TimeLimit)
 def timeout_Non_Monotone_Solver_General(*args, **kwargs):

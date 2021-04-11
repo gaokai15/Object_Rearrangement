@@ -1,7 +1,7 @@
 from __future__ import division
 
 
-from DPLocalSolver import DFS_Rec_for_Monotone
+from DPLocalSolver1 import DFS_Rec_for_Monotone
 from util import *
 import copy
 import IPython
@@ -337,7 +337,6 @@ class DFS_Rec_for_Non_Monotone_General(object):
 
 class Generalized_Brute_force(object):
     def __init__(self, graph, obj_locations, start_poses, goal_poses):
-        enablePrint()
         self.obj_locations = obj_locations
         self.path_dict = {}
         self.dependency_dict = {}
@@ -349,7 +348,6 @@ class Generalized_Brute_force(object):
         self.enumerate_cases()
         self.dependency_dict_conversion()
         self.totalActions = len(self.object_ordering)
-        blockPrint()
         
     def enumerate_cases(self):
         # enumerate possible cases
@@ -362,7 +360,6 @@ class Generalized_Brute_force(object):
                 if Traj_Solver.isconnected:
                     print "Find a solution!"
                     FOUND = True
-                    print "DFS.object_ordering", Traj_Solver.object_ordering
                     self.object_ordering = Traj_Solver.object_ordering
                     break
             if FOUND:
@@ -479,14 +476,12 @@ class Traj_based_Brute_Force(object):
             while current_task in self.parent:
                 parent_task = self.parent[current_task]
                 last_object = int(math.log(current_task - parent_task, 2))
-                print "last_obj", last_object
                 for obj in self.real_objs_list:
                     if last_object in self.traj2index[obj]:
                         object_ordering.append(obj)
                         break
                 current_task = parent_task
             self.object_ordering = list(reversed(object_ordering))
-            print "Traj ordering", self.object_ordering
             return True
         else:
             # if (len(self.obj_buffer_dict)>0):

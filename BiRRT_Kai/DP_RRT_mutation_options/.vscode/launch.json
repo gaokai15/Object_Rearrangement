@@ -29,7 +29,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["5", "80", "1000", "1000", "n", "n", "n", "n", "n", "1"]
+            "args": ["5", "80", "1000", "1000", "z", "n", "n", "n", "n", "1"]
         }
     ]
 }
