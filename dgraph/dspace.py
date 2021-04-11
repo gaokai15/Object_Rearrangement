@@ -17,7 +17,7 @@ import pyclipper as pc
 
 from util import *
 
-num_buffers = 100
+num_buffers = 10
 EPSILON = 1
 
 
@@ -252,6 +252,8 @@ class DiskCSpace(CSpace):
 
             posemap = {'S' + str(i): Circle(p[0], p[1], data['radius']) for i, p in enumerate(data['starts'])}
             posemap.update({'G' + str(i): Circle(p[0], p[1], data['radius']) for i, p in enumerate(data['goals'])})
+            if 'buffers' in data:
+                posemap.update({key: Circle(p[0], p[1], data['radius']) for key, p in data['buffers'].items()})
             # print(posemap)
             return DiskCSpace(
                 data['radius'], posemap, [Poly(poly) for poly in data['obstacles']], data['height'], data['width']
@@ -702,8 +704,11 @@ class DiskCSpaceProgram(GLProgram):
 
 
 def loadEnv(filename):
-    with open(filename) as f:
-        return eval(f.read())
+    if filename[-4:] == 'json':
+        return DiskCSpace.from_json(filename)
+    else:
+        with open(filename) as f:
+            return eval(f.read())
 
 
 def genPoses(n, space):
@@ -1023,7 +1028,19 @@ if __name__ == '__main__':
 
     space.regionGraph()
     if num_buffers > 0:
-        genBuffers(num_buffers, space, space.poseMap.keys(), 'random', 1)
+        seed(88)
+        num_generated = genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
+        print(num_generated)
+        num_generated = genBuffers(
+            num_buffers - num_generated,
+            space,
+            space.poseMap.keys(),
+            'random',
+            len(space.poseMap.keys()),
+            count=num_generated
+        )
+        print(num_generated)
+        # genBuffers(num_buffers, space, space.poseMap.keys(), 'random', len(space.poseMap.keys()))
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_free')
         # genBuffers(num_buffers, space, space.poseMap.keys(), 'greedy_boundary')
         # genBuffers(num_buffers, space, [], 'greedy_free')
