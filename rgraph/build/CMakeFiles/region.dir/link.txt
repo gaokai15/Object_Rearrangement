@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -lboost_python -lmpfr -lgmpxx -lgmp  -shared  -o region.so CMakeFiles/region.dir/src/region.cpp.o -lpython2.7 

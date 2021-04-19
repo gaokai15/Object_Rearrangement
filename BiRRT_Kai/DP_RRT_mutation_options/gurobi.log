@@ -186,3 +186,578 @@ Academic license - for non-commercial use only
 Gurobi 8.1.1 (linux64, Python) logging started Sun Jul  5 23:49:16 2020
 
 Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 09:45:32 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 100 rows, 100 columns and 2216 nonzeros
+Variable types: 0 continuous, 100 integer (100 binary)
+Coefficient statistics:
+  Matrix range     [1e-01, 8e-01]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e-02, 1e+00]
+Found heuristic solution: objective 25.0000000
+Presolve removed 2 rows and 0 columns
+Presolve time: 0.01s
+Presolved: 98 rows, 100 columns, 2165 nonzeros
+Variable types: 0 continuous, 100 integer (100 binary)
+
+Root relaxation: objective 1.479247e+01, 82 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0   14.79247    0   32   25.00000   14.79247  40.8%     -    0s
+H    0     0                      21.0000000   14.79247  29.6%     -    0s
+H    0     0                      20.0000000   14.79247  26.0%     -    0s
+     0     0   14.93510    0   38   20.00000   14.93510  25.3%     -    0s
+H    0     0                      19.0000000   14.93510  21.4%     -    0s
+     0     0   15.09665    0   41   19.00000   15.09665  20.5%     -    0s
+     0     0   15.16780    0   43   19.00000   15.16780  20.2%     -    0s
+     0     0   15.28287    0   43   19.00000   15.28287  19.6%     -    0s
+     0     0   15.34429    0   48   19.00000   15.34429  19.2%     -    0s
+     0     0   15.37769    0   44   19.00000   15.37769  19.1%     -    0s
+     0     0   15.41704    0   42   19.00000   15.41704  18.9%     -    0s
+     0     0   15.43365    0   45   19.00000   15.43365  18.8%     -    0s
+     0     0   15.43393    0   46   19.00000   15.43393  18.8%     -    0s
+     0     0   15.43944    0   45   19.00000   15.43944  18.7%     -    0s
+     0     0   15.43986    0   47   19.00000   15.43986  18.7%     -    0s
+     0     0   15.48438    0   51   19.00000   15.48438  18.5%     -    0s
+     0     0   15.49815    0   48   19.00000   15.49815  18.4%     -    0s
+     0     0   15.50850    0   51   19.00000   15.50850  18.4%     -    0s
+     0     0   15.52021    0   52   19.00000   15.52021  18.3%     -    0s
+     0     0   15.52422    0   53   19.00000   15.52422  18.3%     -    0s
+     0     0   15.52462    0   54   19.00000   15.52462  18.3%     -    0s
+     0     0   15.56004    0   50   19.00000   15.56004  18.1%     -    0s
+     0     0   15.56512    0   54   19.00000   15.56512  18.1%     -    0s
+     0     0   15.56760    0   53   19.00000   15.56760  18.1%     -    0s
+     0     0   15.56798    0   54   19.00000   15.56798  18.1%     -    0s
+     0     0   15.58436    0   50   19.00000   15.58436  18.0%     -    0s
+     0     0   15.58907    0   56   19.00000   15.58907  18.0%     -    0s
+     0     0   15.59185    0   54   19.00000   15.59185  17.9%     -    0s
+     0     0   15.59795    0   58   19.00000   15.59795  17.9%     -    0s
+     0     0   15.60054    0   57   19.00000   15.60054  17.9%     -    0s
+     0     0   15.60277    0   55   19.00000   15.60277  17.9%     -    0s
+     0     0   15.60317    0   57   19.00000   15.60317  17.9%     -    0s
+     0     0   15.61159    0   55   19.00000   15.61159  17.8%     -    0s
+     0     0   15.61446    0   55   19.00000   15.61446  17.8%     -    0s
+     0     0   15.61715    0   53   19.00000   15.61715  17.8%     -    0s
+     0     0   15.61817    0   56   19.00000   15.61817  17.8%     -    0s
+     0     0   15.62649    0   54   19.00000   15.62649  17.8%     -    0s
+     0     0   15.63399    0   55   19.00000   15.63399  17.7%     -    0s
+     0     0   15.63727    0   58   19.00000   15.63727  17.7%     -    0s
+     0     0   15.63831    0   59   19.00000   15.63831  17.7%     -    0s
+     0     0   15.64450    0   59   19.00000   15.64450  17.7%     -    0s
+     0     0   15.64846    0   57   19.00000   15.64846  17.6%     -    0s
+     0     0   15.65352    0   56   19.00000   15.65352  17.6%     -    0s
+     0     0   15.65604    0   56   19.00000   15.65604  17.6%     -    0s
+     0     0   15.65726    0   57   19.00000   15.65726  17.6%     -    0s
+     0     0   15.65817    0   57   19.00000   15.65817  17.6%     -    0s
+     0     0   15.66745    0   54   19.00000   15.66745  17.5%     -    0s
+     0     0   15.67055    0   59   19.00000   15.67055  17.5%     -    0s
+     0     0   15.68377    0   57   19.00000   15.68377  17.5%     -    0s
+     0     0   15.68937    0   56   19.00000   15.68937  17.4%     -    0s
+     0     0   15.69013    0   57   19.00000   15.69013  17.4%     -    0s
+     0     0   15.69717    0   58   19.00000   15.69717  17.4%     -    0s
+     0     0   15.69882    0   60   19.00000   15.69882  17.4%     -    0s
+     0     0   15.70155    0   61   19.00000   15.70155  17.4%     -    0s
+     0     0   15.70333    0   60   19.00000   15.70333  17.4%     -    0s
+     0     0   15.70398    0   62   19.00000   15.70398  17.3%     -    0s
+     0     0   15.71538    0   56   19.00000   15.71538  17.3%     -    0s
+     0     0   15.71959    0   58   19.00000   15.71959  17.3%     -    0s
+     0     0   15.72134    0   62   19.00000   15.72134  17.3%     -    0s
+     0     0   15.72325    0   60   19.00000   15.72325  17.2%     -    0s
+     0     0   15.72357    0   61   19.00000   15.72357  17.2%     -    0s
+     0     0   15.72414    0   59   19.00000   15.72414  17.2%     -    0s
+     0     0   15.72414    0   59   19.00000   15.72414  17.2%     -    0s
+     0     2   15.72414    0   59   19.00000   15.72414  17.2%     -    0s
+H  977   358                      18.0000000   16.07975  10.7%  16.0    0s
+
+Cutting planes:
+  Gomory: 10
+  Cover: 13
+  MIR: 121
+  StrongCG: 22
+  Flow cover: 14
+  Zero half: 3
+
+Explored 16581 nodes (323833 simplex iterations) in 4.97 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 5: 18 19 20 ... 25
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 1.800000000000e+01, best bound 1.800000000000e+01, gap 0.0000%
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 09:59:10 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 09:59:37 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 100 rows, 100 columns and 2216 nonzeros
+Variable types: 0 continuous, 100 integer (0 binary)
+Coefficient statistics:
+  Matrix range     [1e-01, 8e-01]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e-02, 1e+00]
+Found heuristic solution: objective 68.0000000
+Presolve time: 0.00s
+Presolved: 100 rows, 100 columns, 2216 nonzeros
+Variable types: 0 continuous, 100 integer (0 binary)
+
+Root relaxation: objective 1.463661e+01, 39 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0   14.63661    0   33   68.00000   14.63661  78.5%     -    0s
+H    0     0                      21.0000000   14.63661  30.3%     -    0s
+H    0     0                      20.0000000   14.63661  26.8%     -    0s
+     0     0   14.99785    0   37   20.00000   14.99785  25.0%     -    0s
+     0     0   15.11062    0   39   20.00000   15.11062  24.4%     -    0s
+     0     0   15.12229    0   39   20.00000   15.12229  24.4%     -    0s
+     0     0   15.12251    0   39   20.00000   15.12251  24.4%     -    0s
+     0     0   15.22781    0   43   20.00000   15.22781  23.9%     -    0s
+     0     0   15.27708    0   47   20.00000   15.27708  23.6%     -    0s
+     0     0   15.28660    0   48   20.00000   15.28660  23.6%     -    0s
+     0     0   15.29063    0   46   20.00000   15.29063  23.5%     -    0s
+     0     0   15.29073    0   48   20.00000   15.29073  23.5%     -    0s
+     0     0   15.31894    0   45   20.00000   15.31894  23.4%     -    0s
+     0     0   15.33447    0   44   20.00000   15.33447  23.3%     -    0s
+     0     0   15.33751    0   46   20.00000   15.33751  23.3%     -    0s
+     0     0   15.33928    0   46   20.00000   15.33928  23.3%     -    0s
+     0     0   15.33949    0   48   20.00000   15.33949  23.3%     -    0s
+     0     0   15.35402    0   48   20.00000   15.35402  23.2%     -    0s
+     0     0   15.35827    0   50   20.00000   15.35827  23.2%     -    0s
+     0     0   15.36219    0   48   20.00000   15.36219  23.2%     -    0s
+     0     0   15.36352    0   50   20.00000   15.36352  23.2%     -    0s
+     0     0   15.36567    0   49   20.00000   15.36567  23.2%     -    0s
+     0     0   15.36622    0   48   20.00000   15.36622  23.2%     -    0s
+     0     0   15.37761    0   44   20.00000   15.37761  23.1%     -    0s
+     0     0   15.38521    0   46   20.00000   15.38521  23.1%     -    0s
+     0     0   15.38687    0   49   20.00000   15.38687  23.1%     -    0s
+     0     0   15.38774    0   49   20.00000   15.38774  23.1%     -    0s
+     0     0   15.38775    0   49   20.00000   15.38775  23.1%     -    0s
+     0     0   15.39712    0   49   20.00000   15.39712  23.0%     -    0s
+     0     0   15.40067    0   47   20.00000   15.40067  23.0%     -    0s
+     0     0   15.40221    0   49   20.00000   15.40221  23.0%     -    0s
+     0     0   15.40438    0   49   20.00000   15.40438  23.0%     -    0s
+     0     0   15.40590    0   50   20.00000   15.40590  23.0%     -    0s
+     0     0   15.40592    0   49   20.00000   15.40592  23.0%     -    0s
+H    0     0                      19.0000000   15.40592  18.9%     -    0s
+     0     0   15.40837    0   48   19.00000   15.40837  18.9%     -    0s
+     0     0   15.40909    0   49   19.00000   15.40909  18.9%     -    0s
+     0     0   15.41566    0   47   19.00000   15.41566  18.9%     -    0s
+     0     2   15.41566    0   47   19.00000   15.41566  18.9%     -    0s
+H 1440   675                      18.0000000   15.78137  12.3%  11.2    0s
+ 21704  7909   16.77729   26   32   18.00000   16.46540  8.53%  14.8    5s
+ 29765  9785   16.83965   33   59   18.00000   16.52720  8.18%  14.8   10s
+ 38147 11509   16.96745   39   27   18.00000   16.52720  8.18%  14.9   15s
+ 69005 11901     cutoff   45        18.00000   16.65714  7.46%  15.3   20s
+ 95102 12359     cutoff   47        18.00000   16.76801  6.84%  15.6   25s
+ 113759  9591   16.97044   45   28   18.00000   16.83472  6.47%  15.7   30s
+
+Cutting planes:
+  Gomory: 4
+  MIR: 358
+  StrongCG: 66
+  Zero half: 2
+
+Explored 135545 nodes (2104144 simplex iterations) in 34.28 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 5: 18 19 20 ... 68
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 1.800000000000e+01, best bound 1.800000000000e+01, gap 0.0000%
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 10:05:26 2020
+
+Academic license - for non-commercial use only
+Optimize a model with 100 rows, 100 columns and 2216 nonzeros
+Coefficient statistics:
+  Matrix range     [1e-01, 8e-01]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e-02, 1e+00]
+Presolve time: 0.00s
+Presolved: 100 rows, 100 columns, 2216 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.025304e+01   0.000000e+00      0s
+      37    1.4140782e+01   0.000000e+00   0.000000e+00      0s
+
+Solved in 37 iterations and 0.00 seconds
+Optimal objective  1.414078192e+01
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:43:51 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:51:14 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:51:20 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:51:22 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:51:26 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:51:28 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:51:34 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:51:37 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:52:20 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:52:46 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:53:01 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:57:47 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:59:07 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:59:30 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 20:59:54 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:01:05 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:02:19 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:02:36 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:02:52 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:03:07 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:03:46 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:03:55 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:04:15 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:21:29 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:21:51 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:23:10 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 21:47:07 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Mon Sep 28 22:13:53 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Tue Sep 29 00:23:03 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Tue Sep 29 00:23:13 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Tue Sep 29 00:24:15 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Tue Sep 29 00:25:35 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Sat Oct 17 17:12:42 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Sat Oct 17 17:13:22 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Sat Oct 17 17:15:27 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Sat Oct 17 17:15:53 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Sat Oct 17 17:24:39 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:02:01 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:05:50 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:07:17 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:07:32 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:08:11 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:11:05 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:23:05 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:27:18 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:28:14 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:28:44 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:30:45 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:37:30 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:44:24 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 15:48:26 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 16:09:04 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 16:10:18 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 16:30:39 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 21:01:59 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 21:03:38 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 21:17:06 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 21:28:01 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 21:43:19 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 21:57:31 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 22:00:58 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 22:05:38 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 22:10:41 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 22:34:16 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Wed Oct 21 22:36:20 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 12:02:08 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 12:15:22 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 12:17:30 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 12:17:59 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 12:49:43 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 13:00:06 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 13:17:08 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 13:33:43 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 13:36:16 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 13:50:00 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 13:53:35 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 13:57:54 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 14:03:23 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 14:11:16 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 14:26:07 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 14:27:42 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 14:54:56 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 15:51:15 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 15:53:37 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 16:39:50 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 16:39:56 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 16:40:08 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 16:40:12 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 16:40:35 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 16:40:42 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 16:40:51 2020
+
+Academic license - for non-commercial use only
+
+Gurobi 8.1.1 (linux64, Python) logging started Thu Oct 22 16:41:01 2020
+
+Academic license - for non-commercial use only

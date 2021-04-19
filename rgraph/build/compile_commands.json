@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/kai/Documents/Kai_Gao/git/Object_Rearrangement/Object_Rearrangement/rgraph/build",
+  "command": "/usr/bin/c++  -Dregion_EXPORTS -I/usr/include/python2.7  -lboost_python -lmpfr -lgmpxx -lgmp -fPIC   -o CMakeFiles/region.dir/src/region.cpp.o -c /home/kai/Documents/Kai_Gao/git/Object_Rearrangement/Object_Rearrangement/rgraph/src/region.cpp",
+  "file": "/home/kai/Documents/Kai_Gao/git/Object_Rearrangement/Object_Rearrangement/rgraph/src/region.cpp"
+}
+]
