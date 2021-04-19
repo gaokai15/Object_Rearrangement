@@ -262,6 +262,50 @@ def split_challenge2(directory):
                 print(newfile, is_pert)
 
 
+def filter_challenge2(dir_ch2, dir_ch3):
+    for filename in sorted(glob.glob(dir_ch2 + '/*/*/*.json')):
+        with open(filename) as f:
+            data = json.load(f, object_pairs_hook=OrderedDict)
+
+        if 'is_perturbable' not in data or type(data['is_perturbable']) is not bool:
+            continue
+
+        # print(data['is_perturbable'])
+        if data['is_perturbable']:
+            print(filename.replace(dir_ch2, dir_ch3))
+            with open(filename.replace(dir_ch2, dir_ch3), 'w') as f:
+                json.dump(data, f, indent=2)
+
+
+def split_challenge3(directory):
+    for filename in sorted(glob.glob(directory + '/*/*/*.json')):
+        with open(filename) as f:
+            data = json.load(f, object_pairs_hook=OrderedDict)
+
+        c = 0
+        if 'is_valid_buffer' not in data:
+            continue
+        if type(data['is_valid_buffer']) is not OrderedDict:
+            continue
+        valid_buffers = data['is_valid_buffer']
+        buffer_coords = data['buffers']
+        del data['buffers']
+        comp_time = data['computation_time'] / len(valid_buffers)
+        # comp_time1s = data['computation_time_wall']
+        if type(valid_buffers) is not OrderedDict:
+            continue
+
+        for buff, is_valid_buf in valid_buffers.items():
+            if type(is_valid_buf) == bool:
+                newfile = filename[:-5] + '-' + buff + '.json'
+                data['buffer'] = buffer_coords[buff]
+                data['is_valid_buffer'] = is_valid_buf
+                data['computation_time'] = comp_time
+                with open(newfile, 'w') as f:
+                    json.dump(data, f, indent=2)
+                print(newfile, is_valid_buf)
+
+
 def format_data(directory, writetodir):
     csvarr1 = []
     csvarr2 = []
@@ -299,12 +343,8 @@ def format_data(directory, writetodir):
             else:
                 continue
         elif 'ch3' in filename:
-            if 'is_valid_buffer' in data and type(data['is_valid_buffer']) == dict:
-                if 'Timeout' in data['is_valid_buffer'].values() or 'Error' in data['is_valid_buffer'].values():
-                    continue
-                csvarr3.append(
-                    'ch3/' + fcat + ',' + ','.join([str(x[1]) for x in sorted(data['is_valid_buffer'].items())])
-                )
+            if 'is_valid_buffer' in data and type(data['is_valid_buffer']) == bool:
+                csvarr3.append('ch3/' + fcat + ',' + str(data['is_valid_buffer']))
                 # print(csvarr3[-1])
                 if 'is_perturbable' in data:
                     del data['is_perturbable']
@@ -331,7 +371,7 @@ def format_data(directory, writetodir):
         for line in csvarr2:
             print(line, file=f)
     with open(writetodir + '/challenge3.csv', 'w') as f:
-        print('task_file,B0,B1,B2,B3,B4,B5,B6,B7,B8,B9', file=f)
+        print('task_file,is_valid_buffer', file=f)
         for line in csvarr3:
             print(line, file=f)
 
@@ -341,6 +381,8 @@ if __name__ == "__main__":
     ### Misc Processing ###
     # format_data(sys.argv[1], sys.argv[2])
     # split_challenge2(sys.argv[1])
+    # filter_challenge2(sys.argv[1], sys.argv[2])
+    # split_challenge3(sys.argv[1])
     # clean(sys.argv[1])
 
     # for filename in sorted(glob.glob(sys.argv[1] + '/*/*/*.json')):
